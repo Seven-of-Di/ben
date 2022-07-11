@@ -357,7 +357,7 @@ class Driver:
 
         print('\n%s\n' % self.deal_str)
 
-    
+
     async def opening_lead(self, auction):
         contract = bidding.get_contract(auction)
         decl_i = bidding.get_decl_i(contract)

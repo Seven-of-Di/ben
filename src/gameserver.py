@@ -12,17 +12,18 @@ from nn.models import Models
 
 MODELS = Models.load('../models')
 
-print('models loaded')
-
-
-def worker(driver):
-    print('worker', driver)
-    asyncio.new_event_loop().run_until_complete(driver.run())
-
-
 async def handler(websocket, path):
-    print(f'got websocket connection {websocket}')
+    # while(True):
+    #     await asyncio.sleep(1)
+    #     await websocket.send("Hello")
+    # print(f'got websocket connection {websocket}')
+    # name = await websocket.recv()
+    # print(f"< {name}")
 
+    # greeting = f"Hello {name}!"
+
+    # await websocket.send(greeting)
+    # print(f"> {greeting}")
     rdeal = game.random_deal()
     
     driver = game.Driver(MODELS, human.WebsocketFactory(websocket))

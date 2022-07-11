@@ -23,30 +23,25 @@ The recommended way of installing is in a [conda environment](https://docs.conda
 
 For __Windows__ users: After installing anaconda, you  will have a new application called "Anaconda Prompt". Henceforth you will have to run all commands in "Anaconda Prompt" not in "cmd". The title bar of your command prompt window should read *"Administrator: Anaconda Prompt (Miniconda3)"*
 
-After installing conda, execute the commands in the [conda_setup.sh](conda_setup.sh) script to create an environment and install the dependencies.
+Use the following command to install dependencies:
+```
+conda env create -f ./environment.yml
+```
 
 The bridge engine was developed on linux. It will likely work on any other platform which runs Python and conda, but was only tested on Windows 10 and Windows 11.
 
-### Running the Web App
+### Running the Web App (native)
 
 The engine has a (very basic) UI which enables you to play as a human agains three bots and then review the games you played.
 
-The app runs in the browser, and the service has two components: (1) "appserver" which serves the UI through http, and (2) "gameserver" which serves the API to interface with the bots through websockets.
+The app runs in the browser, and the service has two components: (1) "webserver" which serves the UI through http, and (2) "gameserver" which serves the API to interface with the bots through websockets.
 
 Following are instructions to start the service:
-
-First, make sure that you are located in the `src` directory
-
-```bash
-cd src
-```
-
-Activate the conda environment
 
 (If you are on __Windows__, make sure that you are in the *"Anaconda Prompt"*, not in the default Windows command prompt)
 
 ```bash
-conda activate ben
+make activate
 ```
 
 Start the game server
@@ -54,12 +49,17 @@ Start the game server
 (If you are on __Windows__ you  can omit `sudo` from the following commands)
 
 ```bash
-python gameserver.py
+make gameserver
 ```
 And start the app server
 
 ```bash
-python appserver.py
+make webserver
+```
+
+### Running the Web App (Docker)
+```bash
+docker-compose up
 ```
 
 Now you can use the browser to navigate to `http://127.0.0.1:8080/home`

@@ -45,7 +45,6 @@ class Card:
         return cls(suit=code // n_ranks, rank=code % n_ranks, xcards=xcards)
 
 
-
 class CandidateCard:
 
     def __init__(self, card, insta_score, expected_tricks, p_make_contract=None, expected_score=None):

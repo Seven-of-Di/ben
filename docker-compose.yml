@@ -8,17 +8,13 @@ services:
   app:
     platform: linux/x86_64
     build: .
-    command: "gameserver.py"
+    user: root
+    command: "api.py"
     ports:
-      - 4443:4443
-    networks:
-      - ben
-
-  web:
-    platform: linux/x86_64
-    build: .
-    command: "webserver.py"
-    ports:
-      - 8080:8080
+      - 8081:8081
+    volumes:
+      - ./:/app
+    environment:
+      - TF_CPP_MIN_LOG_LEVEL=3
     networks:
       - ben

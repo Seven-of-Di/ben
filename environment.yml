@@ -16,3 +16,4 @@ dependencies:
   - grpcio-tools
   - bottle
   - gevent
+  - quart

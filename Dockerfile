@@ -44,6 +44,7 @@ SHELL ["/bin/bash", "--login", "-c"]
 COPY ./docker/entrypoint.sh /entrypoint.sh
 
 COPY . .
+
 WORKDIR /app/src
 
 ENTRYPOINT [ "/entrypoint.sh"]

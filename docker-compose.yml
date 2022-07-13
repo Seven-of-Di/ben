@@ -13,8 +13,9 @@ services:
     ports:
       - 8081:8081
     volumes:
-      - ./:/app
+      - ./src:/app/src
     environment:
       - TF_CPP_MIN_LOG_LEVEL=3
+      - DEBUG=true
     networks:
       - ben

@@ -1,11 +1,10 @@
-from quart import Quart, request, jsonify
+from flask import Flask, request
 
 from nn.models import Models
 from game import AsyncBotBid
-import bots
 import conf
 
-app = Quart(__name__)
+app = Flask(__name__)
 
 DEALERS = 'NESW'
 VULNERABILITIES = {
@@ -17,18 +16,14 @@ VULNERABILITIES = {
 
 MODELS = Models.from_conf(conf.load("../default.conf"))
 
+class PlaceBid:
+  def __init__(self, place_bid_request):
+    self.vuln = VULNERABILITIES[place_bid_request.vuln]
+    self.hand = place_bid_request.hand
+    self.dealer = place_bid_request.dealer
+    self.auction = ['PAD_START'] * DEALERS.index(self.dealer) + place_bid_request.auction
 
-class PlaceBidRequest:
-  def __init__(self, data):
-    self.vuln = VULNERABILITIES[data['vuln']]
-    self.hand = data['hand']
-    self.dealer = data['dealer']
-    self.next = data['next']
-    
-    auction = ['PAD_START'] * DEALERS.index(self.dealer) + data['auction']
-    self.auction = auction
-
-@app.route('/play_card', methods=['POST'])
+@app.route('/play_card', methods=["POST"])
 async def play_card():
   pass
 
@@ -36,7 +31,6 @@ async def play_card():
 {
   "hand": "QJ3J.542.KJT7.AQ2",
   "dealer": "E",
-  "next: "N",
   "vuln": "None",
   "auction": [
     "1C",
@@ -45,27 +39,26 @@ async def play_card():
   ]
 }
 '''
-@app.route('/place_bid', methods=['POST'])
+@app.route('/place_bid', methods=["POST"])
 async def place_bid():
   try:
-    json_data = await request.get_json()
-    app.logger.info(json_data)
-    parsed_request = PlaceBidRequest(json_data)
-    bot = bots.BotBid(
+    app.logger.info(request.get_json())
+    bot = AsyncBotBid(
       [False, False],
       "QJ3J.542.KJT7.AQ2",
       Models.from_conf(conf.load("../default.conf"))
     )
 
-    bid_resp = bot.bid(['PAD_START', '1C', 'PASS', 'PASS'])
+    bid_resp = await bot.async_bid(['PAD_START', '1C', 'PASS', 'PASS'])
 
-    return jsonify(bid_resp), 200
+    return vars(bid_resp)
   except Exception as e:
     app.logger.exception(e)
-    return jsonify({'error': 'Unexpected error'}), 500
+    return {'error': 'Unexpected error'}
 
-@app.route('/healthz', methods=['GET'])
+@app.route('/healthz', methods=["GET"])
 async def healthz():
-  return 'OK', 200
+  return {'status': 'ok'}
 
-app.run(host='0.0.0.0', port=8081, debug=True)
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=8081, use_reloader=True)

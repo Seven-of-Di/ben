@@ -12,4 +12,4 @@ conda activate ben
 set -euo pipefail
 
 # exec the final command:
-exec python $1
+exec python $@

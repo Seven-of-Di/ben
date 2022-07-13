@@ -6,7 +6,7 @@ import conf
 
 app = Flask(__name__)
 
-DEALERS = 'NESW'
+DIRECTIONS = 'NESW'
 VULNERABILITIES = {
     'None': [False, False],
     'N-S': [True, False],
@@ -21,7 +21,7 @@ class PlaceBid:
     self.vuln = VULNERABILITIES[place_bid_request.vuln]
     self.hand = place_bid_request.hand
     self.dealer = place_bid_request.dealer
-    self.auction = ['PAD_START'] * DEALERS.index(self.dealer) + place_bid_request.auction
+    self.auction = ['PAD_START'] * DIRECTIONS.index(self.dealer) + place_bid_request.auction
 
 @app.route('/play_card', methods=["POST"])
 async def play_card():
@@ -29,7 +29,7 @@ async def play_card():
 
 '''
 {
-  "hand": "QJ3J.542.KJT7.AQ2",
+  "hand": "QJ3.542.KJT7.AQ2",
   "dealer": "E",
   "vuln": "None",
   "auction": [

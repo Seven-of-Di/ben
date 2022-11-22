@@ -1,4 +1,4 @@
-from flask import Flask, request
+from aioflask import Flask, request
 
 from nn.models import Models
 from game import AsyncBotBid
@@ -51,7 +51,7 @@ async def place_bid():
 
     bid_resp = await bot.async_bid(['PAD_START', '1C', 'PASS', 'PASS'])
 
-    return vars(bid_resp)
+    return bid_resp.to_dict()
   except Exception as e:
     app.logger.exception(e)
     return {'error': 'Unexpected error'}

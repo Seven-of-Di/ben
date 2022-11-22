@@ -45,8 +45,8 @@ async def place_bid():
     app.logger.info(request.get_json())
     bot = AsyncBotBid(
       [False, False],
-      "QJ3J.542.KJT7.AQ2",
-      Models.from_conf(conf.load("../default.conf"))
+      "QJ3.542.KJT7.AQ2",
+      MODELS
     )
 
     bid_resp = await bot.async_bid(['PAD_START', '1C', 'PASS', 'PASS'])

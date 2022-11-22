@@ -135,6 +135,7 @@ class CardByCard:
                 
                 card52 = card_resp.card.code()
                 card = deck52.card52to32(card52)
+                print(card_resp.to_dict(),card)
 
                 for card_player in card_players:
                     card_player.set_card_played(trick_i=trick_i, leader_i=leader_i, i=player_i, card=card)

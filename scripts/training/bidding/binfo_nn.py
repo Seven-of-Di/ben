@@ -1,13 +1,12 @@
+from batcher import Batcher
+import tensorflow.compat.v1 as tf
+import numpy as np
+import os.path
 import sys
 sys.path.append('../../../src')
 
-import os.path
-import numpy as np
-import tensorflow as tf
+##np.save(os.path.join(out_dir, 'X.npy'), X)
 
-    ##np.save(os.path.join(out_dir, 'X.npy'), X)
-
-from batcher import Batcher
 
 bin_dir = sys.argv[1]
 out_dir = sys.argv[2]
@@ -42,28 +41,38 @@ for _ in range(n_layers):
 
 state = []
 for i, cell_i in enumerate(cells):
-    s_c = tf.placeholder(tf.float32, [1, lstm_size], name='state_c_{}'.format(i))
-    s_h = tf.placeholder(tf.float32, [1, lstm_size], name='state_h_{}'.format(i))
+    s_c = tf.placeholder(
+        tf.float32, [1, lstm_size], name='state_c_{}'.format(i))
+    s_h = tf.placeholder(
+        tf.float32, [1, lstm_size], name='state_h_{}'.format(i))
     state.append(tf.contrib.rnn.LSTMStateTuple(c=s_c, h=s_h))
 state = tuple(state)
 
 x_in = tf.placeholder(tf.float32, [1, n_ftrs], name='x_in')
-    
+
 lstm_cell = tf.contrib.rnn.MultiRNNCell(cells)
 
 seq_in = tf.placeholder(tf.float32, [None, None, n_ftrs], 'seq_in')
-seq_out_hcp = tf.placeholder(tf.float32, [None, None, n_dim_hcp], 'seq_out_hcp')
-seq_out_shape = tf.placeholder(tf.float32, [None, None, n_dim_shape], 'seq_out_shape')
+seq_out_hcp = tf.placeholder(
+    tf.float32, [None, None, n_dim_hcp], 'seq_out_hcp')
+seq_out_shape = tf.placeholder(
+    tf.float32, [None, None, n_dim_shape], 'seq_out_shape')
 
-w_hcp = tf.get_variable('w_hcp', shape=[lstm_cell.output_size, n_dim_hcp], dtype=tf.float32, initializer=tf.contrib.layers.xavier_initializer(seed=1337))
-w_shape = tf.get_variable('w_shape', shape=[lstm_cell.output_size, n_dim_shape], dtype=tf.float32, initializer=tf.contrib.layers.xavier_initializer(seed=1337))
+w_hcp = tf.get_variable('w_hcp', shape=[lstm_cell.output_size, n_dim_hcp],
+                        dtype=tf.float32, initializer=tf.contrib.layers.xavier_initializer(seed=1337))
+w_shape = tf.get_variable('w_shape', shape=[lstm_cell.output_size, n_dim_shape],
+                          dtype=tf.float32, initializer=tf.contrib.layers.xavier_initializer(seed=1337))
 
 out_rnn, _ = tf.nn.dynamic_rnn(lstm_cell, seq_in, dtype=tf.float32)
 
-out_hcp_seq = tf.matmul(tf.reshape(out_rnn, [-1, lstm_size]), w_hcp, name='out_hcp_seq')
-out_hcp_target_seq = tf.reshape(seq_out_hcp, [-1, n_dim_hcp], name='out_hcp_target_seq')
-out_shape_seq = tf.matmul(tf.reshape(out_rnn, [-1, lstm_size]), w_shape, name='out_shape_seq')
-out_shape_target_seq = tf.reshape(seq_out_shape, [-1, n_dim_shape], name='out_shape_target_seq')
+out_hcp_seq = tf.matmul(tf.reshape(
+    out_rnn, [-1, lstm_size]), w_hcp, name='out_hcp_seq')
+out_hcp_target_seq = tf.reshape(
+    seq_out_hcp, [-1, n_dim_hcp], name='out_hcp_target_seq')
+out_shape_seq = tf.matmul(tf.reshape(
+    out_rnn, [-1, lstm_size]), w_shape, name='out_shape_seq')
+out_shape_target_seq = tf.reshape(
+    seq_out_shape, [-1, n_dim_shape], name='out_shape_target_seq')
 
 output, next_state = lstm_cell(x_in, state)
 
@@ -89,36 +98,46 @@ with tf.Session() as sess:
     saver = tf.train.Saver(max_to_keep=20)
 
     for i in range(n_iterations):
-        x_batch, hcp_batch, shape_batch = batch.next_batch([X_train, HCP_train, SHAPE_train])
+        x_batch, hcp_batch, shape_batch = batch.next_batch(
+            [X_train, HCP_train, SHAPE_train])
         if i % display_step == 0:
             print(i)
-            x_cost, hcp_cost, shape_cost = cost_batch.next_batch([X_train, HCP_train, SHAPE_train])
+            x_cost, hcp_cost, shape_cost = cost_batch.next_batch(
+                [X_train, HCP_train, SHAPE_train])
             c_train = \
-                sess.run([cost, cost_hcp, cost_shape], 
-                    feed_dict={seq_in: x_cost, seq_out_hcp: hcp_cost, seq_out_shape: shape_cost, keep_prob: 1.0})
+                sess.run([cost, cost_hcp, cost_shape],
+                         feed_dict={seq_in: x_cost, seq_out_hcp: hcp_cost, seq_out_shape: shape_cost, keep_prob: 1.0})
 
             print(c_train)
 
-            p_hcp_seq, p_shape_seq = sess.run([out_hcp_seq, out_shape_seq], feed_dict={seq_in: x_cost, seq_out_hcp: hcp_cost, seq_out_shape: shape_cost, keep_prob: 1.0})
+            p_hcp_seq, p_shape_seq = sess.run([out_hcp_seq, out_shape_seq], feed_dict={
+                                              seq_in: x_cost, seq_out_hcp: hcp_cost, seq_out_shape: shape_cost, keep_prob: 1.0})
 
             print(
-                np.mean(np.abs(hcp_cost[:,0,:] - p_hcp_seq.reshape(hcp_cost.shape)[:,0,:])),
-                np.mean(np.abs(hcp_cost[:,1,:] - p_hcp_seq.reshape(hcp_cost.shape)[:,1,:])),
-                np.mean(np.abs(hcp_cost[:,2,:] - p_hcp_seq.reshape(hcp_cost.shape)[:,2,:])),
-                np.mean(np.abs(hcp_cost[:,3,:] - p_hcp_seq.reshape(hcp_cost.shape)[:,3,:])),
-                np.mean(np.abs(hcp_cost[:,-1,:] - p_hcp_seq.reshape(hcp_cost.shape)[:,-1,:])))
+                np.mean(
+                    np.abs(hcp_cost[:, 0, :] - p_hcp_seq.reshape(hcp_cost.shape)[:, 0, :])),
+                np.mean(
+                    np.abs(hcp_cost[:, 1, :] - p_hcp_seq.reshape(hcp_cost.shape)[:, 1, :])),
+                np.mean(
+                    np.abs(hcp_cost[:, 2, :] - p_hcp_seq.reshape(hcp_cost.shape)[:, 2, :])),
+                np.mean(
+                    np.abs(hcp_cost[:, 3, :] - p_hcp_seq.reshape(hcp_cost.shape)[:, 3, :])),
+                np.mean(np.abs(hcp_cost[:, -1, :] - p_hcp_seq.reshape(hcp_cost.shape)[:, -1, :])))
             print(
-                np.mean(np.abs(shape_cost[:,0,:] - p_shape_seq.reshape(shape_cost.shape)[:,0,:])),
-                np.mean(np.abs(shape_cost[:,1,:] - p_shape_seq.reshape(shape_cost.shape)[:,1,:])),
-                np.mean(np.abs(shape_cost[:,2,:] - p_shape_seq.reshape(shape_cost.shape)[:,2,:])),
-                np.mean(np.abs(shape_cost[:,3,:] - p_shape_seq.reshape(shape_cost.shape)[:,3,:])),
-                np.mean(np.abs(shape_cost[:,-1,:] - p_shape_seq.reshape(shape_cost.shape)[:,-1,:])))
-            
-            
+                np.mean(
+                    np.abs(shape_cost[:, 0, :] - p_shape_seq.reshape(shape_cost.shape)[:, 0, :])),
+                np.mean(
+                    np.abs(shape_cost[:, 1, :] - p_shape_seq.reshape(shape_cost.shape)[:, 1, :])),
+                np.mean(
+                    np.abs(shape_cost[:, 2, :] - p_shape_seq.reshape(shape_cost.shape)[:, 2, :])),
+                np.mean(
+                    np.abs(shape_cost[:, 3, :] - p_shape_seq.reshape(shape_cost.shape)[:, 3, :])),
+                np.mean(np.abs(shape_cost[:, -1, :] - p_shape_seq.reshape(shape_cost.shape)[:, -1, :])))
+
             sys.stdout.flush()
 
             saver.save(sess, model_path, global_step=i)
-        sess.run(train_step, feed_dict={seq_in: x_batch, seq_out_hcp: hcp_batch, seq_out_shape: shape_batch, keep_prob: 0.8})
+        sess.run(train_step, feed_dict={
+                 seq_in: x_batch, seq_out_hcp: hcp_batch, seq_out_shape: shape_batch, keep_prob: 0.8})
 
     saver.save(sess, model_path, global_step=n_iterations)
-    

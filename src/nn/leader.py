@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 
 class Leader:
@@ -16,7 +16,8 @@ class Leader:
 
     def load_model(self):
         with self.graph.as_default():
-            saver = tf.train.import_meta_graph(self.model_path + '.meta')
+            saver = tf.train.import_meta_graph(
+                self.model_path + '.meta')
             saver.restore(self.sess, self.model_path)
 
     def init_model(self):
@@ -40,4 +41,3 @@ class Leader:
             return result
 
         return pred_fun
-

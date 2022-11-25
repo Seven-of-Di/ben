@@ -1,8 +1,9 @@
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+
 
 class BidInfo:
-    
+
     def __init__(self, model_path):
         self.model_path = model_path
         self.graph = tf.Graph()
@@ -12,12 +13,13 @@ class BidInfo:
 
     def close(self):
         self.sess.close()
-        
+
     def load_model(self):
         with self.graph.as_default():
-            saver = tf.train.import_meta_graph(self.model_path + '.meta')
+            saver = tf.train.import_meta_graph(
+                self.model_path + '.meta')
             saver.restore(self.sess, self.model_path)
-        
+
     def init_model(self):
         graph = self.sess.graph
 
@@ -27,12 +29,12 @@ class BidInfo:
         out_shape_seq = graph.get_tensor_by_name('out_shape_seq:0')
 
         p_keep = 1.0
-        
+
         def pred_fun(x):
             result = None
             with self.graph.as_default():
                 result = self.sess.run(
-                    [out_hcp_seq, out_shape_seq], 
+                    [out_hcp_seq, out_shape_seq],
                     feed_dict={seq_in: x, keep_prob: p_keep}
                 )
             return result

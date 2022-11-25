@@ -1,13 +1,14 @@
+from batcher import Batcher
+import tensorflow.compat.v1 as tf
+import numpy as np
 import sys
 sys.path.append('../../../src')
 
-import numpy as np
-import tensorflow as tf
 
-from batcher import Batcher
-
-checkpoint_model = sys.argv[1]  # pretrained model e.g './model/bidding-1000000'
-output_model = sys.argv[2]  # where to save new checkpoints e.g './model2/bidding'  
+# pretrained model e.g './model/bidding-1000000'
+checkpoint_model = sys.argv[1]
+# where to save new checkpoints e.g './model2/bidding'
+output_model = sys.argv[2]
 
 model_path = output_model
 
@@ -51,10 +52,12 @@ with graph.as_default():
         x_batch, y_batch = batch.next_batch([X_train, y_train])
         if i % display_step == 0:
             x_cost, y_cost = cost_batch.next_batch([X_train, y_train])
-            c_train = sess.run(cost, feed_dict={seq_in: x_cost, seq_out: y_cost, keep_prob: 1.0})
+            c_train = sess.run(
+                cost, feed_dict={seq_in: x_cost, seq_out: y_cost, keep_prob: 1.0})
             print('{}. c_train={}'.format(i, c_train))
             sys.stdout.flush()
             saver.save(sess, model_path, global_step=i)
-        sess.run(train_step, feed_dict={seq_in: x_batch, seq_out: y_batch, keep_prob: 0.8})
+        sess.run(train_step, feed_dict={
+                 seq_in: x_batch, seq_out: y_batch, keep_prob: 0.8})
 
     saver.save(sess, model_path, global_step=start_iteration + n_iterations)

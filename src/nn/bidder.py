@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 from collections import namedtuple
 
@@ -7,31 +7,38 @@ State = namedtuple('State', ['c', 'h'])
 
 
 class Bidder:
-    
+
     def __init__(self, name, model_path):
         self.name = name
         self.model_path = model_path
         self.graph = tf.Graph()
         self.sess = tf.Session(graph=self.graph)
         self.load_model()
-        self.output_softmax = tf.nn.softmax(self.graph.get_tensor_by_name('out_bid_logit:0'))
+        
         self.graph.finalize()
         self.lstm_size = 128
         self.zero_state = (
-            State(c=np.zeros((1, self.lstm_size)), h=np.zeros((1, self.lstm_size))),
-            State(c=np.zeros((1, self.lstm_size)), h=np.zeros((1, self.lstm_size))),
-            State(c=np.zeros((1, self.lstm_size)), h=np.zeros((1, self.lstm_size))),
+            State(c=np.zeros((1, self.lstm_size)),
+                  h=np.zeros((1, self.lstm_size))),
+            State(c=np.zeros((1, self.lstm_size)),
+                  h=np.zeros((1, self.lstm_size))),
+            State(c=np.zeros((1, self.lstm_size)),
+                  h=np.zeros((1, self.lstm_size))),
         )
-        self.nesw_initial = [self.zero_state, self.zero_state, self.zero_state, self.zero_state]
-        self.model_seq, self.model  = self.init_model()
-        
+        self.nesw_initial = [self.zero_state,
+                             self.zero_state, self.zero_state, self.zero_state]
+        self.model_seq, self.model = self.init_model()
+
     def close(self):
         self.sess.close()
 
     def load_model(self):
         with self.graph.as_default():
-            saver = tf.train.import_meta_graph(self.model_path + '.meta')
+            saver = tf.train.import_meta_graph(
+                self.model_path + '.meta')
             saver.restore(self.sess, self.model_path)
+            self.output_softmax = tf.nn.softmax(
+                self.graph.get_tensor_by_name('out_bid_logit:0'))
 
     def init_model(self):
         graph = self.sess.graph
@@ -63,10 +70,10 @@ class Bidder:
 
         x_in = graph.get_tensor_by_name('x_in:0')
         out_bid = graph.get_tensor_by_name('out_bid:0')
-        
+
         # defining model
         p_keep = 1.0
-        
+
         def pred_fun(x, state_in):
             bids, next_state = None, None
             with self.graph.as_default():
@@ -82,12 +89,15 @@ class Bidder:
                 }
                 bids = self.sess.run(out_bid, feed_dict=feed_dict)
                 next_state = (
-                    State(c=self.sess.run(next_c_0, feed_dict=feed_dict), h=self.sess.run(next_h_0, feed_dict=feed_dict)),
-                    State(c=self.sess.run(next_c_1, feed_dict=feed_dict), h=self.sess.run(next_h_1, feed_dict=feed_dict)),
-                    State(c=self.sess.run(next_c_2, feed_dict=feed_dict), h=self.sess.run(next_h_2, feed_dict=feed_dict)),
+                    State(c=self.sess.run(next_c_0, feed_dict=feed_dict),
+                          h=self.sess.run(next_h_0, feed_dict=feed_dict)),
+                    State(c=self.sess.run(next_c_1, feed_dict=feed_dict),
+                          h=self.sess.run(next_h_1, feed_dict=feed_dict)),
+                    State(c=self.sess.run(next_c_2, feed_dict=feed_dict),
+                          h=self.sess.run(next_h_2, feed_dict=feed_dict)),
                 )
             return bids, next_state
-        
+
         def pred_fun_seq(x):
             result = None
             with self.graph.as_default():
@@ -95,7 +105,8 @@ class Bidder:
                     keep_prob: p_keep,
                     seq_in: x,
                 }
-                result = self.sess.run(self.output_softmax, feed_dict=feed_dict)
+                result = self.sess.run(
+                    self.output_softmax, feed_dict=feed_dict)
             return result
-        
+
         return pred_fun_seq, pred_fun

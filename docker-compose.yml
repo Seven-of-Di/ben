@@ -15,6 +15,7 @@ services:
     volumes:
       - ./src:/app/src
     environment:
+      - FLASK_ENV=development
       - TF_CPP_MIN_LOG_LEVEL=3
       - DEBUG=true
     networks:

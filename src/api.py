@@ -43,13 +43,16 @@ async def play_card():
 async def place_bid():
   try:
     app.logger.info(request.get_json())
+    req = PlaceBid(request.get_json())
     bot = AsyncBotBid(
+      req.vuln,
+      req.hand,
       [False, False],
       "QJ3.542.KJT7.AQ2",
       MODELS
     )
 
-    bid_resp = await bot.async_bid(['PAD_START', '1C', 'PASS', 'PASS'])
+    bid_resp = await bot.async_bid(req.auction)
 
     return bid_resp.to_dict()
   except Exception as e:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 from functools import total_ordering
+from random import shuffle
 from typing import Dict, Iterable, List
 
 """
@@ -202,7 +203,7 @@ class BiddingSuit(Enum):
 
 
 @total_ordering
-class Card:
+class Card_:
     """A single card in a hand or deal of bridge"""
 
     def __init__(self, suit: Suit, rank: Rank):
@@ -228,7 +229,7 @@ class Card:
         return self.suit.value *13 + self.rank.value
 
     def to_32(self) -> int :
-        return self.suit.value * 8 + min(self.rank.value,7)
+        return self.suit.value * 8 + 14-max(self.rank.rank(),7)
 
     def __repr__(self) -> str:
         return self.rank.abbreviation()
@@ -236,7 +237,7 @@ class Card:
     def __hash__(self) -> int:
         return hash(repr(self))
 
-    def trump_comparaison(self, other : Card, trump : BiddingSuit, lead : Suit) -> bool :
+    def trump_comparaison(self, other : Card_, trump : BiddingSuit, lead : Suit) -> bool :
         if self.suit == other.suit :
             return self.rank>other.rank
         if self.suit == trump.to_suit() :
@@ -251,11 +252,11 @@ class Card:
 
 
     @classmethod
-    def from_str(cls, card_str) -> Card:
+    def from_str(cls, card_str) -> Card_:
         try:
-            return Card(Suit.from_str(card_str[0]), Rank.from_str(card_str[1]))
+            return Card_(Suit.from_str(card_str[0]), Rank.from_str(card_str[1]))
         except:
-            return Card(Suit.from_str(card_str[1]), Rank.from_str(card_str[0]))
+            return Card_(Suit.from_str(card_str[1]), Rank.from_str(card_str[0]))
 
 
 class PlayerHand():
@@ -263,15 +264,15 @@ class PlayerHand():
 
     def __init__(self, suits: Dict[Suit, List[Rank]]):
         self.suits: Dict[Suit, List[Rank]] = suits
-        self.cards: List[Card] = []
+        self.cards: List[Card_] = []
         self.pair_vul = False
         self.opp_vul = False
         for suit in reversed(Suit):
             for rank in self.suits[suit]:
-                self.cards.append(Card(suit, rank))
+                self.cards.append(Card_(suit, rank))
 
     @staticmethod
-    def from_cards(cards: Iterable[Card]) -> PlayerHand:
+    def from_cards(cards: Iterable[Card_]) -> PlayerHand:
         suits = {
             Suit.CLUBS: sorted([card.rank for card in cards if card.suit == Suit.CLUBS], reverse=True),
             Suit.DIAMONDS: sorted([card.rank for card in cards if card.suit == Suit.DIAMONDS], reverse=True),
@@ -295,20 +296,90 @@ class PlayerHand():
             for rank in temp:
                 match index:
                     case 0:
-                        cards.append(Card(Suit.SPADES, Rank.from_str(rank)))
+                        cards.append(Card_(Suit.SPADES, Rank.from_str(rank)))
                     case 1:
-                        cards.append(Card(Suit.HEARTS, Rank.from_str(rank)))
+                        cards.append(Card_(Suit.HEARTS, Rank.from_str(rank)))
                     case 2:
-                        cards.append(Card(Suit.DIAMONDS, Rank.from_str(rank)))
+                        cards.append(Card_(Suit.DIAMONDS, Rank.from_str(rank)))
                     case 3:
-                        cards.append(Card(Suit.CLUBS, Rank.from_str(rank)))
+                        cards.append(Card_(Suit.CLUBS, Rank.from_str(rank)))
 
         return PlayerHand.from_cards(cards)
 
-    def get_as_32_list(self) :
-        return [c.to_32() for c in self.cards]
+    def len(self) -> int:
+        # print(self.suits,self.cards)
+        assert sum([len(ranks) for ranks in self.suits.values()])==len(self.cards)
+        return sum([len(ranks) for ranks in self.suits.values()])
 
-TOTAL_DECK : List[Card] = []
+    def append(self, card: Card_):
+        if card not in self.cards :
+            self.cards.append(card)
+        if card.rank not in self.suits[card.suit] :
+            self.suits[card.suit].append(card.rank)
+
+    def get_as_32_list(self) :
+        cards_32 = [0]*32
+        for i in self.cards :
+            cards_32[i.to_32()]=1
+        return cards_32
+
+    def to_pbn(self) -> str:
+        suit_arrays = [[], [], [], []]
+        for card in self.cards:
+            suit_arrays[card.suit.value].append(repr(card))
+        repr_str = ".".join("".join(suit) for suit in suit_arrays)
+        return repr_str
+
+    def __repr__(self) -> str:
+        suit_arrays = [[], [], [], []]
+        for card in self.cards:
+            suit_arrays[card.suit.value].append(repr(card))
+        repr_str = "|".join("".join(suit) for suit in suit_arrays)
+        return f"PlayerHand({repr_str})"
+
+    def __str__(self) -> str:
+        suit_arrays = [['♠'], ['♥'], ['♦'], ['♣']]
+        for card in sorted(self.cards,reverse=True):
+            suit_arrays[card.suit.value].append(repr(card))
+        repr_str = " ".join("".join(suit) for suit in suit_arrays)
+        return f"{repr_str}"
+
+TOTAL_DECK : List[Card_] = []
 for rank in Rank:
     for suit in Suit:
-        TOTAL_DECK.append(Card(suit, rank))
+        TOTAL_DECK.append(Card_(suit, rank))
+
+class Diag():
+    def __init__(self, hands: Dict[Direction, PlayerHand], autocomplete=True):
+        self.hands = hands
+        if autocomplete:
+            self.auto_complete()
+        self.player_cards = {
+            direction: self.hands[direction].cards for direction in self.hands}
+
+    def auto_complete(self) -> Dict[Direction, PlayerHand]:
+        missing_cards = self.missing_cards()
+        shuffle(missing_cards)
+        for dir in Direction:
+            if dir not in self.hands:
+                self.hands[dir] = PlayerHand({suit: [] for suit in Suit})
+            while self.hands[dir].len() < 13:
+                if len(missing_cards)==0 :
+                    print(self.hands)
+                self.hands[dir].append(missing_cards.pop())
+        return self.hands
+
+    def missing_cards(self) -> List[Card_]:
+        list_of_cards = []
+        for player_hand in self.hands.values():
+            for card in player_hand.cards:
+                if card in list_of_cards:
+                    print(self.hands)
+                    print("Cette carte est en double", card)
+                assert card not in list_of_cards
+                list_of_cards.append(card)
+        missing_cards = [
+            card for card in TOTAL_DECK if card not in list_of_cards]
+        return missing_cards
+
+

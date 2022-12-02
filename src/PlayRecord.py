@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import logging
 from typing import Dict, List, Optional, Set, Tuple
 
-from .utils  import Direction, Card, BiddingSuit, Suit
+from utils  import Direction, Card_, BiddingSuit, Suit
 
 
 @dataclass
@@ -16,12 +16,14 @@ class PlayRecord:
 
 
     @staticmethod
-    def from_tricks_as_list(trump : BiddingSuit,list_of_tricks : List[List[Card]], declarer : Direction) -> PlayRecord :
+    def from_tricks_as_list(trump : BiddingSuit,list_of_tricks : List[List[str]], declarer : Direction) -> PlayRecord :
+        list_of_tricks = [[Card_.from_str(card) for card in trick] for trick in list_of_tricks]
         tricks : List[Trick] = []
         tricks_count = 0
         turn = declarer.offset(1)
-        shown_out_suits = Dict[Direction,Set(Suit)] = {d:set() for d in Direction}
-        cards_played_32 : List[List[int]] = [[]*4]
+        shown_out_suits : Dict[Direction,Set(Suit)] = {d:set() for d in Direction}
+        cards_played_32 : List[List[int]] = [[] for _ in range(4)]
+        print(list_of_tricks)
         for trick_as_list in list_of_tricks :
             current_trick = {}
             for i,card in enumerate(trick_as_list) :
@@ -53,11 +55,11 @@ class PlayRecord:
             return len(self.record)
 
 
-@dataclass
 class Trick():
-    lead: Direction
-    cards: Dict[Direction, Card]
-    shown_out_suit : Dict[Direction,Suit] = {}
+    def __init__(self, lead : Direction, cards : Dict[Direction,Card_], shown_out_suit : Dict[Direction,Suit]={}) -> None:
+        self.lead: Direction = lead
+        self.cards: Dict[Direction, Card_] = cards
+        self.shown_out_suit : Dict[Direction,Suit] = shown_out_suit
 
     def winner(self, trump: BiddingSuit) -> Direction:
         winner = self.lead
@@ -106,15 +108,15 @@ class Trick():
         return string[:-1]
 
     def get_as_32_list(self) :
-        trick_as_list : List[Tuple[Direction,Card]]= []
+        trick_as_list : List[Tuple[Direction,Card_]]= []
         dir : Direction = self.lead
         for _ in range(len(self.cards)) :
             trick_as_list.append(self.cards[dir].to_32())
             dir = dir.offset(1)
         return trick_as_list
 
-    def __trick_as_list__(self) -> List[Tuple[Direction,Card]] :
-        trick_as_list : List[Tuple[Direction,Card]]= []
+    def __trick_as_list__(self) -> List[Tuple[Direction,Card_]] :
+        trick_as_list : List[Tuple[Direction,Card_]]= []
         dir : Direction = self.lead
         for _ in range(len(self.cards)) :
             trick_as_list.append((dir,self.cards[dir]))

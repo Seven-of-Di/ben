@@ -13,8 +13,8 @@ from bidding import bidding
 # 224:256 this trick pard card
 # 256:288 this trick rho card
 # 288:292 last trick lead player index one-hot
-#     292 level
-# 293:298 strain one hot N, S, H, D, C
+#     293 level
+# 294:298 strain one hot N, S, H, D, C
 class BinaryInput:
 
     def __init__(self, x):

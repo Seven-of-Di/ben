@@ -119,8 +119,11 @@ class CardByCard:
                 
                 rollout_states = None
                 if isinstance(card_players[player_i], bots.CardPlayer):
-                    rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits, current_trick, 200, self.padded_auction, card_players[player_i].hand.reshape((-1, 32)), self.vuln, self.models)
-
+                    rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits, current_trick, 50, self.padded_auction, card_players[player_i].hand.reshape((-1, 32)), self.vuln, self.models)
+                    if player_i==3 and trick_i==2 :
+                        with np.printoptions(threshold=np.inf):
+                            print(card_players[player_i].x_play[0,2,:32])
+                            # print(card_players[player_i].x_play)
                 card_resp = card_players[player_i].play_card(trick_i, leader_i, current_trick52, rollout_states)
 
                 card_resp = CardResp(Card.from_symbol(self.play[card_i]), card_resp.candidates, card_resp.samples)
@@ -135,7 +138,6 @@ class CardByCard:
                 
                 card52 = card_resp.card.code()
                 card = deck52.card52to32(card52)
-                print(card_resp.to_dict(),card)
 
                 for card_player in card_players:
                     card_player.set_card_played(trick_i=trick_i, leader_i=leader_i, i=player_i, card=card)

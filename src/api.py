@@ -2,17 +2,13 @@ from aioflask import Flask, request
 
 from nn.models import Models
 from game import AsyncBotBid
+import binary
 import conf
+import sample
+import transform_play_card
+from utils import DIRECTIONS,VULNERABILITIES
 
 app = Flask(__name__)
-
-DIRECTIONS = 'NESW'
-VULNERABILITIES = {
-    'None': [False, False],
-    'N-S': [True, False],
-    'E-W': [False, True],
-    'Both': [True, True]
-}
 
 MODELS = Models.from_conf(conf.load("../default.conf"))
 
@@ -23,9 +19,60 @@ class PlaceBid:
     self.dealer = place_bid_request.dealer
     self.auction = ['PAD_START'] * DIRECTIONS.index(self.dealer) + place_bid_request.auction
 
+class PlayCard:
+  def __init__(self, play_card_request):
+    self.hand = play_card_request["hand"]
+    self.dummy_hand = play_card_request["dummy_hand"]
+    self.dealer = play_card_request["deal`er"]
+    self.vuln = play_card_request["vuln"]
+    self.auction = play_card_request["auction"]
+    self.contract = play_card_request["contract"]
+    self.contract_direction = play_card_request["contract_direction"]
+    self.next_player = play_card_request["next_player"]
+    self.tricks = play_card_request["tricks"]
+
+'''
+{
+  "hand": "QJ3.542.KJT7.AQ2",
+  "dummy_hand": "AK2.KQT.AQ52.KJ3",
+  "dealer": "E",
+  "vuln": "None",
+  "auction": [
+    "1C",
+    "PASS",
+    "PASS",
+    "PASS"
+  ],
+  "contract": "2C",
+  "contract_direction: "N",
+  "current_trick_leader": "N",
+  "next_player": "E",
+  "tricks": [
+    ["C2", "C3", "C4", "C5"],
+    ["HA"]
+  ]
+}
+'''
 @app.route('/play_card', methods=["POST"])
 async def play_card():
-  pass
+  app.logger.info(request.get_json())
+  req = PlayCard(request.get_json())
+
+  card_to_play = transform_play_card(
+    req.hand,
+    req.dummy_hand,
+    req.dealer,
+    req.vuln,
+    req.auction,
+    req.contract,
+    req.contract_direction,
+    req.next_player,
+    req.tricks,
+    MODELS
+  )
+
+  return {'card': card_to_play}
+
 
 '''
 {
@@ -43,13 +90,14 @@ async def play_card():
 async def place_bid():
   try:
     app.logger.info(request.get_json())
+    req = PlaceBid(request.get_json())
     bot = AsyncBotBid(
-      [False, False],
-      "QJ3.542.KJT7.AQ2",
+      req.vuln,
+      req.hand,
       MODELS
     )
 
-    bid_resp = await bot.async_bid(['PAD_START', '1C', 'PASS', 'PASS'])
+    bid_resp = await bot.async_bid(req.auction)
 
     return bid_resp.to_dict()
   except Exception as e:
@@ -61,4 +109,4 @@ async def healthz():
   return {'status': 'ok'}
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8081, use_reloader=True)
+    app.run(host='0.0.0.0', port=8081, debug=True, use_reloader=True)

@@ -9,6 +9,8 @@ from typing import Dict, Iterable, List
 Common bridge concepts such as Cardinal Direction, Suit, and Card Rank represented as Enums
 """
 
+DIRECTIONS = 'NESW'
+
 VULNERABILITIES = {
     'None': [False, False],
     'N-S': [True, False],

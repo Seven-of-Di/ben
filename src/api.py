@@ -45,7 +45,6 @@ class PlayCard:
   ],
   "contract": "2C",
   "contract_direction: "N",
-  "current_trick_leader": "N",
   "next_player": "E",
   "tricks": [
     ["C2", "C3", "C4", "C5"],

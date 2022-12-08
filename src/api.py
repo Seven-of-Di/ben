@@ -23,7 +23,7 @@ class PlayCard:
   def __init__(self, play_card_request):
     self.hand = play_card_request["hand"]
     self.dummy_hand = play_card_request["dummy_hand"]
-    self.dealer = play_card_request["deal`er"]
+    self.dealer = play_card_request["dealer"]
     self.vuln = play_card_request["vuln"]
     self.auction = play_card_request["auction"]
     self.contract = play_card_request["contract"]

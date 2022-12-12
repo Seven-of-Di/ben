@@ -2,9 +2,8 @@ from aioflask import Flask, request
 
 from nn.models import Models
 from game import AsyncBotBid
-import binary
+import os
 import conf
-import sample
 import transform_play_card
 from utils import DIRECTIONS,VULNERABILITIES
 
@@ -107,5 +106,7 @@ async def place_bid():
 async def healthz():
   return {'status': 'ok'}
 
+port = os.environ.get('PORT', '8081')
+
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8081, debug=True, use_reloader=True)
+    app.run(host='0.0.0.0', port=port, debug=True, use_reloader=True)

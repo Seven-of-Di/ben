@@ -4,7 +4,7 @@ from nn.models import Models
 from game import AsyncBotBid
 import os
 import conf
-import transform_play_card
+from transform_play_card import get_ben_card_play_answer
 from utils import DIRECTIONS,VULNERABILITIES
 import tensorflow.compat.v1 as tf
 
@@ -23,15 +23,15 @@ class PlaceBid:
 
 class PlayCard:
   def __init__(self, play_card_request):
-    self.hand = play_card_request["hand"]
-    self.dummy_hand = play_card_request["dummy_hand"]
-    self.dealer = play_card_request["dealer"]
-    self.vuln = play_card_request["vuln"]
-    self.auction = play_card_request["auction"]
-    self.contract = play_card_request["contract"]
-    self.contract_direction = play_card_request["contract_direction"]
-    self.next_player = play_card_request["next_player"]
-    self.tricks = play_card_request["tricks"]
+    self.hand = play_card_request['hand']
+    self.dummy_hand = play_card_request['dummy_hand']
+    self.dealer = play_card_request['dealer']
+    self.vuln = play_card_request['vuln']
+    self.auction = play_card_request['auction']
+    self.contract = play_card_request['contract']
+    self.contract_direction = play_card_request['contract_direction']
+    self.next_player = play_card_request['next_player']
+    self.tricks = play_card_request['tricks']
 
 '''
 {
@@ -56,23 +56,27 @@ class PlayCard:
 '''
 @app.route('/play_card', methods=["POST"])
 async def play_card():
-  app.logger.info(request.get_json())
-  req = PlayCard(request.get_json())
+  try:
+    app.logger.info(request.get_json())
+    req = PlayCard(request.get_json())
 
-  card_to_play = transform_play_card(
-    req.hand,
-    req.dummy_hand,
-    req.dealer,
-    req.vuln,
-    req.auction,
-    req.contract,
-    req.contract_direction,
-    req.next_player,
-    req.tricks,
-    MODELS
-  )
+    card_to_play = get_ben_card_play_answer(
+      req.hand,
+      req.dummy_hand,
+      req.dealer,
+      req.vuln,
+      req.auction,
+      req.contract,
+      req.contract_direction,
+      req.next_player,
+      req.tricks,
+      MODELS
+    )
 
-  return {'card': card_to_play}
+    return {'card': card_to_play}
+  except Exception as e:
+    app.logger.exception(e)
+    return {'error': 'Unexpected error'}
 
 
 '''

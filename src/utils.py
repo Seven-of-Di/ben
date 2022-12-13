@@ -296,16 +296,15 @@ class PlayerHand():
                         continue
                     temp = temp.replace('x', rank.abbreviation(), 1)
             for rank in temp:
-                match index:
-                    case 0:
-                        cards.append(Card_(Suit.SPADES, Rank.from_str(rank)))
-                    case 1:
-                        cards.append(Card_(Suit.HEARTS, Rank.from_str(rank)))
-                    case 2:
-                        cards.append(Card_(Suit.DIAMONDS, Rank.from_str(rank)))
-                    case 3:
-                        cards.append(Card_(Suit.CLUBS, Rank.from_str(rank)))
-
+                if index == 0:
+                    cards.append(Card_(Suit.SPADES, Rank.from_str(rank)))
+                elif index == 1:
+                    cards.append(Card_(Suit.HEARTS, Rank.from_str(rank)))
+                elif index == 2:
+                    cards.append(Card_(Suit.DIAMONDS, Rank.from_str(rank)))
+                elif index == 3:
+                    cards.append(Card_(Suit.CLUBS, Rank.from_str(rank)))
+                        
         return PlayerHand.from_cards(cards)
 
     def len(self) -> int:

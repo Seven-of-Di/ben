@@ -6,6 +6,9 @@ import os
 import conf
 import transform_play_card
 from utils import DIRECTIONS,VULNERABILITIES
+import tensorflow.compat.v1 as tf
+
+tf.disable_v2_behavior()
 
 app = Flask(__name__)
 
@@ -13,10 +16,10 @@ MODELS = Models.from_conf(conf.load("../default.conf"))
 
 class PlaceBid:
   def __init__(self, place_bid_request):
-    self.vuln = VULNERABILITIES[place_bid_request.vuln]
-    self.hand = place_bid_request.hand
-    self.dealer = place_bid_request.dealer
-    self.auction = ['PAD_START'] * DIRECTIONS.index(self.dealer) + place_bid_request.auction
+    self.vuln = VULNERABILITIES[place_bid_request['vuln']]
+    self.hand = place_bid_request['hand']
+    self.dealer = place_bid_request['dealer']
+    self.auction = ['PAD_START'] * DIRECTIONS.index(self.dealer) + place_bid_request['auction']
 
 class PlayCard:
   def __init__(self, play_card_request):
@@ -97,7 +100,7 @@ async def place_bid():
 
     bid_resp = await bot.async_bid(req.auction)
 
-    return bid_resp.to_dict()
+    return {'bid': bid_resp.bid}
   except Exception as e:
     app.logger.exception(e)
     return {'error': 'Unexpected error'}

@@ -1,10 +1,6 @@
 {
-  "hand": "QJ3J.542.KJT7.AQ2",
-  "dealer": "N",
-  "vuln": "None",
-  "auction": [
-    "1C",
-    "PASS",
-    "PASS"
-  ]
+    "hand": "QJ3.542.KJT7.AQ2",
+    "dealer": "N",
+    "vuln": "None",
+    "auction": ["1C", "PASS", "PASS"]
 }

@@ -1,4 +1,4 @@
 [submodule "libdds"]
 	path = libdds
-	url = git@github.com:online-bridge-hackathon/libdds.git
+	url = https://github.com/online-bridge-hackathon/libdds.git
 	branch = master

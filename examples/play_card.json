@@ -1,0 +1,11 @@
+{
+    "hand": "Q8754.2.KT8.QT92",
+    "dummy_hand": ".T87543.QJ53.76",
+    "dealer": "N",
+    "vuln": "None",
+    "auction": ["1H", "PASS", "1N", "PASS", "PASS", "PASS"],
+    "contract": "1N",
+    "contract_direction": "S",
+    "next_player": "E",
+    "tricks": [["SA", "SK"]]
+}

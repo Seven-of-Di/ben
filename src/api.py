@@ -60,7 +60,7 @@ async def play_card():
     app.logger.info(request.get_json())
     req = PlayCard(request.get_json())
 
-    card_to_play = get_ben_card_play_answer(
+    card_to_play = await get_ben_card_play_answer(
       req.hand,
       req.dummy_hand,
       req.dealer,

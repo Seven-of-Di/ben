@@ -78,7 +78,9 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
                 card_i += 1
                 if card_i >= len(play):
                     rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits, current_trick, 200, padded_auction, card_players[player_i].hand.reshape((-1, 32)), vuls, MODELS)
-                    return await list(card_players[player_i].async_play_card(trick_i, leader_i, current_trick52, rollout_states).to_dict().values())[0]
+                    resp = await card_players[player_i].async_play_card(trick_i, leader_i, current_trick52, rollout_states)
+                    
+                    return list(resp.to_dict().values())[0]
 
                 card52 = Card.from_symbol(play[card_i]).code() 
                 card = deck52.card52to32(card52)

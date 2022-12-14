@@ -1,7 +1,7 @@
 from aioflask import Flask, request
 
 from nn.models import Models
-from game import AsyncBotBid
+from game import AsyncBotBid, AsyncBotLead
 import os
 import conf
 from transform_play_card import get_ben_card_play_answer
@@ -32,6 +32,12 @@ class PlayCard:
     self.contract_direction = play_card_request['contract_direction']
     self.next_player = play_card_request['next_player']
     self.tricks = play_card_request['tricks']
+
+class MakeLead:
+  def __init__(self, make_lead_request):
+    self.hand = make_lead_request['hand']
+    self.vuln = VULNERABILITIES[make_lead_request['vuln']]
+    self.auction = ['PAD_START'] * DIRECTIONS.index(self.dealer) + make_lead_request['auction']
 
 '''
 {
@@ -93,6 +99,20 @@ async def place_bid():
     bid_resp = await bot.async_bid(req.auction)
 
     return {'bid': bid_resp.bid}
+  except Exception as e:
+    app.logger.exception(e)
+    return {'error': 'Unexpected error'}
+
+@app.route('/make_lead', methods=['POST'])
+async def make_lead():
+  try:
+    app.logger.info(request.get_json())
+    req = MakeLead(request.get_json())
+    bot = AsyncBotLead(req.vuln, req.hand, MODELS)
+
+    lead = await bot.lead(req.auction)
+
+    return {'card': lead.to_dict()['candidates'][0]}
   except Exception as e:
     app.logger.exception(e)
     return {'error': 'Unexpected error'}

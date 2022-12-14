@@ -35,23 +35,15 @@ class PlayCard:
 
 '''
 {
-  "hand": "QJ3.542.KJT7.AQ2",
-  "dummy_hand": "AK2.KQT.AQ52.KJ3",
-  "dealer": "E",
-  "vuln": "None",
-  "auction": [
-    "1C",
-    "PASS",
-    "PASS",
-    "PASS"
-  ],
-  "contract": "2C",
-  "contract_direction: "N",
-  "next_player": "E",
-  "tricks": [
-    ["C2", "C3", "C4", "C5"],
-    ["HA"]
-  ]
+    "hand": "Q8754.2.KT8.QT92",
+    "dummy_hand": ".T87543.QJ53.76",
+    "dealer": "N",
+    "vuln": "None",
+    "auction": ["1H", "PASS", "1N", "PASS", "PASS", "PASS"],
+    "contract": "1N",
+    "contract_direction": "S",
+    "next_player": "E",
+    "tricks": [["SA", "SK"]]
 }
 '''
 @app.route('/play_card', methods=["POST"])
@@ -81,14 +73,10 @@ async def play_card():
 
 '''
 {
-  "hand": "QJ3.542.KJT7.AQ2",
-  "dealer": "E",
-  "vuln": "None",
-  "auction": [
-    "1C",
-    "PASS",
-    "PASS"
-  ]
+    "hand": "QJ3.542.KJT7.AQ2",
+    "dealer": "N",
+    "vuln": "None",
+    "auction": ["1C", "PASS", "PASS"]
 }
 '''
 @app.route('/place_bid', methods=["POST"])

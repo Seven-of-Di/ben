@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 
 from objects import Card
-from utils import Direction,PlayerHand,VULNERABILITIES,Diag
+from utils import Direction,PlayerHand,VULNERABILITIES,Diag,Suit
 from PlayRecord import PlayRecord,BiddingSuit
 
 import bots
@@ -86,6 +86,8 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
                     resp = await card_players[player_i].async_play_card(trick_i, leader_i, current_trick52, rollout_states)
 
                     best_choice = list(resp.to_dict().values())[0]
+                    if best_choice[1]=="x" :
+                        return best_choice[0]+sorted(random_diag.hands[next_player].suits[Suit.from_str(best_choice[0])])[0].abbreviation()
                     return best_choice
 
                 card52 = Card.from_symbol(play[card_i]).code() 

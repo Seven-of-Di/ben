@@ -36,6 +36,7 @@ class PlayCard:
 class MakeLead:
   def __init__(self, make_lead_request):
     self.hand = make_lead_request['hand']
+    self.dealer = make_lead_request['dealer']
     self.vuln = VULNERABILITIES[make_lead_request['vuln']]
     self.auction = ['PAD_START'] * DIRECTIONS.index(self.dealer) + make_lead_request['auction']
 
@@ -52,7 +53,7 @@ class MakeLead:
     "tricks": [["SA", "SK"]]
 }
 '''
-@app.route('/play_card', methods=["POST"])
+@app.route('/play_card', methods=['POST'])
 async def play_card():
   try:
     app.logger.info(request.get_json())
@@ -103,6 +104,14 @@ async def place_bid():
     app.logger.exception(e)
     return {'error': 'Unexpected error'}
 
+'''
+{
+    "hand": "QJ3.542.KJT7.AQ2",
+    "dealer": "N",
+    "vuln": "None",
+    "auction": ["1C", "PASS", "PASS", "PASS"]
+}
+'''
 @app.route('/make_lead', methods=['POST'])
 async def make_lead():
   try:
@@ -110,14 +119,14 @@ async def make_lead():
     req = MakeLead(request.get_json())
     bot = AsyncBotLead(req.vuln, req.hand, MODELS)
 
-    lead = await bot.lead(req.auction)
+    lead = bot.lead(req.auction)
 
-    return {'card': lead.to_dict()['candidates'][0]}
+    return {'card': lead.to_dict()['candidates'][0]['card']}
   except Exception as e:
     app.logger.exception(e)
     return {'error': 'Unexpected error'}
 
-@app.route('/healthz', methods=["GET"])
+@app.route('/healthz', methods=['GET'])
 async def healthz():
   return {'status': 'ok'}
 

@@ -7,7 +7,6 @@ import json
 import deck52
 import scoring
 
-from ddsolver.ddsolver import DDSolver
 from bidding import bidding
 from objects import Card
 from bidding.binary import parse_hand_f

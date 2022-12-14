@@ -4,6 +4,7 @@ import pprint
 
 import numpy as np
 
+from ddsolver import ddsolver
 import binary
 import nn.player as player
 import deck52
@@ -335,8 +336,6 @@ class CardPlayer:
         self.init_x_play(parse_hand_f(32)(public_hand_str), self.level, self.strain_i)
 
         self.score_by_tricks_taken = [scoring.score(self.contract, self.is_decl_vuln, n_tricks) for n_tricks in range(14)]
-
-        from ddsolver import ddsolver
         self.dd = ddsolver.DDSolver()
 
     def init_x_play(self, public_hand, level, strain_i):
@@ -377,8 +376,6 @@ class CardPlayer:
         return card_resp
 
     def next_card52(self, trick_i, leader_i, current_trick52, players_states):
-        from ddsolver import ddsolver
-        
         n_samples = players_states[0].shape[0]
 
         unavailable_cards = set(list(np.nonzero(self.hand52)[0]) + list(np.nonzero(self.public52)[0]) + current_trick52)

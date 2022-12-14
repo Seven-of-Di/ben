@@ -69,24 +69,9 @@ class Trick():
         except :
             logging.warning("The winner of the last trick didn't play in the following one")
             return winner
-        if trump == BiddingSuit.NO_TRUMP:
-            for dir, card in self.cards.items():
-                if card.suit == suit_led:
-                    if card > self.cards[winner]:
-                        winner = dir
-                else :
-                    self.shown_out_suit[dir].add(card.suit)
-        else:  # Trump
-            for dir, card in self.cards.items():
-                if card.suit == trump.to_suit():
-                    if self.cards[winner].suit == suit_led:
-                        winner = dir
-                    if self.cards[winner].suit == trump.to_suit():
-                        if card > self.cards[winner]:
-                            winner = dir
-                elif card.suit == suit_led and self.cards[winner].suit == suit_led:
-                    if card > self.cards[winner]:
-                        winner = dir
+        for dir, card in self.cards.items():
+            if card.trump_comparaison(self.cards[winner], trump, suit_led) :
+                winner = dir
 
         return winner
 

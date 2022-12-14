@@ -84,11 +84,7 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
                 if card_i >= len(play):
                     rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits, current_trick, 200, padded_auction, card_players[player_i].hand.reshape((-1, 32)), vuls, MODELS)
                     resp = await card_players[player_i].async_play_card(trick_i, leader_i, current_trick52, rollout_states)
-
-                    best_choice = list(resp.to_dict().values())[0]
-                    if best_choice[1]=="x" :
-                        return best_choice[0]+sorted(random_diag.hands[next_player].suits[Suit.from_str(best_choice[0])])[0].abbreviation()
-                    return best_choice
+                    return low_card_to_real_card(random_diag.hands[next_player],list(resp.to_dict().values())[0])
 
                 card52 = Card.from_symbol(play[card_i]).code() 
                 card = deck52.card52to32(card52)
@@ -171,3 +167,8 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
             leader_i = trick_winner
             current_trick = []
             current_trick52 = []
+
+def low_card_to_real_card(hand : PlayerHand, card_str : str) :
+    if card_str[1]=="x" :
+        return card_str[0]+sorted(hand.suits[Suit.from_str(card_str[0])])[0].abbreviation()
+    return card_str

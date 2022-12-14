@@ -4,8 +4,8 @@ from nn.models import Models
 from game import AsyncBotBid, AsyncBotLead
 import os
 import conf
-from transform_play_card import get_ben_card_play_answer
-from utils import DIRECTIONS,VULNERABILITIES
+from transform_play_card import get_ben_card_play_answer,low_card_to_real_card
+from utils import DIRECTIONS,VULNERABILITIES,PlayerHand
 import tensorflow.compat.v1 as tf
 
 tf.disable_v2_behavior()
@@ -121,7 +121,7 @@ async def make_lead():
 
     lead = bot.lead(req.auction)
 
-    return {'card': lead.to_dict()['candidates'][0]['card']}
+    return {'card': low_card_to_real_card(PlayerHand.from_pbn(req.hand),lead.to_dict()['candidates'][0]['card'])}
   except Exception as e:
     app.logger.exception(e)
     return {'error': 'Unexpected error'}

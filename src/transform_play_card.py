@@ -22,6 +22,7 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
     level = int(contract[0])
     next_player = Direction.from_str(next_player_str) 
     declarer = Direction.from_str(declarer_str)
+    dummy = declarer.offset(2)
     strain_i = bidding.get_strain_i(contract)
     decl_i = bidding.get_decl_i(contract)
     vuls = VULNERABILITIES[vuln_str]
@@ -29,7 +30,11 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
     play = [item for sublist in tricks_str for item in sublist]
 
     hands_for_diag = {d:PlayerHand.from_pbn(hand_str if next_player==d else "") for d in Direction}
-    hands_for_diag[Direction.from_str(dealer_str).offset(2)]=PlayerHand.from_pbn(dummy_hand_str)
+    if dummy == next_player:
+        hands_for_diag[declarer] = PlayerHand.from_pbn(hand_str)
+
+    hands_for_diag[dummy]=PlayerHand.from_pbn(dummy_hand_str)
+
     play_record = PlayRecord.from_tricks_as_list(declarer=declarer,list_of_tricks = tricks_str, trump = BiddingSuit.from_str(contract[1]))
 
     for trick in play_record.record :

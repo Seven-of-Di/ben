@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import List
 import numpy as np
-import time
+from datetime import datetime
 
 from objects import Card
 from utils import Direction,PlayerHand,VULNERABILITIES,Diag,Suit
@@ -84,9 +84,9 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
                 card_i += 1
                 if card_i >= len(play):
                     rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits, current_trick, 200, padded_auction, card_players[player_i].hand.reshape((-1, 32)), vuls, MODELS)
-                    print("["+time.time()+"] Before calling async_play_card")
+                    print("["+datetime.now().strftime("%m/%d/%Y, %H:%M:%S")+"] Before calling async_play_card")
                     resp = await card_players[player_i].async_play_card(trick_i, leader_i, current_trick52, rollout_states)
-                    print("["+time.time()+"] After calling async_play_card")
+                    print("["+datetime.now().strftime("%m/%d/%Y, %H:%M:%S")+"] After calling async_play_card")
                     return low_card_to_real_card(random_diag.hands[next_player],list(resp.to_dict().values())[0])
 
                 card52 = Card.from_symbol(play[card_i]).code() 

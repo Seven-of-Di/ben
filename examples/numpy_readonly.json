@@ -1,0 +1,17 @@
+{
+    "hand": "985.732..KT4",
+    "dummy_hand": "A.K.8.J9872",
+    "dealer": "N",
+    "vuln": "None",
+    "auction": ["PASS", "3D", "PASS", "PASS", "PASS"],
+    "contract": "3D",
+    "contract_direction": "E",
+    "next_player": "N",
+    "tricks": [
+        ["S3", "SJ", "SK", "S7"],
+        ["ST", "S4", "S2", "SQ"],
+        ["CA", "C6", "CQ", "C3"],
+        ["D5", "DK", "DA", "DT"],
+        ["H5", "HA", "HT"]
+    ]
+}

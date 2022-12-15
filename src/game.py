@@ -1,24 +1,4 @@
-import deck52
-import pprint
-import time
-import json
-import asyncio
-import uuid
-import shelve
-
-import numpy as np
-
-import human
 import bots
-import sample
-import conf
-
-from bidding import bidding
-from nn.models import Models
-from deck52 import decode_card
-from bidding.binary import DealData
-from objects import CardResp, Card
-
 
 def random_deal():
     deal_str = deck52.random_deal()

@@ -58,6 +58,7 @@ class MakeLead:
 async def play_card():
   try:
     data = await request.get_json()
+    # app.logger.warn(data)
     req = PlayCard(data)
 
     card_to_play = await get_ben_card_play_answer(
@@ -132,8 +133,3 @@ async def make_lead():
 @app.get('/healthz')
 async def healthz():
   return {'status': 'ok'}
-
-port = os.environ.get('PORT', '8081')
-
-# if __name__ == "__main__":
-app.run(host='0.0.0.0', port=port, debug=True, use_reloader=True)

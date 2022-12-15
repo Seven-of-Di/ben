@@ -250,12 +250,8 @@ def shuffle_cards_bidding_info(n_samples, binfo, auction, hand, vuln, known_nesw
     ak_cards = [c for c in hidden_cards if c in {0,1,8,9,16,17,24,25}]
     small_cards = [c for c in hidden_cards if c not in {0,1,8,9,16,17,24,25}]
 
-    ak_out_i = np.zeros((n_samples, len(ak_cards)), dtype=int)
-    ak_out_i[:,:] = np.array(ak_cards)
-    ak_out_i = np.vectorize(np.random.permutation, signature='(n)->(n)')(ak_out_i)
-    small_out_i = np.zeros((n_samples, len(small_cards)), dtype=int)
-    small_out_i[:,:] = np.array(small_cards)
-    small_out_i = np.vectorize(np.random.permutation, signature='(n)->(n)')(small_out_i)
+    ak_out_i = np.array([np.random.permutation(ak_cards) for _ in range (n_samples)],dtype=int)
+    small_out_i = np.array([np.random.permutation(small_cards) for _ in range (n_samples)],dtype=int)
 
     r_hcp = np.zeros((n_samples, 2)) + p_hcp
     r_shp = np.zeros((n_samples, 2, 4)) + p_shp

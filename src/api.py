@@ -1,7 +1,7 @@
-from aioflask import Flask, request
+from flask import Flask, request
 
 from nn.models import Models
-from game import AsyncBotBid, AsyncBotLead
+from bots import BotBid, BotLead
 import os
 import conf
 from transform_play_card import get_ben_card_play_answer,low_card_to_real_card
@@ -54,12 +54,12 @@ class MakeLead:
 }
 '''
 @app.route('/play_card', methods=['POST'])
-async def play_card():
+def play_card():
   try:
     app.logger.info(request.get_json())
     req = PlayCard(request.get_json())
 
-    card_to_play = await get_ben_card_play_answer(
+    card_to_play = get_ben_card_play_answer(
       req.hand,
       req.dummy_hand,
       req.dealer,
@@ -87,17 +87,17 @@ async def play_card():
 }
 '''
 @app.route('/place_bid', methods=["POST"])
-async def place_bid():
+def place_bid():
   try:
     app.logger.info(request.get_json())
     req = PlaceBid(request.get_json())
-    bot = AsyncBotBid(
+    bot = BotBid(
       req.vuln,
       req.hand,
       MODELS
     )
 
-    bid_resp = await bot.async_bid(req.auction)
+    bid_resp = bot.bid(req.auction)
 
     return {'bid': bid_resp.bid}
   except Exception as e:
@@ -113,11 +113,11 @@ async def place_bid():
 }
 '''
 @app.route('/make_lead', methods=['POST'])
-async def make_lead():
+def make_lead():
   try:
     app.logger.info(request.get_json())
     req = MakeLead(request.get_json())
-    bot = AsyncBotLead(req.vuln, req.hand, MODELS)
+    bot = BotLead(req.vuln, req.hand, MODELS)
 
     lead = bot.lead(req.auction)
 
@@ -127,7 +127,7 @@ async def make_lead():
     return {'error': 'Unexpected error'}
 
 @app.route('/healthz', methods=['GET'])
-async def healthz():
+def healthz():
   return {'status': 'ok'}
 
 port = os.environ.get('PORT', '8081')

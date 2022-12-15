@@ -6,15 +6,14 @@ from objects import Card
 from utils import Direction,PlayerHand,VULNERABILITIES,Diag,Suit
 from PlayRecord import PlayRecord,BiddingSuit
 
-import bots
 from bidding import bidding
 import deck52
 import sample
 
-from game import AsyncCardPlayer
+from bots import CardPlayer
 
 
-async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_str, auction, contract, declarer_str, next_player_str, tricks_str, MODELS):
+def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_str, auction, contract, declarer_str, next_player_str, tricks_str, MODELS):
     padded_auction = ["PAD_START"] * Direction.from_str(dealer_str).value + auction
     
     contract = bidding.get_contract(padded_auction)
@@ -48,10 +47,10 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
     decl_hand = random_diag.hands[declarer].to_pbn()
 
     card_players = [
-            AsyncCardPlayer(MODELS.player_models, 0, lefty_hand, dummy_hand, contract, is_decl_vuln),
-            AsyncCardPlayer(MODELS.player_models, 1, dummy_hand, decl_hand, contract, is_decl_vuln),
-            AsyncCardPlayer(MODELS.player_models, 2, righty_hand, dummy_hand, contract, is_decl_vuln),
-            AsyncCardPlayer(MODELS.player_models, 3, decl_hand, dummy_hand, contract, is_decl_vuln)
+            CardPlayer(MODELS.player_models, 0, lefty_hand, dummy_hand, contract, is_decl_vuln),
+            CardPlayer(MODELS.player_models, 1, dummy_hand, decl_hand, contract, is_decl_vuln),
+            CardPlayer(MODELS.player_models, 2, righty_hand, dummy_hand, contract, is_decl_vuln),
+            CardPlayer(MODELS.player_models, 3, decl_hand, dummy_hand, contract, is_decl_vuln)
         ]
 
     player_cards_played = [[] for _ in range(4)]
@@ -83,7 +82,7 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
                 card_i += 1
                 if card_i >= len(play):
                     rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits, current_trick, 200, padded_auction, card_players[player_i].hand.reshape((-1, 32)), vuls, MODELS)
-                    resp = await card_players[player_i].async_play_card(trick_i, leader_i, current_trick52, rollout_states)
+                    resp = card_players[player_i].play_card(trick_i, leader_i, current_trick52, rollout_states)
                     return low_card_to_real_card(random_diag.hands[next_player],list(resp.to_dict().values())[0])
 
                 card52 = Card.from_symbol(play[card_i]).code() 

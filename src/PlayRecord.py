@@ -54,6 +54,14 @@ class PlayRecord:
         else :
             return len(self.record)
 
+    def get_cards_played_by_direction(self,direction : Direction) -> List[Card_]:
+        cards : List[Card_] = []
+        if self.record is None :
+            return []
+        for trick in self.record :
+            if direction in trick.cards :
+                cards.append(trick.cards[direction])
+        return cards
 
 class Trick():
     def __init__(self, lead : Direction, cards : Dict[Direction,Card_], shown_out_suit : Dict[Direction,Suit]={}) -> None:
@@ -99,6 +107,7 @@ class Trick():
             trick_as_list.append(self.cards[dir].to_32())
             dir = dir.offset(1)
         return trick_as_list
+
 
     def __trick_as_list__(self) -> List[Tuple[Direction,Card_]] :
         trick_as_list : List[Tuple[Direction,Card_]]= []

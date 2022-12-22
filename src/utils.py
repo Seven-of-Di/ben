@@ -345,6 +345,9 @@ class PlayerHand():
         repr_str = " ".join("".join(suit) for suit in suit_arrays)
         return f"{repr_str}"
 
+    def number_of_figures(self, suit: Suit) -> int:
+        return sum(el in self.suits[suit] for el in [Rank.ACE, Rank.KING, Rank.QUEEN, Rank.JACK])
+
 TOTAL_DECK : List[Card_] = []
 for rank in Rank:
     for suit in Suit:

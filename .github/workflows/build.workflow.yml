@@ -1,4 +1,4 @@
-name: Upgrade the DDS API image
+name: Upgrade Ben API image
 
 on:
   push:

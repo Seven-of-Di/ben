@@ -2,6 +2,7 @@ from __future__ import annotations
 import random
 from typing import List
 import numpy as np
+from datetime import datetime
 
 from objects import Card
 from utils import Direction, PlayerHand, VULNERABILITIES, Diag, Suit, Rank, Card_

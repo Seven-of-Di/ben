@@ -63,8 +63,6 @@ class CardByCard:
         contract = bidding.get_contract(self.padded_auction)
         decl_i = bidding.get_decl_i(contract)
 
-        print(self.play[0])
-
         bot_lead = bots.BotLead(self.vuln, self.hands[(decl_i + 1) % 4], self.models)
 
         card_resp = bot_lead.lead(self.padded_auction)

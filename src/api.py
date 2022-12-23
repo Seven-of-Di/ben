@@ -1,4 +1,4 @@
-from aioflask import Flask, request
+from quart import Quart, request
 
 from nn.models import Models
 from game import AsyncBotBid, AsyncBotLead
@@ -11,7 +11,7 @@ import tensorflow.compat.v1 as tf
 
 tf.disable_v2_behavior()
 
-app = Flask(__name__)
+app = Quart(__name__)
 
 MODELS = Models.from_conf(conf.load("../default.conf"))
 
@@ -65,9 +65,10 @@ class MakeLead:
 
 @app.route('/play_card', methods=['POST'])
 async def play_card():
-    try:
-        app.logger.info(request.get_json())
-        req = PlayCard(request.get_json())
+  try:
+    data = await request.get_json()
+    # app.logger.warn(data)
+    req = PlayCard(data)
 
         card_to_play = await get_ben_card_play_answer(
             req.hand,
@@ -96,18 +97,17 @@ async def play_card():
     "auction": ["1C", "PASS", "PASS"]
 }
 '''
-
-
-@app.route('/place_bid', methods=["POST"])
+@app.post('/place_bid')
 async def place_bid():
-    try:
-        app.logger.info(request.get_json())
-        req = PlaceBid(request.get_json())
-        bot = AsyncBotBid(
-            req.vuln,
-            req.hand,
-            MODELS
-        )
+  try:
+    data = await request.get_json()
+    req = PlaceBid(data)
+
+    bot = AsyncBotBid(
+      req.vuln,
+      req.hand,
+      MODELS
+    )
 
         bid_resp = await bot.async_bid(req.auction)
 
@@ -124,14 +124,13 @@ async def place_bid():
     "auction": ["1C", "PASS", "PASS", "PASS"]
 }
 '''
-
-
-@app.route('/make_lead', methods=['POST'])
+@app.post('/make_lead')
 async def make_lead():
-    try:
-        app.logger.info(request.get_json())
-        req = MakeLead(request.get_json())
-        bot = AsyncBotLead(req.vuln, req.hand, MODELS)
+  try:
+    data = await request.get_json()
+    req = MakeLead(data)
+
+    bot = AsyncBotLead(req.vuln, req.hand, MODELS)
 
         lead = bot.lead(req.auction)
         card_str = lead.to_dict()['candidates'][0]['card']
@@ -144,7 +143,7 @@ async def make_lead():
         return {'error': 'Unexpected error'}
 
 
-@app.route('/healthz', methods=['GET'])
+@app.get('/healthz')
 async def healthz():
     return {'status': 'ok'}
 

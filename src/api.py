@@ -65,10 +65,10 @@ class MakeLead:
 
 @app.route('/play_card', methods=['POST'])
 async def play_card():
-  try:
-    data = await request.get_json()
-    # app.logger.warn(data)
-    req = PlayCard(data)
+    try:
+        data = await request.get_json()
+        # app.logger.warn(data)
+        req = PlayCard(data)
 
         card_to_play = await get_ben_card_play_answer(
             req.hand,
@@ -99,15 +99,15 @@ async def play_card():
 '''
 @app.post('/place_bid')
 async def place_bid():
-  try:
-    data = await request.get_json()
-    req = PlaceBid(data)
+    try:
+        data = await request.get_json()
+        req = PlaceBid(data)
 
-    bot = AsyncBotBid(
-      req.vuln,
-      req.hand,
-      MODELS
-    )
+        bot = AsyncBotBid(
+            req.vuln,
+            req.hand,
+            MODELS
+        )
 
         bid_resp = await bot.async_bid(req.auction)
 
@@ -126,17 +126,17 @@ async def place_bid():
 '''
 @app.post('/make_lead')
 async def make_lead():
-  try:
-    data = await request.get_json()
-    req = MakeLead(data)
+    try:
+        data = await request.get_json()
+        req = MakeLead(data)
 
-    bot = AsyncBotLead(req.vuln, req.hand, MODELS)
+        bot = AsyncBotLead(req.vuln, req.hand, MODELS)
 
         lead = bot.lead(req.auction)
         card_str = lead.to_dict()['candidates'][0]['card']
         contract = next((bid for bid in reversed(req.auction) if len(bid)==2 and bid!="XX"),None)
         if contract is None :
-          raise Exception("contract is None")
+            raise Exception("contract is None")
         return {'card': lead_real_card(PlayerHand.from_pbn(req.hand),card_str,BiddingSuit.from_str(contract[1])).__str__()}
     except Exception as e:
         app.logger.exception(e)

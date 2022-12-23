@@ -23,7 +23,6 @@ class PlayRecord:
         turn = declarer.offset(1)
         shown_out_suits : Dict[Direction,Set(Suit)] = {d:set() for d in Direction}
         cards_played_32 : List[List[int]] = [[] for _ in range(4)]
-        print(list_of_tricks)
         for trick_as_list in list_of_tricks :
             current_trick = {}
             for i,card in enumerate(trick_as_list) :

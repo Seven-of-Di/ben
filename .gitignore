@@ -3,3 +3,4 @@ __pycache__
 src/gamedb.*
 
 env
+src/examples/Bidding.ipynb

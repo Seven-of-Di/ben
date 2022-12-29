@@ -219,7 +219,7 @@ class Card_:
         return self.rank < other.rank
 
     def __str__(self) -> str:
-        return self.rank.abbreviation() + self.suit.abbreviation()
+        return self.suit.abbreviation() + self.rank.abbreviation()
 
     def to_pbn(self) -> str:
         return self.suit.abbreviation() + self.rank.abbreviation()

@@ -148,6 +148,8 @@ async def healthz():
     return {'status': 'ok'}
 
 port = os.environ.get('PORT', '8081')
+debug = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
+use_reloader = os.environ.get('USE_RELOADER', 'False').lower() in ('true', '1', 't')
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=port, debug=True, use_reloader=True)
+    app.run(host='0.0.0.0', port=port, debug=debug, use_reloader=use_reloader)

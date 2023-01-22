@@ -46,12 +46,18 @@ class BotBid:
         hand_ix = len(auction) % 4
         
         X = binary.get_auction_binary(n_steps, auction, hand_ix, self.hand, self.vuln)
-
         return X[:,-1,:]
+
+    def restful_bid(self,auction) -> BidResp:
+        position_minus_1 = len(auction)%4
+        for i in range(len(auction)//4) :
+            self.get_bid_candidates(auction[:i*4+position_minus_1])
+        return self.bid(auction)
 
     def bid(self, auction):
         candidates = self.get_bid_candidates(auction)
         hands_np = self.sample_hands(auction)
+
 
         samples = []
         for i in range(min(10, hands_np.shape[0])):

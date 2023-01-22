@@ -9,7 +9,7 @@ def random_deal():
 
 class AsyncBotBid(bots.BotBid):
     async def async_bid(self, auction):
-        return self.bid(auction)
+        return self.restful_bid(auction)
 
 class AsyncBotLead(bots.BotLead):
     async def async_lead(self, auction):

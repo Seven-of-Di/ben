@@ -49,8 +49,10 @@ class BotBid:
         return X[:,-1,:]
 
     def restful_bid(self,auction) -> BidResp:
+        auction = [element for element in auction if element!="PAD_START"]
         position_minus_1 = len(auction)%4
-        for i in range(len(auction)//4) :
+
+        for i in range(len(auction)//4):
             self.get_bid_candidates(auction[:i*4+position_minus_1])
         return self.bid(auction)
 

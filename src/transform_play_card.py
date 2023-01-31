@@ -16,14 +16,13 @@ import sample
 from game import AsyncCardPlayer
 
 def get_play_status(hand : PlayerHand, current_trick: List[Card_]):
-    if current_trick == [] or len(current_trick)==4:
-        return "Lead"
-    match len(hand.suits[current_trick[0].suit]):
-        case 0:
+        if current_trick == [] or len(current_trick)==4:
+            return "Lead"
+        if len(hand.suits[current_trick[0].suit])==0 :
             return "Discard"
-        case 1:
+        elif len(hand.suits[current_trick[0].suit])==1:
             return "Forced"
-        case _:
+        else :
             return "Follow"
 
 async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_str, auction, contract, declarer_str, next_player_str, tricks_str, MODELS) -> str:

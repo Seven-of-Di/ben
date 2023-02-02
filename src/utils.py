@@ -291,6 +291,11 @@ class Card_:
         except:
             return Card_(Suit.from_str(card_str[1]), Rank.from_str(card_str[0]))
 
+    @classmethod
+    def get_from_52(cls, value: int):
+        return Card_(suit=Suit(value//13), rank=Rank.from_integer((value) % 13))
+
+
 
 class PlayerHand():
     """Contain one hand"""
@@ -461,3 +466,10 @@ class Diag():
             string += self.hands[dir].print_as_pbn()
             string += " "
         return string[:-1]+''
+
+    def is_valid(self) :
+        try :
+            assert sum([len(self.hands[dir]) for dir in Direction]) == len(set((card for hand in self.hands.values() for card in hand.cards)))
+        except :
+            print(self)
+            raise Exception

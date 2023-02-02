@@ -167,8 +167,8 @@ async def check_claim() :
     try:
         data = await request.get_json()
         req = CheckClaim(data)
-
-        return {'claim_accepted': check_claim_from_api(req.claiming_hand,req.dummy_hand,req.claiming_direction,req.declarer,req.contract,req.tricks,req.claim)}
+        res = await check_claim_from_api(req.claiming_hand,req.dummy_hand,req.claiming_direction,req.declarer,req.contract,req.tricks,req.claim)
+        return {'claim_accepted': res}
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}

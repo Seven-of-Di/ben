@@ -112,7 +112,7 @@ def dds_check(samples: List[Diag], trump: BiddingSuit, trick_leader: Direction, 
 
     dd_solved = ddsolver.DDSolver().solve(trump.strain(), trick_leader.offset(1).value, [
         card.to_52() for card in current_trick], [sample.print_as_pbn() for sample in samples])
-    # print(dd_solved)
+    print(dd_solved)
     claimer_turn = claim_direction in [trick_leader.offset(
         len(current_trick)), trick_leader.offset(len(current_trick)+2)]
     if claim_direction == declarer:
@@ -138,7 +138,7 @@ def complete_3_card_trick(diag: Diag, current_trick: List[Card_], claim_directio
     pass
 
 
-def check_claim_from_api(claiming_hand_str: str, dummy_hand_str: str, claiming_direction_str: str, declarer_str: str, contract_str: str, tricks_as_str: List[List[str]], absolute_claim: int) -> bool:
+async def check_claim_from_api(claiming_hand_str: str, dummy_hand_str: str, claiming_direction_str: str, declarer_str: str, contract_str: str, tricks_as_str: List[List[str]], absolute_claim: int) -> bool:
     claiming_direction = Direction.from_str(claiming_direction_str)
     declarer = Direction.from_str(declarer_str)
     trump = BiddingSuit.from_str(contract_str[1])

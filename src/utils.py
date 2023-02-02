@@ -64,6 +64,15 @@ class Direction(Enum):
     def to_str(self) -> str :
         return self.__to_str__[self.value]
 
+    def farest(self,dir1 : Direction,dir2 : Direction)->Direction :
+        for i in range(4) :
+            if self.offset(i)==dir1 :
+                return dir2
+            if self.offset(i)==dir2 :
+                return dir1
+        raise Exception("???")
+            
+
 
 @total_ordering
 class Suit(Enum):
@@ -139,6 +148,14 @@ class Rank(Enum):
         "A": ACE,
     }
 
+    
+    @classmethod
+    def from_integer(cls, rank_as_int: int) -> Rank:
+        return [r for r in reversed(Rank)][rank_as_int]
+
+    def to_integer(self) -> int :
+        return [r for r in reversed(Rank)].index(self)
+
     @classmethod
     def from_str(cls, rank_str: str) -> Rank:
         return Rank(cls.__from_str_map__[rank_str.upper()])
@@ -161,6 +178,16 @@ class Rank(Enum):
     def hcp(self) -> int:
         return self.value[2]
 
+    def previous(self) -> Rank :
+        return [r for r in Rank][[r for r in Rank].index(self)-1]
+    
+    def next(self) -> Rank :
+        return [r for r in Rank][[r for r in Rank].index(self)+1]
+
+    def offset(self,offset : int) -> Rank :
+        return [r for r in Rank][[r for r in Rank].index(self)+offset]
+
+
     def __hash__(self) -> int:
         return hash(repr(self))
 
@@ -178,6 +205,7 @@ class BiddingSuit(Enum):
                         '♠': SPADES, '♥': HEARTS, '♦': DIAMONDS, '♣': CLUBS, 'SA': NO_TRUMP}
     __to_symbol__ = {SPADES : '♠',HEARTS : '♥',DIAMONDS:'♦',CLUBS:'♣', NO_TRUMP : "NT"}
     __4_colors__ = {SPADES : 'blue',HEARTS : 'red',DIAMONDS:'orange',CLUBS:'green',NO_TRUMP : 'black'}
+    __to_strain__ = {NO_TRUMP : 0,SPADES:1,HEARTS:2,DIAMONDS:3,CLUBS:4}
 
     def __lt__(self, other) -> bool:
         return self.value > other.value
@@ -198,6 +226,9 @@ class BiddingSuit(Enum):
     
     def color(self) -> str :
         return self.__4_colors__[self.value]
+
+    def strain(self) :
+        return self.__to_strain__[self.value]
 
     @classmethod
     def from_str(cls, bidding_suit_str: str) -> BiddingSuit:
@@ -228,7 +259,7 @@ class Card_:
         return self.to_pbn()
 
     def to_52(self) -> int :
-        return self.suit.value *13 + self.rank.value
+        return self.suit.value *13 + self.rank.to_integer()
 
     def to_32(self) -> int :
         return self.suit.value * 8 + 14-max(self.rank.rank(),7)
@@ -307,10 +338,9 @@ class PlayerHand():
                         
         return PlayerHand.from_cards(cards)
 
-    def len(self) -> int:
-        # print(self.suits,self.cards)
-        assert sum([len(ranks) for ranks in self.suits.values()])==len(self.cards)
-        return sum([len(ranks) for ranks in self.suits.values()])
+    def remove(self,card : Card_) :
+        self.cards.remove(card)
+        self.suits[card.suit].remove(card.rank)
 
     def append(self, card: Card_):
         if card not in self.cards :
@@ -347,6 +377,23 @@ class PlayerHand():
 
     def number_of_figures(self, suit: Suit) -> int:
         return sum(el in self.suits[suit] for el in [Rank.ACE, Rank.KING, Rank.QUEEN, Rank.JACK])
+
+    def len(self) -> int:
+        # print(self.suits,self.cards)
+        assert sum([len(ranks) for ranks in self.suits.values()])==len(self.cards)
+        return sum([len(ranks) for ranks in self.suits.values()])
+    
+    def __len__(self) -> int:
+        # print(self.suits,self.cards)
+        assert sum([len(ranks) for ranks in self.suits.values()])==len(self.cards)
+        return sum([len(ranks) for ranks in self.suits.values()])
+
+    def print_as_pbn(self) -> str:
+        suit_arrays = [[], [], [], []]
+        for card in self.cards:
+            suit_arrays[card.suit.value].append(repr(card))
+        repr_str = ".".join("".join(suit) for suit in suit_arrays)
+        return repr_str
 
 TOTAL_DECK : List[Card_] = []
 for rank in Rank:
@@ -386,4 +433,31 @@ class Diag():
             card for card in TOTAL_DECK if card not in list_of_cards]
         return missing_cards
 
+    def __len__(self) :
+        return sum(len(hand) for hand in self.hands.values())
 
+    @staticmethod
+    def init_from_pbn(string: str) -> Diag:
+        """ Create a diag from this syntax : 'N:752.Q864.84.AT62 A98.AT9.Q753.J98 KT.KJ73.JT.K7543 QJ643.52.AK962.Q'"""
+        dealer = Direction.from_str(string[0])
+        string = string[2:]
+        hand_list = string.split(" ")
+        hands = {}
+        for i,hand_str in enumerate(hand_list) :
+            hands[dealer.offset(i)] = PlayerHand.from_pbn(hand_str)
+
+        return Diag(hands,autocomplete=False)
+
+    def __str__(self) -> str:
+        string = ""
+        for direction in Direction:
+            string += direction.name + " : " + \
+                self.hands[direction].__str__() + "\n"
+        return string
+
+    def print_as_pbn(self) -> str:
+        string = 'N:'
+        for dir in Direction:
+            string += self.hands[dir].print_as_pbn()
+            string += " "
+        return string[:-1]+''

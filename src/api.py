@@ -7,6 +7,8 @@ import conf
 from transform_play_card import get_ben_card_play_answer, lead_real_card
 from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit
 from PlayRecord import PlayRecord, Direction
+from claim_dds import check_claim_from_api
+
 import tensorflow.compat.v1 as tf
 
 tf.disable_v2_behavior()
@@ -47,6 +49,15 @@ class MakeLead:
         self.auction = ['PAD_START'] * \
             DIRECTIONS.index(self.dealer) + make_lead_request['auction']
 
+class CheckClaim:
+    def __init__(self, check_claim_request) -> None:
+        self.claiming_hand = check_claim_request["hand"]
+        self.dummy_hand = check_claim_request["dummy_hand"]
+        self.claiming_direction = check_claim_request["claiming_direction"]
+        self.declarer = check_claim_request["declarer"]
+        self.contract = check_claim_request["contract"]
+        self.tricks = check_claim_request['tricks']
+        self.claim = check_claim_request['claim']
 
 '''
 {
@@ -151,5 +162,17 @@ port = os.environ.get('PORT', '8081')
 debug = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
 use_reloader = os.environ.get('USE_RELOADER', 'False').lower() in ('true', '1', 't')
 
+@app.post('/check_claim')
+async def check_claim() :
+    try:
+        data = await request.get_json()
+        req = CheckClaim(data)
+
+        return {'claim_accepted': check_claim_from_api(req.claiming_hand,req.dummy_hand,req.claiming_direction,req.declarer,req.contract,req.tricks,req.claim)}
+    except Exception as e:
+        app.logger.exception(e)
+        return {'error': 'Unexpected error'}
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=port, debug=debug, use_reloader=use_reloader)
+

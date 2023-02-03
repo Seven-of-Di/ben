@@ -29,7 +29,8 @@ else:
 LIBDDSPATH = "libdds/.build/src/"
 
 if platform.system() == "Windows":
-    libname = "libdds.dll"
+    LIBDDSPATH ="./"
+    libname = "dds.dll"
 elif platform.system() == "Darwin":
     libname = "libdds.2.dylib"
 else:

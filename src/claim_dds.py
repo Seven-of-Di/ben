@@ -115,7 +115,7 @@ def dds_check(samples: List[Diag], trump: BiddingSuit, trick_leader: Direction, 
     temp = [card for trick in temp for card in trick]
     for sample in samples :
         sample.is_valid()
-    dd_solved = ddsolver.DDSolver().solve(trump.strain(), trick_leader.offset(1).value, [
+    dd_solved = ddsolver.DDSolver(dds_mode=2).solve(trump.strain(), trick_leader.offset(1).value, [
         card.to_52() for card in current_trick], [sample.print_as_pbn() for sample in samples])
     # for key, value in dict(sorted(dd_solved.items())).items():
     #     print(Card_.get_from_52(key), value)

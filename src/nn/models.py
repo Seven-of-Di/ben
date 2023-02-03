@@ -22,7 +22,8 @@ class Models:
     
     @classmethod
     def from_conf(cls, conf: ConfigParser) -> "Models":
-        base_path = os.getenv('BEN_HOME') or '..'
+        base_path = os.getenv('BEN_HOME','..') 
+         
         return cls(
             bidder_model=Bidder('bidder', os.path.join(base_path, conf['bidding']['bidder'])),
             binfo=BidInfo(os.path.join(base_path, conf['bidding']['info'])),

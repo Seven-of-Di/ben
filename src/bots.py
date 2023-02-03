@@ -16,6 +16,7 @@ from bidding import bidding
 from bidding.binary import parse_hand_f
 
 from util import hand_to_str, expected_tricks, p_make_contract
+from utils import Card_
 
 
 class BotBid:
@@ -444,13 +445,20 @@ class CardPlayer:
 
         t_start = time.time()
         
+        # for hand_pbn in hands_pbn :
+        #     print(hand_pbn)
         dd_solved = self.dd.solve(self.strain_i, leader_i, current_trick52, hands_pbn)
+        # print(dd_solved)
+        for key, value in dict(sorted(dd_solved.items())).items():
+            print(Card_.get_from_52(key), value,sum(value)/len(value))
         card_tricks = ddsolver.expected_tricks(dd_solved)
         card_ev = self.get_card_ev(dd_solved)
 
         card_result = {}
         for key in dd_solved.keys():
             card_result[key] = (card_tricks[key], card_ev[key])
+
+        # print(card_result)
 
         if self.verbose:
             print('dds took', time.time() - t_start)

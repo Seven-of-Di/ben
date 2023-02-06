@@ -449,8 +449,8 @@ class CardPlayer:
         #     print(hand_pbn)
         dd_solved = self.dd.solve(self.strain_i, leader_i, current_trick52, hands_pbn)
         # print(dd_solved)
-        for key, value in dict(sorted(dd_solved.items())).items():
-            print(Card_.get_from_52(key), value,sum(value)/len(value))
+        # for key, value in dict(sorted(dd_solved.items())).items():
+        #     print(Card_.get_from_52(key), value,sum(value)/len(value))
         card_tricks = ddsolver.expected_tricks(dd_solved)
         card_ev = self.get_card_ev(dd_solved)
 

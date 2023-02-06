@@ -51,10 +51,10 @@ class MakeLead:
 
 class CheckClaim:
     def __init__(self, check_claim_request) -> None:
-        self.claiming_hand = check_claim_request["hand"]
+        self.claiming_hand = check_claim_request["claiming_hand"]
         self.dummy_hand = check_claim_request["dummy_hand"]
         self.claiming_direction = check_claim_request["claiming_direction"]
-        self.declarer = check_claim_request["declarer"]
+        self.declarer = check_claim_request["contract_direction"]
         self.contract = check_claim_request["contract"]
         self.tricks = check_claim_request['tricks']
         self.claim = check_claim_request['claim']
@@ -153,6 +153,28 @@ async def make_lead():
         app.logger.exception(e)
         return {'error': 'Unexpected error'}
 
+'''
+{
+    "claiming_hand": "Q8754.2.KT8.QT92",
+    "dummy_hand": ".T87543.QJ53.76",
+    "claiming_direction": "N",
+    "contract": "1N",
+    "contract_direction": "S",
+    "tricks": [["SA", "SK"]],
+    "claim": 12
+}
+'''
+
+@app.post('/check_claim')
+async def check_claim() :
+    try:
+        data = await request.get_json()
+        req = CheckClaim(data)
+        res = await check_claim_from_api(req.claiming_hand,req.dummy_hand,req.claiming_direction,req.contract_direction,req.contract,req.tricks,req.claim)
+        return {'claim_accepted': res}
+    except Exception as e:
+        app.logger.exception(e)
+        return {'error': 'Unexpected error'}
 
 @app.get('/healthz')
 async def healthz():
@@ -161,17 +183,6 @@ async def healthz():
 port = os.environ.get('PORT', '8081')
 debug = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
 use_reloader = os.environ.get('USE_RELOADER', 'False').lower() in ('true', '1', 't')
-
-@app.post('/check_claim')
-async def check_claim() :
-    try:
-        data = await request.get_json()
-        req = CheckClaim(data)
-        res = await check_claim_from_api(req.claiming_hand,req.dummy_hand,req.claiming_direction,req.declarer,req.contract,req.tricks,req.claim)
-        return {'claim_accepted': res}
-    except Exception as e:
-        app.logger.exception(e)
-        return {'error': 'Unexpected error'}
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=port, debug=debug, use_reloader=use_reloader)

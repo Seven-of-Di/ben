@@ -54,7 +54,7 @@ class CheckClaim:
         self.claiming_hand = check_claim_request["claiming_hand"]
         self.dummy_hand = check_claim_request["dummy_hand"]
         self.claiming_direction = check_claim_request["claiming_direction"]
-        self.declarer = check_claim_request["contract_direction"]
+        self.contract_direction = check_claim_request["contract_direction"]
         self.contract = check_claim_request["contract"]
         self.tricks = check_claim_request['tricks']
         self.claim = check_claim_request['claim']
@@ -170,7 +170,15 @@ async def check_claim() :
     try:
         data = await request.get_json()
         req = CheckClaim(data)
-        res = await check_claim_from_api(req.claiming_hand,req.dummy_hand,req.claiming_direction,req.contract_direction,req.contract,req.tricks,req.claim)
+        res = await check_claim_from_api(
+            req.claiming_hand,
+            req.dummy_hand,
+            req.claiming_direction,
+            req.contract_direction,
+            req.contract,
+            req.tricks,
+            req.claim)
+
         return {'claim_accepted': res}
     except Exception as e:
         app.logger.exception(e)

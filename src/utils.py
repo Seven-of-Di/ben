@@ -4,6 +4,7 @@ from enum import Enum
 from functools import total_ordering
 from random import shuffle
 from typing import Dict, Iterable, List
+import numpy as np
 
 """
 Common bridge concepts such as Cardinal Direction, Suit, and Card Rank represented as Enums
@@ -18,6 +19,7 @@ VULNERABILITIES = {
     'Both': [True, True]
 }
 
+
 @total_ordering
 class Direction(Enum):
     NORTH = 0
@@ -26,7 +28,7 @@ class Direction(Enum):
     WEST = 3
 
     __from_str_map__ = {"N": NORTH, "E": EAST, "S": SOUTH, "W": WEST}
-    __to_str__ = {NORTH : "North",SOUTH : "South",EAST : "East",WEST : "West"}
+    __to_str__ = {NORTH: "North", SOUTH: "South", EAST: "East", WEST: "West"}
 
     @classmethod
     def from_str(cls, direction_str: str) -> Direction:
@@ -49,29 +51,28 @@ class Direction(Enum):
 
     def offset(self, offset: int) -> Direction:
         return Direction((self.value + offset) % 4)
-    
-    def teammates(self, other : Direction) -> bool :
-        if self == other.partner() or self == other :
+
+    def teammates(self, other: Direction) -> bool:
+        if self == other.partner() or self == other:
             return True
         return False
 
-    def opponents(self,other:Direction) -> bool :
+    def opponents(self, other: Direction) -> bool:
         return not self.teammates(other)
 
     def abbreviation(self) -> str:
         return self.name[0]
 
-    def to_str(self) -> str :
+    def to_str(self) -> str:
         return self.__to_str__[self.value]
 
-    def farest(self,dir1 : Direction,dir2 : Direction)->Direction :
-        for i in range(4) :
-            if self.offset(i)==dir1 :
+    def farest(self, dir1: Direction, dir2: Direction) -> Direction:
+        for i in range(4):
+            if self.offset(i) == dir1:
                 return dir2
-            if self.offset(i)==dir2 :
+            if self.offset(i) == dir2:
                 return dir1
         raise Exception("???")
-            
 
 
 @total_ordering
@@ -84,9 +85,10 @@ class Suit(Enum):
     __from_str_map__ = {"S": SPADES, "H": HEARTS, "D": DIAMONDS,
                         "C": CLUBS, '♠': SPADES, '♥': HEARTS, '♦': DIAMONDS, '♣': CLUBS}
 
-    __to_symbol__ = {SPADES : '♠',HEARTS : '♥',DIAMONDS:'♦',CLUBS:'♣'}
+    __to_symbol__ = {SPADES: '♠', HEARTS: '♥', DIAMONDS: '♦', CLUBS: '♣'}
 
-    __4_colors__ = {SPADES : 'blue',HEARTS : 'red',DIAMONDS:'orange',CLUBS:'green'}
+    __4_colors__ = {SPADES: 'blue', HEARTS: 'red',
+                    DIAMONDS: 'orange', CLUBS: 'green'}
 
     @classmethod
     def from_str(cls, suit_str: str) -> Suit:
@@ -101,18 +103,17 @@ class Suit(Enum):
     def abbreviation(self) -> str:
         return self.name[0]
 
-    def symbol(self) -> str :
+    def symbol(self) -> str:
         return self.__to_symbol__[self.value]
 
-    def color(self) -> str :
+    def color(self) -> str:
         return self.__4_colors__[self.value]
 
-    def is_major(self) :
-        return True if self.value >=2 else False
-    
-    def is_minor(self) :
+    def is_major(self):
+        return True if self.value >= 2 else False
+
+    def is_minor(self):
         return not self.is_major()
-            
 
 
 @total_ordering
@@ -148,12 +149,12 @@ class Rank(Enum):
         "A": ACE,
     }
 
-    
     @classmethod
     def from_integer(cls, rank_as_int: int) -> Rank:
         return [r for r in reversed(Rank)][rank_as_int]
 
-    def to_integer(self) -> int :
+
+    def to_integer(self) -> int:
         return [r for r in reversed(Rank)].index(self)
 
     @classmethod
@@ -178,15 +179,14 @@ class Rank(Enum):
     def hcp(self) -> int:
         return self.value[2]
 
-    def previous(self) -> Rank :
+    def previous(self) -> Rank:
         return [r for r in Rank][[r for r in Rank].index(self)-1]
-    
-    def next(self) -> Rank :
+
+    def next(self) -> Rank:
         return [r for r in Rank][[r for r in Rank].index(self)+1]
 
-    def offset(self,offset : int) -> Rank :
+    def offset(self, offset: int) -> Rank:
         return [r for r in Rank][[r for r in Rank].index(self)+offset]
-
 
     def __hash__(self) -> int:
         return hash(repr(self))
@@ -203,9 +203,11 @@ class BiddingSuit(Enum):
     __from_str_map__ = {"S": SPADES, "H": HEARTS,
                         "D": DIAMONDS, "C": CLUBS, "N": NO_TRUMP, "NT": NO_TRUMP,
                         '♠': SPADES, '♥': HEARTS, '♦': DIAMONDS, '♣': CLUBS, 'SA': NO_TRUMP}
-    __to_symbol__ = {SPADES : '♠',HEARTS : '♥',DIAMONDS:'♦',CLUBS:'♣', NO_TRUMP : "NT"}
-    __4_colors__ = {SPADES : 'blue',HEARTS : 'red',DIAMONDS:'orange',CLUBS:'green',NO_TRUMP : 'black'}
-    __to_strain__ = {NO_TRUMP : 0,SPADES:1,HEARTS:2,DIAMONDS:3,CLUBS:4}
+    __to_symbol__ = {SPADES: '♠', HEARTS: '♥',
+                     DIAMONDS: '♦', CLUBS: '♣', NO_TRUMP: "NT"}
+    __4_colors__ = {SPADES: 'blue', HEARTS: 'red',
+                    DIAMONDS: 'orange', CLUBS: 'green', NO_TRUMP: 'black'}
+    __to_strain__ = {NO_TRUMP: 0, SPADES: 1, HEARTS: 2, DIAMONDS: 3, CLUBS: 4}
 
     def __lt__(self, other) -> bool:
         return self.value > other.value
@@ -221,13 +223,13 @@ class BiddingSuit(Enum):
             return "NT"
         return self.name[0]
 
-    def symbol(self) -> str :
+    def symbol(self) -> str:
         return self.__to_symbol__[self.value]
-    
-    def color(self) -> str :
+
+    def color(self) -> str:
         return self.__4_colors__[self.value]
 
-    def strain(self) :
+    def strain(self):
         return self.__to_strain__[self.value]
 
     @classmethod
@@ -255,14 +257,14 @@ class Card_:
     def to_pbn(self) -> str:
         return self.suit.abbreviation() + self.rank.abbreviation()
 
-    def suit_first_str(self) -> str :
+    def suit_first_str(self) -> str:
         return self.to_pbn()
 
-    def to_52(self) -> int :
-        return self.suit.value *13 + self.rank.to_integer()
+    def to_52(self) -> int:
+        return self.suit.value * 13 + self.rank.to_integer()
 
-    def to_32(self) -> int :
-        return self.suit.value * 8 + 14-max(self.rank.rank(),7)
+    def to_32(self) -> int:
+        return self.suit.value * 8 + 14-max(self.rank.rank(), 7)
 
     def __repr__(self) -> str:
         return self.rank.abbreviation()
@@ -270,19 +272,18 @@ class Card_:
     def __hash__(self) -> int:
         return hash(repr(self))
 
-    def trump_comparaison(self, other : Card_, trump : BiddingSuit, lead : Suit) -> bool :
-        if self.suit == other.suit :
-            return self.rank>other.rank
-        if self.suit == trump.to_suit() :
+    def trump_comparaison(self, other: Card_, trump: BiddingSuit, lead: Suit) -> bool:
+        if self.suit == other.suit:
+            return self.rank > other.rank
+        if self.suit == trump.to_suit():
             return True
-        if other.suit == trump.to_suit() :
+        if other.suit == trump.to_suit():
             return False
-        if self.suit == lead :
+        if self.suit == lead:
             return True
-        if other.suit == lead :
+        if other.suit == lead:
             return False
         raise Exception("None of the card is a trump or the suit led")
-
 
     @classmethod
     def from_str(cls, card_str) -> Card_:
@@ -294,7 +295,6 @@ class Card_:
     @classmethod
     def get_from_52(cls, value: int):
         return Card_(suit=Suit(value//13), rank=Rank.from_integer((value) % 13))
-
 
 
 class PlayerHand():
@@ -340,23 +340,23 @@ class PlayerHand():
                     cards.append(Card_(Suit.DIAMONDS, Rank.from_str(rank)))
                 elif index == 3:
                     cards.append(Card_(Suit.CLUBS, Rank.from_str(rank)))
-                        
+
         return PlayerHand.from_cards(cards)
 
-    def remove(self,card : Card_) :
+    def remove(self, card: Card_):
         self.cards.remove(card)
         self.suits[card.suit].remove(card.rank)
 
     def append(self, card: Card_):
-        if card not in self.cards :
+        if card not in self.cards:
             self.cards.append(card)
-        if card.rank not in self.suits[card.suit] :
+        if card.rank not in self.suits[card.suit]:
             self.suits[card.suit].append(card.rank)
 
-    def get_as_32_list(self) :
+    def get_as_32_list(self):
         cards_32 = [0]*32
-        for i in self.cards :
-            cards_32[i.to_32()]=1
+        for i in self.cards:
+            cards_32[i.to_32()] = 1
         return cards_32
 
     def to_pbn(self) -> str:
@@ -375,7 +375,7 @@ class PlayerHand():
 
     def __str__(self) -> str:
         suit_arrays = [['♠'], ['♥'], ['♦'], ['♣']]
-        for card in sorted(self.cards,reverse=True):
+        for card in sorted(self.cards, reverse=True):
             suit_arrays[card.suit.value].append(repr(card))
         repr_str = " ".join("".join(suit) for suit in suit_arrays)
         return f"{repr_str}"
@@ -385,12 +385,14 @@ class PlayerHand():
 
     def len(self) -> int:
         # print(self.suits,self.cards)
-        assert sum([len(ranks) for ranks in self.suits.values()])==len(self.cards)
+        assert sum([len(ranks)
+                   for ranks in self.suits.values()]) == len(self.cards)
         return sum([len(ranks) for ranks in self.suits.values()])
-    
+
     def __len__(self) -> int:
         # print(self.suits,self.cards)
-        assert sum([len(ranks) for ranks in self.suits.values()])==len(self.cards)
+        assert sum([len(ranks)
+                   for ranks in self.suits.values()]) == len(self.cards)
         return sum([len(ranks) for ranks in self.suits.values()])
 
     def print_as_pbn(self) -> str:
@@ -400,10 +402,12 @@ class PlayerHand():
         repr_str = ".".join("".join(suit) for suit in suit_arrays)
         return repr_str
 
-TOTAL_DECK : List[Card_] = []
+
+TOTAL_DECK: List[Card_] = []
 for rank in Rank:
     for suit in Suit:
         TOTAL_DECK.append(Card_(suit, rank))
+
 
 class Diag():
     def __init__(self, hands: Dict[Direction, PlayerHand], autocomplete=True):
@@ -420,7 +424,7 @@ class Diag():
             if dir not in self.hands:
                 self.hands[dir] = PlayerHand({suit: [] for suit in Suit})
             while self.hands[dir].len() < 13:
-                if len(missing_cards)==0 :
+                if len(missing_cards) == 0:
                     print(self.hands)
                 self.hands[dir].append(missing_cards.pop())
         return self.hands
@@ -438,7 +442,7 @@ class Diag():
             card for card in TOTAL_DECK if card not in list_of_cards]
         return missing_cards
 
-    def __len__(self) :
+    def __len__(self):
         return sum(len(hand) for hand in self.hands.values())
 
     @staticmethod
@@ -448,10 +452,10 @@ class Diag():
         string = string[2:]
         hand_list = string.split(" ")
         hands = {}
-        for i,hand_str in enumerate(hand_list) :
+        for i, hand_str in enumerate(hand_list):
             hands[dealer.offset(i)] = PlayerHand.from_pbn(hand_str)
 
-        return Diag(hands,autocomplete=False)
+        return Diag(hands, autocomplete=False)
 
     def __str__(self) -> str:
         string = ""
@@ -467,9 +471,83 @@ class Diag():
             string += " "
         return string[:-1]+''
 
-    def is_valid(self) :
-        try :
-            assert sum([len(self.hands[dir]) for dir in Direction]) == len(set((card for hand in self.hands.values() for card in hand.cards)))
-        except :
+    def is_valid(self):
+        try:
+            assert sum([len(self.hands[dir]) for dir in Direction]) == len(
+                set((card for hand in self.hands.values() for card in hand.cards)))
+        except:
             print(self)
             raise Exception
+
+
+def compare_two_list(list_1: List[int], List_2: List[int]):
+    list_1_sup = True
+    list_2_sup = True
+    for val_1, val_2 in zip(list_1, List_2):
+        if val_1 < val_2:
+            list_1_sup = False
+            break
+    for val_1, val_2 in zip(list_1, List_2):
+        if val_2 < val_1:
+            list_2_sup = False
+            break
+    if (not list_1_sup and not list_2_sup) or (list_1_sup and list_2_sup):
+        return None
+    if list_1_sup:
+        return True
+    if list_2_sup:
+        return False
+
+
+def multiple_list_comparaison(dd_results_dict: Dict[int, List]) -> List[int]:
+    maximum_cards = []
+
+    for card, dd_results in dd_results_dict.items():
+        temp_max_cards = maximum_cards
+        is_maximum = True
+        for max_card in temp_max_cards:
+            res = compare_two_list(dd_results_dict[max_card], dd_results)
+            if res:
+                is_maximum = False
+                break
+            if res == False:
+                maximum_cards.remove(max_card)
+        if is_maximum:
+            maximum_cards.append(card)
+    return maximum_cards
+
+# print(multiple_list_comparaison({3:[6,5,1],0:[1,2,3],1:[2,2,3],2:[3,2,1]}))
+
+# test = {
+# 0 : [3, 3, 1, 1, 1, 2, 2, 1, 3, 2, 1, 1, 3, 1, 1, 4, 3, 3, 3, 1, 3, 2, 1, 4, 2, 1, 3, 4, 2, 2, 1, 1, 1, 1, 4, 0, 1, 2, 1, 2, 1, 2, 4, 4, 0, 2, 1, 1, 0, 2],
+# 1 : [3, 3, 1, 1, 1, 2, 2, 1, 3, 2, 1, 1, 3, 1, 1, 4, 3, 3, 3, 1, 3, 2, 1, 4, 2, 1, 3, 4, 2, 2, 1, 1, 1, 1, 4, 0, 1, 2, 1, 2, 1, 2, 4, 4, 0, 2, 1, 1, 0, 2],
+# 2 : [3, 3, 1, 1, 1, 2, 2, 1, 3, 2, 1, 1, 3, 1, 1, 4, 3, 3, 3, 1, 3, 2, 1, 4, 2, 1, 3, 4, 2, 2, 1, 1, 1, 1, 4, 0, 1, 2, 1, 2, 1, 2, 4, 4, 0, 2, 1, 1, 0, 2],
+# 5 : [3, 3, 1, 1, 1, 3, 1, 1, 3, 2, 1, 1, 3, 1, 1, 4, 3, 3, 3, 1, 3, 1, 1, 3, 2, 1, 3, 4, 2, 1, 1, 1, 1, 1, 4, 0, 1, 2, 1, 1, 1, 3, 4, 4, 0, 2, 1, 1, 0, 1],
+# 3 : [3, 3, 1, 1, 1, 1, 2, 1, 3, 2, 1, 1, 3, 1, 1, 4, 3, 3, 3, 1, 3, 2, 1, 4, 1, 1, 3, 4, 2, 2, 1, 1, 1, 1, 3, 0, 1, 1, 1, 2, 1, 1, 4, 4, 0, 2, 1, 1, 0, 2],
+# 4 : [3, 3, 1, 1, 1, 1, 2, 1, 3, 2, 1, 1, 3, 1, 1, 4, 3, 3, 3, 1, 3, 2, 1, 4, 1, 1, 3, 4, 2, 2, 1, 1, 1, 1, 3, 0, 1, 1, 1, 2, 1, 1, 4, 4, 0, 2, 1, 1, 0, 2],
+# }
+
+# print(multiple_list_comparaison(test))
+
+
+def remove_same_indexes(dict_to_clear,dict_to_take_values_from):
+    transposed_lists = zip(*dict_to_take_values_from.values())
+    indexes_to_remove = [index for index, values in enumerate(
+        transposed_lists) if len(set(values)) == 1]
+    if len(indexes_to_remove) == len(list(dict_to_clear.values())[0]) :
+        return dict_to_clear
+    for key in dict_to_clear.keys():
+        for index in sorted(indexes_to_remove, reverse=True):
+            dict_to_clear[key].pop(index)
+    return dict_to_clear
+
+
+# dict_to_clear = {1: [1, 2, 3, 4], 2: [1, 6, 3, 8], 3: [1, 10, 6, 12]}
+# dict_to_take_values_from = {1: [1, 2, 3, 4], 2: [1, 6, 3, 8]}
+# new_dict = remove_same_indexes(dict_to_clear,dict_to_take_values_from)
+# print(new_dict)
+
+def softmax(x):
+    """Compute softmax values for each sets of scores in x."""
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum(axis=0) # only difference

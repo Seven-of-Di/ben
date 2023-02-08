@@ -1,6 +1,6 @@
 from __future__ import annotations
 import random
-from typing import List
+from typing import Dict, List
 import numpy as np
 from datetime import datetime
 
@@ -14,6 +14,7 @@ import deck52
 import sample
 
 from game import AsyncCardPlayer
+from claim_dds import check_claim_from_api
 
 def get_play_status(hand : PlayerHand, current_trick: List[Card_]):
         if current_trick == [] or len(current_trick)==4:
@@ -25,12 +26,16 @@ def get_play_status(hand : PlayerHand, current_trick: List[Card_]):
         else :
             return "Follow"
 
-async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_str, auction, contract, declarer_str, next_player_str, tricks_str, MODELS) -> str:
+async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_str, auction, contract, declarer_str, next_player_str, tricks_str, MODELS) -> Dict:
     n_samples = 200
+    claim_res = False
+    
     padded_auction = ["PAD_START"] * \
         Direction.from_str(dealer_str).value + auction
 
     contract = bidding.get_contract(padded_auction)
+    if contract is None :
+        raise Exception("Contract is None !")
 
     level = int(contract[0])
     next_player = Direction.from_str(next_player_str)
@@ -51,6 +56,9 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
 
     play_record = PlayRecord.from_tricks_as_list(
         declarer=declarer, list_of_tricks=tricks_str, trump=BiddingSuit.from_str(contract[1]))
+
+    if play_record.record is None:
+        raise Exception("Play record is None !")
 
     for trick in play_record.record:
         for dir, card in trick.cards.items():
@@ -93,6 +101,7 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
 
     for trick_i in range(12):
         for player_i in map(lambda x: x % 4, range(leader_i, leader_i + 4)):
+            card_players[player_i].tricks_left = 13-trick_i
             if trick_i == 0 and player_i == 0:
                 for i, card_player in enumerate(card_players):
                     card_player.set_card_played(
@@ -106,10 +115,15 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
                     n_samples=50
                 if play_status=="Discard" :
                     n_samples = 50
-                rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits,
+                rollout_states,probabilities_list = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits,
                                                             current_trick, n_samples, padded_auction, card_players[player_i].hand.reshape((-1, 32)), vuls, MODELS)
-                resp = await card_players[player_i].async_play_card(trick_i, leader_i, current_trick52, rollout_states)
-                return play_real_card(random_diag.hands[next_player], list(resp.to_dict().values())[0], trump=BiddingSuit.from_str(contract[1]), play_record=play_record, player_direction=next_player, declarer=declarer).__str__()
+                resp = await card_players[player_i].async_play_card(trick_i, leader_i, current_trick52, rollout_states,probabilities_list)
+                if card_players[player_i].check_claim and next_player in [declarer,dummy]:
+                    claim_res = await check_claim_from_api(hand_str,dummy_hand_str,declarer.abbreviation(),declarer_str,contract,tricks_str,13-trick_i+card_players[player_i].n_tricks_taken)
+                return {
+                    "card": play_real_card(random_diag.hands[next_player], list(resp.to_dict().values())[0], trump=BiddingSuit.from_str(contract[1]), play_record=play_record, player_direction=next_player, declarer=declarer).__str__(),
+                    "claim_the_rest" : claim_res
+                }
 
             card52 = Card.from_symbol(play[card_i]).code()
             card = deck52.card52to32(card52)

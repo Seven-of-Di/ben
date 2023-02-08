@@ -9,6 +9,7 @@ from ddsolver import ddsolver
 
 def convert_diag_with_new_suit_rank(diag: Diag, current_trick: List[Card_]) -> Tuple[Diag, List[Card_]]:
     new_suit_rank = create_new_suit_rank(diag, current_trick)
+    pass
     new_hands = {}
     for dir in Direction:
         new_hands[dir] = PlayerHand(
@@ -32,7 +33,7 @@ def create_new_suit_rank(diag: Diag, current_trick: List[Card_]) -> Dict[Suit, D
     return new_suit_rank
 
 
-def convert_intermediate_cards_to_low(diag: Diag, claim_direction: Direction, shown_out_suits: Dict[Direction, Set[Suit]], current_trick: List[Card_],trick_leader : Direction) -> Tuple[Diag, List[Card_]]:
+def convert_intermediate_cards_to_low(diag: Diag, claim_direction: Direction, shown_out_suits: Dict[Direction, Set[Suit]], current_trick: List[Card_], trick_leader: Direction) -> Tuple[Diag, List[Card_]]:
     diag.is_valid()
     lowest_max_card_from_claiming_side = {s: Rank.TWO for s in Suit}
     for suit in Suit:
@@ -47,14 +48,16 @@ def convert_intermediate_cards_to_low(diag: Diag, claim_direction: Direction, sh
             rank_tested = rank_tested.offset(-1)
 
     # print(lowest_max_card_from_claiming_side)
-    current_trick_dict = {trick_leader.offset(i):card for i,card in enumerate(current_trick)}
+    current_trick_dict = {trick_leader.offset(
+        i): card for i, card in enumerate(current_trick)}
 
     converter = {s: {} for s in Suit}
     for suit in Suit:
         claming_side_ranks = [rank for rank in diag.hands[claim_direction].suits[suit]+diag.hands[claim_direction.partner(
-        )].suits[suit]+[c.rank for dir,c in current_trick_dict.items() if c.suit == suit and dir in [claim_direction,claim_direction.partner()]] if rank < lowest_max_card_from_claiming_side[suit]]
+        )].suits[suit]+[c.rank for dir, c in current_trick_dict.items() if c.suit == suit and dir in [claim_direction, claim_direction.partner()]] if rank < lowest_max_card_from_claiming_side[suit]]
         claming_side_ranks = sorted(claming_side_ranks)
-        other_side_ranks = [rank for rank in diag.hands[claim_direction.offset(1)].suits[suit]+diag.hands[claim_direction.offset(3)].suits[suit]+[c.rank for dir,c in current_trick_dict.items() if c.suit == suit and dir in [claim_direction.offset(1),claim_direction.offset(3)]]  if rank <= lowest_max_card_from_claiming_side[suit]]
+        other_side_ranks = [rank for rank in diag.hands[claim_direction.offset(1)].suits[suit]+diag.hands[claim_direction.offset(3)].suits[suit]+[c.rank for dir, c in current_trick_dict.items(
+        ) if c.suit == suit and dir in [claim_direction.offset(1), claim_direction.offset(3)]] if rank <= lowest_max_card_from_claiming_side[suit]]
         other_side_ranks = sorted(other_side_ranks, reverse=True)
 
         for old_rank, new_rank in zip(claming_side_ranks, Rank):
@@ -109,11 +112,10 @@ def generate_diags(diag: Diag, claiming_direction: Direction, dummy: Direction, 
 
 
 def dds_check(samples: List[Diag], trump: BiddingSuit, trick_leader: Direction, current_trick: List[Card_], claim: int, claim_direction: Direction, declarer: Direction):
-
     temp = [trick for trick in [samples[0].player_cards[dir]
                                 for dir in Direction]]
     temp = [card for trick in temp for card in trick]
-    for sample in samples :
+    for sample in samples:
         sample.is_valid()
     dd_solved = ddsolver.DDSolver(dds_mode=2).solve(trump.strain(), trick_leader.offset(1).value, [
         card.to_52() for card in current_trick], [sample.print_as_pbn() for sample in samples])
@@ -128,13 +130,13 @@ def dds_check(samples: List[Diag], trump: BiddingSuit, trick_leader: Direction, 
             possible_tricks_left = len(
                 samples[0].hands[trick_leader]) + (1 if len(current_trick) % 4 != 0 else 0)
             return True if all(all([i <= possible_tricks_left-claim for i in card_res]) for card_res in dd_solved.values()) else False
+    # Defensive claim
+    if claimer_turn:
+        return True if all(all([i >= claim for i in card_res]) for card_res in dd_solved.values()) else False
     else:
-        if claimer_turn:
-            return True if all(all([i >= claim for i in card_res]) for card_res in dd_solved.values()) else False
-        else:
-            possible_tricks_left = len(
-                samples[0].hands[trick_leader]) + (1 if len(current_trick) % 4 != 0 else 0)
-            return True if all(all([i <= possible_tricks_left-claim for i in card_res]) for card_res in dd_solved.values()) else False
+        possible_tricks_left = len(
+            samples[0].hands[trick_leader]) + (1 if len(current_trick) % 4 != 0 else 0)
+        return True if all(all([i <= possible_tricks_left-claim for i in card_res]) for card_res in dd_solved.values()) else False
 
 
 def complete_3_card_trick(diag: Diag, current_trick: List[Card_], claim_direction: Direction, trick_leader: Direction, declarer: Direction):
@@ -143,18 +145,23 @@ def complete_3_card_trick(diag: Diag, current_trick: List[Card_], claim_directio
         claim_direction == declarer and trick_leader.offset(3) == declarer.offset(2))
     pass
 
-def check_claim(diag: Diag, claim: int, claim_direction: Direction, trump: BiddingSuit, declarer: Direction, shown_out_suits: Dict[Direction, Set[Suit]], current_trick: List[Card_], trick_leader: Direction) -> bool:
+def check_claim(diag: Diag, claim: int, claim_direction: Direction, trump: BiddingSuit, declarer: Direction, shown_out_suits: Dict[Direction, Set[Suit]], current_trick: List[Card_], trick_leader: Direction, n_samples=200) -> bool:
+    if claim==0 :
+        return True
     dummy = declarer.offset(2)
+    pass
     diag, current_trick = convert_diag_with_new_suit_rank(diag, current_trick)
+    pass
     diag, current_trick = convert_intermediate_cards_to_low(
-        diag, claim_direction, shown_out_suits, current_trick,trick_leader)
-    diags = generate_diags(diag, claim_direction, dummy, shown_out_suits)
+        diag, claim_direction, shown_out_suits, current_trick, trick_leader)
+    diags = generate_diags(diag, claim_direction, dummy,
+                           shown_out_suits, n_samples)
     # for diag in diags[:5]:
     #     print(diag)
-    return dds_check(diags, trump, trick_leader, current_trick, claim, claim_direction, declarer)
+    return dds_check(diags[:5], trump, trick_leader, current_trick, claim, claim_direction, declarer) and dds_check(diags[5:], trump, trick_leader, current_trick, claim, claim_direction, declarer)
 
 
-async def check_claim_from_api(claiming_hand_str: str, dummy_hand_str: str, claiming_direction_str: str, declarer_str: str, contract_str: str, tricks_as_str: List[List[str]], absolute_claim: int) -> bool:
+async def check_claim_from_api(claiming_hand_str: str, dummy_hand_str: str, claiming_direction_str: str, declarer_str: str, contract_str: str, tricks_as_str: List[List[str]], absolute_claim: int, n_samples=200) -> bool:
     claiming_direction = Direction.from_str(claiming_direction_str)
     declarer = Direction.from_str(declarer_str)
     trump = BiddingSuit.from_str(contract_str[1])
@@ -168,9 +175,9 @@ async def check_claim_from_api(claiming_hand_str: str, dummy_hand_str: str, clai
     tricks = [[Card_.from_str(card) for card in trick]
               for trick in tricks_as_str]
     flat_tricks = [item for sublist in tricks for item in sublist]
-    last_trick = tricks[-1] if tricks != [] else []
+    last_trick = tricks[-1] if tricks != [] and len(tricks[-1])!=4 else []
 
-    claim = absolute_claim - \
+    relative_claim = absolute_claim - \
         (declarer_tricks if claiming_direction ==
          declarer else play_length-declarer_tricks)
 
@@ -201,11 +208,9 @@ async def check_claim_from_api(claiming_hand_str: str, dummy_hand_str: str, clai
         diag.hands[dir].append(hidden_cards.pop())
     assert len(hidden_cards) == 0
 
-    return check_claim(diag, claim, claiming_direction, trump, declarer, shown_out_suits, last_trick, current_trick_leader)
+    return check_claim(diag, relative_claim, claiming_direction, trump, declarer, shown_out_suits, last_trick, current_trick_leader, n_samples)
 
     raise Exception("This should not append !")
-
-
 
 
 if __name__ == "__main__":

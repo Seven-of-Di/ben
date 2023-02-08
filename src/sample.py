@@ -1,10 +1,12 @@
 import time
+from typing import List
 
 import numpy as np
 
 import binary
 
 from bidding import bidding
+from utils import softmax
 from util import get_all_hidden_cards, view_samples
 
 
@@ -405,6 +407,8 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
         [shown_out_suits[hidden_1_i], shown_out_suits[hidden_2_i]]
     )
 
+    h1_h2 = np.unique(h1_h2, axis=0)
+
     hidden_hand1, hidden_hand2 = h1_h2[:,0], h1_h2[:,1]
 
     states = [np.zeros((hidden_hand1.shape[0], 13, 298)) for _ in range(4)]
@@ -484,7 +488,8 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
         accept = np.ones_like(accept).astype(bool)
     #end of re-applyconstraints
 
-    states = [state[accept] for state in states]
+    # states = [state[accept] for state in states]
+    probability_of_occurence = np.ones(len(states[0])) 
 
     # reject samples inconsistent with the opening lead
     t_start = time.time()
@@ -492,13 +497,13 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
     if hidden_1_i == 0 or hidden_2_i == 0:
         opening_lead = current_trick[0] if trick_i == 0 else player_cards_played[0][0]
         lead_scores = get_opening_lead_scores(auction, vuln, models.binfo, models.lead, states[0][:,0,:32], opening_lead)
+        
+        # lead_accept_threshold = 0.1
+        # while np.sum(lead_scores > lead_accept_threshold) < n_samples:
+        #     lead_accept_threshold -= 0.01
 
-        lead_accept_threshold = 0.1
-        while np.sum(lead_scores > lead_accept_threshold) < n_samples:
-            lead_accept_threshold -= 0.01
-
-        states = [state[lead_scores > lead_accept_threshold] for state in states]
-
+        # states = [state[lead_scores > lead_accept_threshold] for state in states]
+        probability_of_occurence = np.multiply(probability_of_occurence,lead_scores)
     # reject samples inconsistent with the bidding
     if trick_i <= 9:
         t_start = time.time()
@@ -510,14 +515,7 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
             bid_scores = get_bid_scores(h_i_nesw, auction, vuln, states[h_i][:,0,:32], models.bidder_model)
 
             min_bid_scores = np.minimum(min_bid_scores, bid_scores)
-
-        bid_accept_threshold = 0.5
-        while np.sum(min_bid_scores > bid_accept_threshold) < 50:
-            bid_accept_threshold -= 0.01
-        states = [state[min_bid_scores > bid_accept_threshold] for state in states]
-    
-    states = [state[:2*n_samples] for state in states]
-
+        probability_of_occurence = np.multiply(probability_of_occurence,min_bid_scores)
     # reject samples inconsistent with the play
     t_start = time.time()
     min_scores = np.ones(states[0].shape[0])
@@ -547,9 +545,14 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
 
             min_scores = np.minimum(min_scores, np.min(card_scores, axis=1))
 
-    play_accept_threshold = 0.03
-    while np.sum(min_scores > play_accept_threshold) < 20:
-        play_accept_threshold -= 0.01
-    s_accepted = min_scores > play_accept_threshold
+    probability_of_occurence = np.multiply(probability_of_occurence,min_scores)
 
-    return [state[s_accepted][:n_samples] for state in states]
+    arr1inds = probability_of_occurence.argsort()
+    probability_of_occurence_ordered = probability_of_occurence[arr1inds[::-1]]
+    probability_of_occurence_ordered = probability_of_occurence_ordered[:n_samples]
+    sum_of_proba = np.sum(probability_of_occurence_ordered,axis=0)
+    probability_of_occurence_ordered = [val/sum_of_proba for val in probability_of_occurence_ordered]
+    new_state = np.empty_like(states)
+    for i,state in enumerate(states) :
+        new_state[i] = state[arr1inds[::-1]]
+    return [state[:n_samples] for state in new_state],probability_of_occurence_ordered

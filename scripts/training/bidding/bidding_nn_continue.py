@@ -1,5 +1,5 @@
 from batcher import Batcher
-import tensorflow.compat.v1 as tf
+import tensorflow.compat.v1 as tf  # type: ignore
 import numpy as np
 import sys
 sys.path.append('../../../src')

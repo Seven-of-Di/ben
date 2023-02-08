@@ -9,7 +9,7 @@ from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit
 from PlayRecord import PlayRecord, Direction
 from claim_dds import check_claim_from_api
 
-import tensorflow.compat.v1 as tf
+import tensorflow.compat.v1 as tf  # type: ignore
 
 tf.disable_v2_behavior()
 
@@ -49,6 +49,7 @@ class MakeLead:
         self.auction = ['PAD_START'] * \
             DIRECTIONS.index(self.dealer) + make_lead_request['auction']
 
+
 class CheckClaim:
     def __init__(self, check_claim_request) -> None:
         self.claiming_hand = check_claim_request["claiming_hand"]
@@ -58,6 +59,7 @@ class CheckClaim:
         self.contract = check_claim_request["contract"]
         self.tricks = check_claim_request['tricks']
         self.claim = check_claim_request['claim']
+
 
 '''
 {
@@ -81,7 +83,7 @@ async def play_card():
         # app.logger.warn(data)
         req = PlayCard(data)
 
-        card_to_play = await get_ben_card_play_answer(
+        dict_result = await get_ben_card_play_answer(
             req.hand,
             req.dummy_hand,
             req.dealer,
@@ -93,8 +95,14 @@ async def play_card():
             req.tricks,
             MODELS
         )
+        """
+        dict_result = {
+            "card": "H4",
+            "claim_the_rest": false
+        }
+        """
 
-        return {'card': card_to_play}
+        return dict_result
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}
@@ -108,6 +116,8 @@ async def play_card():
     "auction": ["1C", "PASS", "PASS"]
 }
 '''
+
+
 @app.post('/place_bid')
 async def place_bid():
     try:
@@ -135,6 +145,8 @@ async def place_bid():
     "auction": ["1C", "PASS", "PASS", "PASS"]
 }
 '''
+
+
 @app.post('/make_lead')
 async def make_lead():
     try:
@@ -145,10 +157,23 @@ async def make_lead():
 
         lead = bot.lead(req.auction)
         card_str = lead.to_dict()['candidates'][0]['card']
-        contract = next((bid for bid in reversed(req.auction) if len(bid)==2 and bid!="XX"),None)
-        if contract is None :
+        contract = next((bid for bid in reversed(req.auction)
+                        if len(bid) == 2 and bid != "XX"), None)
+        if contract is None:
             raise Exception("contract is None")
-        return {'card': lead_real_card(PlayerHand.from_pbn(req.hand),card_str,BiddingSuit.from_str(contract[1])).__str__()}
+        return {'card': lead_real_card(PlayerHand.from_pbn(req.hand), card_str, BiddingSuit.from_str(contract[1])).__str__()}
+    except Exception as e:
+        app.logger.exception(e)
+        return {'error': 'Unexpected error'}
+
+
+@app.post('/check_claim')
+async def check_claim():
+    try:
+        data = await request.get_json()
+        req = CheckClaim(data)
+        res = await check_claim_from_api(req.claiming_hand, req.dummy_hand, req.claiming_direction, req.declarer, req.contract, req.tricks, req.claim)
+        return {'claim_accepted': res}
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}
@@ -190,8 +215,8 @@ async def healthz():
 
 port = os.environ.get('PORT', '8081')
 debug = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
-use_reloader = os.environ.get('USE_RELOADER', 'False').lower() in ('true', '1', 't')
+use_reloader = os.environ.get(
+    'USE_RELOADER', 'False').lower() in ('true', '1', 't')
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=port, debug=debug, use_reloader=use_reloader)
-
+    app.run(host='0.0.0.0', port=int(port), debug=debug, use_reloader=use_reloader)

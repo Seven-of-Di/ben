@@ -6,6 +6,5 @@ env
 src/examples/Bidding.ipynb
 dds.dll
 src/conf.py
-src/conf.py
 src/examples/Bidding1.ipynb
 dump.txt

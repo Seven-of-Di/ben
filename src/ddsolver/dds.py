@@ -19,8 +19,8 @@ import os
 import os.path
 import platform
 
-from ctypes import *
-
+from ctypes import * # type: ignore
+ 
 if platform.system() == "Windows":
     from ctypes import windll as libloader
 else:
@@ -29,7 +29,7 @@ else:
 LIBDDSPATH = "libdds/.build/src/"
 
 if platform.system() == "Windows":
-    LIBDDSPATH ="./"
+    LIBDDSPATH ='C:\\Users\\lucbe\\OneDrive\\Documents\\Bridge\\ben\\ben\\'
     libname = "dds.dll"
 elif platform.system() == "Darwin":
     libname = "libdds.2.dylib"
@@ -268,7 +268,7 @@ SetMaxThreads.argtypes = [c_int]
 SetMaxThreads.restype = None
 
 FreeMemory = dds.FreeMemory
-FreeMemory.argtypes = None
+FreeMemory.argtypes = None  # type: ignore
 FreeMemory.restype = None
 
 SolveBoard = dds.SolveBoard
@@ -394,7 +394,7 @@ SidesPar = dds.SidesPar
 array struct parResultsDealer sidesRes[2],
 int vulnerable"""
 SidesPar.argtypes = [POINTER(ddTableResults), parResultsDealer * 2, c_int]
-SidesPar.restypes = c_int
+SidesPar.restypes = c_int # type: ignore
 
 DealerPar = dds.DealerPar
 """pointer to struct ddTableResults * tablep

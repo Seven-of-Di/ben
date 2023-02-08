@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow.compat.v1 as tf
+import tensorflow.compat.v1 as tf  # type: ignore
 
 from collections import namedtuple
 
@@ -14,7 +14,7 @@ class Bidder:
         self.graph = tf.Graph()
         self.sess = tf.Session(graph=self.graph)
         self.load_model()
-        
+
         self.graph.finalize()
         self.lstm_size = 128
         self.zero_state = (

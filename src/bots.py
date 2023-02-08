@@ -1,6 +1,7 @@
 import time
 import random
 import pprint
+from typing import List
 
 import numpy as np
 
@@ -16,7 +17,8 @@ from bidding import bidding
 from bidding.binary import parse_hand_f
 
 from util import hand_to_str, expected_tricks, p_make_contract
-from utils import Card_
+from utils import Card_,multiple_list_comparaison,remove_same_indexes,Direction
+from claim_dds import check_claim_from_api
 
 
 class BotBid:
@@ -45,7 +47,7 @@ class BotBid:
     def get_binary(self, auction):
         n_steps = BotBid.get_n_steps_auction(auction)
         hand_ix = len(auction) % 4
-        
+
         X = binary.get_auction_binary(n_steps, auction, hand_ix, self.hand, self.vuln)
         return X[:,-1,:]
 
@@ -82,20 +84,20 @@ class BotBid:
             candidates = sorted(ev_candidates, key=lambda c: c.expected_score, reverse=True)
 
             return BidResp(bid=candidates[0].bid, candidates=candidates, samples=samples)
-        
+
         return BidResp(bid=candidates[0].bid, candidates=candidates, samples=samples)
-    
+
     @staticmethod
     def do_rollout(auction, candidates):
         if len(candidates) == 1:
             return False
-        
+
         if BotBid.get_n_steps_auction(auction) > 1:
             return True
-        
+
         if any(bid not in ('PASS', 'PAD_START') for bid in auction):
             return True
-        
+
         if all(candidate.bid != 'PASS' for candidate in candidates):
             return True
 
@@ -121,46 +123,46 @@ class BotBid:
         self.state = next_state
 
         return bid_np
-    
+
     def sample_hands(self, auction_so_far):
         turn_to_bid = len(auction_so_far) % 4
         n_steps = BotBid.get_n_steps_auction(auction_so_far)
         lho_pard_rho = sample.sample_cards_auction(2048, n_steps, auction_so_far, turn_to_bid, self.hand, self.vuln, self.model, self.binfo_model)[:64]
         n_samples = lho_pard_rho.shape[0]
-        
+
         hands_np = np.zeros((n_samples, 4, 32), dtype=np.int32)
         hands_np[:,turn_to_bid,:] = self.hand
         for i in range(1, 4):
             hands_np[:, (turn_to_bid + i) % 4, :] = lho_pard_rho[:,i-1,:]
-            
+
         return hands_np
 
     def bidding_rollout(self, auction_so_far, candidate_bid, hands_np):
         auction = [*auction_so_far, candidate_bid]
-        
+
         n_samples = hands_np.shape[0]
-        
+
         n_steps_vals = [0, 0, 0, 0]
         for i in range(1, 5):
-            n_steps_vals[(len(auction_so_far) % 4 + i) % 4] = BotBid.get_n_steps_auction(auction_so_far + ['?'] * i)  
-        
+            n_steps_vals[(len(auction_so_far) % 4 + i) % 4] = BotBid.get_n_steps_auction(auction_so_far + ['?'] * i)
+
         # initialize auction vector
         auction_np = np.ones((n_samples, 64), dtype=np.int32) * bidding.BID2ID['PAD_END']
         for i, bid in enumerate(auction):
             auction_np[:,i] = bidding.BID2ID[bid]
-            
+
         bid_i = len(auction) - 1
         turn_i = len(auction) % 4
         while not np.all(auction_np[:,bid_i] == bidding.BID2ID['PAD_END']):
             X = binary.get_auction_binary(n_steps_vals[turn_i], auction_np, turn_i, hands_np[:,turn_i,:], self.vuln)
             bid_np = self.model.model_seq(X).reshape((n_samples, n_steps_vals[turn_i], -1))[:,-1,:]
-            
+
             bid_i += 1
             auction_np[:,bid_i] = np.argmax(bid_np, axis=1)
-            
+
             n_steps_vals[turn_i] += 1
             turn_i = (turn_i + 1) % 4
-            
+
         return auction_np
 
     def expected_tricks(self, hands_np, auctions_np):
@@ -171,7 +173,7 @@ class BotBid:
         strains = np.zeros(n_samples, dtype=np.int32)
         X_ftrs = np.zeros((n_samples, 42))
         B_ftrs = np.zeros((n_samples, 15))
-        
+
         for i in range(n_samples):
             sample_auction = [bidding.ID2BID[bid_i] for bid_i in list(auctions_np[i, :]) if bid_i != 1]
             auctions.append(sample_auction)
@@ -179,14 +181,14 @@ class BotBid:
             contracts.append(contract)
             strains[i] = 'NSHDC'.index(contract[1])
             declarers[i] = 'NESW'.index(contract[-1])
-            
+
             hand_on_lead = hands_np[i:i+1, (declarers[i] + 1) % 4, :]
-            
+
             X_ftrs[i,:], B_ftrs[i,:] = binary.get_lead_binary(sample_auction, hand_on_lead, self.binfo_model, self.vuln)
-        
+
         lead_softmax = self.lead_model.model(X_ftrs, B_ftrs)
         lead_cards = np.argmax(lead_softmax, axis=1)
-        
+
         X_sd = np.zeros((n_samples, 32 + 5 + 4*32))
 
         X_sd[s_all,32 + strains] = 1
@@ -198,13 +200,13 @@ class BotBid:
         X_sd[:,(32 + 5 + 2*32):(32 + 5 + 3*32)] = hands_np[s_all, (declarers + 3) % 4]
         # declarer
         X_sd[:,(32 + 5 + 3*32):] = hands_np[s_all, declarers]
-        
+
         X_sd[s_all, lead_cards] = 1
-        
+
         decl_tricks_softmax = self.sd_model.model(X_sd)
-        
+
         return contracts, decl_tricks_softmax
-    
+
     def expected_score(self, turn_to_bid, contracts, decl_tricks_softmax):
         n_samples = len(contracts)
         scores_by_trick = np.zeros((n_samples, 14))
@@ -214,7 +216,7 @@ class BotBid:
             if (turn_to_bid + decl_i) % 2 == 1:
                 # the other side is playing the contract
                 scores_by_trick[i,:] *= -1
-        
+
         return np.sum(decl_tricks_softmax * scores_by_trick, axis=1)
 
 
@@ -338,6 +340,8 @@ class CardPlayer:
         self.contract = contract
         self.is_decl_vuln = is_decl_vuln
         self.n_tricks_taken = 0
+        self.check_claim = False
+        self.tricks_left = 13
         self.verbose = False
         self.level = int(contract[0])
         self.strain_i = bidding.get_strain_i(contract)
@@ -377,14 +381,14 @@ class CardPlayer:
     def set_public_card_played52(self, card52):
         self.public52[card52] -= 1
 
-    def play_card(self, trick_i, leader_i, current_trick52, players_states):
+    def play_card(self, trick_i, leader_i, current_trick52, players_states,probabilities_list):
         current_trick = [deck52.card52to32(c) for c in current_trick52]
-        card52_dd = self.next_card52(trick_i, leader_i, current_trick52, players_states)
+        card52_dd = self.next_card52(trick_i, leader_i, current_trick52, players_states,probabilities_list)
         card_resp = self.next_card(trick_i, leader_i, current_trick, players_states, card52_dd)
 
         return card_resp
 
-    def next_card52(self, trick_i, leader_i, current_trick52, players_states):
+    def next_card52(self, trick_i, leader_i, current_trick52, players_states,probabilities_list):
         n_samples = players_states[0].shape[0]
 
         unavailable_cards = set(list(np.nonzero(self.hand52)[0]) + list(np.nonzero(self.public52)[0]) + current_trick52)
@@ -429,13 +433,13 @@ class CardPlayer:
                                     try:
                                         if pip_i[suit_i] < len(pips[suit_i]):
                                             pip = pips[suit_i][pip_i[suit_i]]
-                                            
+
                                             if suit_i * 13 + pip not in current_trick52:
                                                 suit.append(pip)
                                                 pip_i[suit_i] += 1
                                     except:
                                         import pdb; pdb.set_trace()
-                                    
+
                         suits.append(''.join([symbols[card] for card in sorted(suit)]))
                     hands[j] = '.'.join(suits)
 
@@ -444,21 +448,32 @@ class CardPlayer:
                 print(hands_pbn[-1])
 
         t_start = time.time()
-        
-        # for hand_pbn in hands_pbn :
-        #     print(hand_pbn)
+
+        # for hand,p in zip(hands_pbn,probabilities_list) :
+        #     print(round(p,4),":",hand)
         dd_solved = self.dd.solve(self.strain_i, leader_i, current_trick52, hands_pbn)
+        superiors_cards =  multiple_list_comparaison(dd_results_dict=dd_solved)
+
+        if all(trick==self.tricks_left for trick in dd_solved[superiors_cards[0]]) :
+            self.check_claim = True
+
+        # print("Before removing")
         # print(dd_solved)
-        # for key, value in dict(sorted(dd_solved.items())).items():
-        #     print(Card_.get_from_52(key), value,sum(value)/len(value))
-        card_tricks = ddsolver.expected_tricks(dd_solved)
+        # print(ddsolver.expected_tricks(dd_solved))
+        # dd_solved = remove_same_indexes(dd_solved,{card:values for card,values in dd_solved.items() if card in superiors_cards})
+        # print("After removing")
+        # print(dd_solved)
+        card_tricks = ddsolver.expected_tricks(dd_solved,probabilities_list)
         card_ev = self.get_card_ev(dd_solved)
 
         card_result = {}
         for key in dd_solved.keys():
-            card_result[key] = (card_tricks[key], card_ev[key])
+            # print(Card_.get_from_52(key),dd_solved[key])
+            card_result[key] = (card_tricks[key], card_ev[key],(True if key in superiors_cards else False))
 
-        # print(card_result)
+
+        # for key, value in (card_result.items()):
+        #     print(Card_.get_from_52(key), value)
 
         if self.verbose:
             print('dds took', time.time() - t_start)
@@ -469,6 +484,7 @@ class CardPlayer:
 
     def get_card_ev(self, dd_solved):
         card_ev = {}
+        sign = 1 if self.player_i % 2 == 1 else -1
         for card, future_tricks in dd_solved.items():
             ev_sum = 0
             for ft in future_tricks:
@@ -476,10 +492,9 @@ class CardPlayer:
                     continue
                 tot_tricks = self.n_tricks_taken + ft
                 tot_decl_tricks = tot_tricks if self.player_i % 2 == 1 else 13 - tot_tricks
-                sign = 1 if self.player_i % 2 == 1 else -1
                 ev_sum += sign * self.score_by_tricks_taken[tot_decl_tricks]
             card_ev[card] = ev_sum / len(future_tricks)
-                
+
         return card_ev
 
     def next_card_softmax(self, trick_i):
@@ -504,9 +519,9 @@ class CardPlayer:
         if self.verbose:
             print(card_nn)
 
-        candidate_cards = []
-        
-        for card52, (e_tricks, e_score) in card_dd.items():
+        candidate_cards : List[CandidateCard] = []
+
+        for card52, (e_tricks, e_score,superior_card) in card_dd.items():
             card32 = deck52.card52to32(card52)
 
             candidate_cards.append(CandidateCard(
@@ -518,6 +533,8 @@ class CardPlayer:
             ))
 
         candidate_cards = sorted(candidate_cards, key=lambda c: (c.expected_score, c.insta_score + random.random() / 10000), reverse=True)
+        # for candidate_card in candidate_cards :
+        #     print(candidate_card.to_dict())
 
         samples = []
         for i in range(min(20, players_states[0].shape[0])):

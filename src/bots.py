@@ -450,7 +450,7 @@ class CardPlayer:
         t_start = time.time()
 
         # for hand,p in zip(hands_pbn,probabilities_list) :
-        #     print(round(p,4),":",hand)
+        #     print(round(p,6),":",hand)
         dd_solved = self.dd.solve(self.strain_i, leader_i, current_trick52, hands_pbn)
         superiors_cards =  multiple_list_comparaison(dd_results_dict=dd_solved)
 

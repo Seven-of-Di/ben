@@ -1,24 +1,23 @@
 Error code=-14
 
 Deal data:
-trump=S
-first=W
-index=0 currentTrickSuit=H currentTrickRank= A
+trump=N
+first=S
 index1=0 index2=0 remainCards=0
-index1=0 index2=1 remainCards=12340
-index1=0 index2=2 remainCards=5320
-index1=0 index2=3 remainCards=56
+index1=0 index2=1 remainCards=8
+index1=0 index2=2 remainCards=8192
+index1=0 index2=3 remainCards=12288
 index1=1 index2=0 remainCards=0
-index1=1 index2=1 remainCards=2056
-index1=1 index2=2 remainCards=2820
-index1=1 index2=3 remainCards=12740
+index1=1 index2=1 remainCards=12320
+index1=1 index2=2 remainCards=0
+index1=1 index2=3 remainCards=16384
 index1=2 index2=0 remainCards=0
-index1=2 index2=1 remainCards=1984
-index1=2 index2=2 remainCards=24624
-index1=2 index2=3 remainCards=19968
+index1=2 index2=1 remainCards=0
+index1=2 index2=2 remainCards=0
+index1=2 index2=3 remainCards=0
 index1=3 index2=0 remainCards=0
-index1=3 index2=1 remainCards=0
-index1=3 index2=2 remainCards=0
+index1=3 index2=1 remainCards=16404
+index1=3 index2=2 remainCards=16384
 index1=3 index2=3 remainCards=0
 
 target=-1
@@ -27,15 +26,16 @@ mode=2
 
 
         S --
-        H KQ542
-        D QT763
-        C 543
+        H 3
+        D K
+        C KQ
 S --            S --
-H --            H J3
-D --            D J982
-C --            C KQ8762
+H A42           H KQ5
+D A             D --
+C --            C A
         S --
-        H T9876
-        D AK54
-        C AJT9
+        H --
+        D --
+        C --
+
 

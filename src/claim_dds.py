@@ -164,6 +164,7 @@ def check_claim(diag: Diag, claim: int, claim_direction: Direction, trump: Biddi
 async def check_claim_from_api(claiming_hand_str: str, dummy_hand_str: str, claiming_direction_str: str, declarer_str: str, contract_str: str, tricks_as_str: List[List[str]], absolute_claim: int, n_samples=200) -> bool:
     claiming_direction = Direction.from_str(claiming_direction_str)
     declarer = Direction.from_str(declarer_str)
+    claiming_direction = declarer if claiming_direction == declarer.partner() else claiming_direction
     trump = BiddingSuit.from_str(contract_str[1])
     claiming_hand = PlayerHand.from_pbn(claiming_hand_str)
     dummy_hand = PlayerHand.from_pbn(dummy_hand_str)

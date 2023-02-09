@@ -153,7 +153,6 @@ class Rank(Enum):
     def from_integer(cls, rank_as_int: int) -> Rank:
         return [r for r in reversed(Rank)][rank_as_int]
 
-
     def to_integer(self) -> int:
         return [r for r in reversed(Rank)].index(self)
 
@@ -320,6 +319,19 @@ class PlayerHand():
         return PlayerHand(suits)
 
     @staticmethod
+    def from_lin(string: str) -> PlayerHand:
+        """Create a hand from a string with the following syntax SK7HAQT632DK4CQ62"""
+        current_suit = Suit.SPADES
+        cards = []
+        for str_card in string:
+            if str_card in ["S", "H", "D", "C"]:
+                current_suit = Suit.from_str(str_card)
+            else:
+                cards.append(Card_(current_suit, Rank.from_str(str_card)))
+
+        return PlayerHand.from_cards(cards)
+
+    @staticmethod
     def from_pbn(string: str) -> PlayerHand:
         """Create a hand from a string with the following syntax '752.Q864.84.AT62'"""
         tab_of_suit = string.split('.')
@@ -457,6 +469,18 @@ class Diag():
 
         return Diag(hands, autocomplete=False)
 
+    @staticmethod
+    def init_from_lin(string: str) -> Diag:
+        """Create a deal from this syntax : 3SK7HAQT632DK4CQ62,S82H98DAT632CKT43,S965HKJ5DQJ985CA5"""
+        string = string[1:]  # Delete the dealer carac
+        hand_list = string.split(",")
+        hands = {}
+        hands[Direction.SOUTH] = PlayerHand.from_lin(hand_list[0])
+        hands[Direction.WEST] = PlayerHand.from_lin(hand_list[1])
+        hands[Direction.NORTH] = PlayerHand.from_lin(hand_list[2])
+
+        return Diag(hands)
+
     def __str__(self) -> str:
         string = ""
         for direction in Direction:
@@ -478,6 +502,12 @@ class Diag():
         except:
             print(self)
             raise Exception
+
+    def remove(self, card: Card_):
+        for dir, hand in self.hands.items():
+            if card in hand.cards:
+                hand.remove(card)
+                return
 
 
 def compare_two_list(list_1: List[int], List_2: List[int]):
@@ -530,11 +560,11 @@ def multiple_list_comparaison(dd_results_dict: Dict[int, List]) -> List[int]:
 # print(multiple_list_comparaison(test))
 
 
-def remove_same_indexes(dict_to_clear,dict_to_take_values_from):
+def remove_same_indexes(dict_to_clear, dict_to_take_values_from):
     transposed_lists = zip(*dict_to_take_values_from.values())
     indexes_to_remove = [index for index, values in enumerate(
         transposed_lists) if len(set(values)) == 1]
-    if len(indexes_to_remove) == len(list(dict_to_clear.values())[0]) :
+    if len(indexes_to_remove) == len(list(dict_to_clear.values())[0]):
         return dict_to_clear
     for key in dict_to_clear.keys():
         for index in sorted(indexes_to_remove, reverse=True):
@@ -550,4 +580,42 @@ def remove_same_indexes(dict_to_clear,dict_to_take_values_from):
 def softmax(x):
     """Compute softmax values for each sets of scores in x."""
     e_x = np.exp(x - np.max(x))
-    return e_x / e_x.sum(axis=0) # only difference
+    return e_x / e_x.sum(axis=0)  # only difference
+
+
+def from_lin_to_request(lin_str: str, remove_cards_from_diag_up_to_trick: int = 0):
+    return_dict = {}
+    lin_str = lin_str.split("=", maxsplit=1)[1]
+    lin_str = lin_str.split("%", maxsplit=3)[3]
+    diag_lin = lin_str[2:].split("%")[0]
+    diag = Diag.init_from_lin(diag_lin)
+    lin_str = lin_str[2:].split("%", maxsplit=1)[1]
+    lin_str = "".join([substr for substr in lin_str.split("7C")])
+
+    def bidding_el_to_pbn(el: str):
+        trans_dict = {
+            "d": "X",
+            "r": "XX",
+            "p": "PASS"
+        }
+        return el if el not in trans_dict else trans_dict[el]
+
+    bidding_str = lin_str.split("mb%")[1:-1]
+    bidding_str = [bidding_el_to_pbn(el.strip("%")) for el in bidding_str]
+    print(bidding_str)
+
+    play_str = lin_str.split("pc")[1:-1]
+    play = [s.strip("%") for s in play_str]
+    n = 4
+    play_as_list_of_list = [play[i * n:(i + 1) * n]
+                            for i in range((len(play) + n - 1) // n)]
+
+    for i in range(remove_cards_from_diag_up_to_trick):
+        for card_str in play_as_list_of_list[i]:
+            diag.remove(Card_.from_str(card_str))
+    print(play_as_list_of_list[:remove_cards_from_diag_up_to_trick])
+    print(diag.print_as_pbn())
+
+if __name__ == "__main__":
+    link = r"https://stage.intobridge.com/hand?lin=pn%7CBen,Ben,guest321,Ben%7Cmd%7C3S6432H7543D976C92,SKHQJ86DJTCAQT743,SAQT75HT9D542CK85,SJ98HAK2DAKQ83CJ6%7Cah%7CBoard%201%7Cmb%7Cp%7Cmb%7C1D%7Cmb%7Cp%7Cmb%7C2C%7Cmb%7C2S%7Cmb%7C3N%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CS4%7Cpc%7CSK%7Cpc%7CSA%7Cpc%7CS8%7Cpc%7CD4%7Cpc%7CD3%7Cpc%7CD6%7Cpc%7CDT%7Cpc%7CDJ%7Cpc%7CD5%7Cpc%7CD8%7Cpc%7CD7%7Cpc%7CH6%7Cpc%7CH9%7Cpc%7CHA%7Cpc%7CH7%7Cpc%7CDA%7Cpc%7CD9%7Cpc%7CC7%7Cpc%7CD2%7Cpc%7CDK%7Cpc%7CS2%7Cpc%7CC3%7Cpc%7CS5%7Cpc%7CDQ%7Cpc%7CH5%7Cpc%7CC4%7Cpc%7CC5%7Cpc%7CHK%7Cpc%7CH4%7Cpc%7CH8%7Cpc%7CHT%7Cpc%7CCJ%7Cpc%7CC2%7Cpc%7CCT%7Cpc%7CCK%7Cpc%7CST%7Cpc%7CS9%7Cpc%7CS6%7Cpc%7CHJ%7Cpc%7CS7%7Cpc%7CSJ%7Cpc%7CS3%7Cpc%7CCQ%7Cpc%7CC6%7Cpc%7CC9%7Cpc%7CCA%7Cpc%7CC8%7Cpc%7CHQ%7Cpc%7CSQ%7Cpc%7CH2%7Cpc%7CH3%7Cmc%7C10%7C"
+    from_lin_to_request(link, 9)

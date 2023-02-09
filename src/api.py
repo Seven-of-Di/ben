@@ -15,7 +15,8 @@ tf.disable_v2_behavior()
 
 app = Quart(__name__)
 
-MODELS = Models.from_conf(conf.load("../default.conf"))
+DEFAULT_MODEL_CONF = os.path.join(os.path.dirname(os.getcwd()), 'default.conf')
+MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
 
 
 class PlaceBid:

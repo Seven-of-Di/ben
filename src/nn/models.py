@@ -9,6 +9,8 @@ from nn.bid_info import BidInfo
 from nn.leader import Leader
 from nn.lead_singledummy import LeadSingleDummy
 
+BIDDER_MODEL_BASE_PATH = os.path.join(os.path.dirname(os.getcwd()))
+
 
 class Models:
 
@@ -22,18 +24,16 @@ class Models:
     
     @classmethod
     def from_conf(cls, conf: ConfigParser) -> "Models":
-        base_path = os.getenv('BEN_HOME','..') 
-         
         return cls(
-            bidder_model=Bidder('bidder', os.path.join(base_path, conf['bidding']['bidder'])),
-            binfo=BidInfo(os.path.join(base_path, conf['bidding']['info'])),
-            lead=Leader(os.path.join(base_path, conf['lead']['lead'])),
-            sd_model=LeadSingleDummy(os.path.join(base_path, conf['eval']['lead_single_dummy'])),
+            bidder_model=Bidder('bidder', os.path.join(BIDDER_MODEL_BASE_PATH, conf['bidding']['bidder'])),
+            binfo=BidInfo(os.path.join(BIDDER_MODEL_BASE_PATH, conf['bidding']['info'])),
+            lead=Leader(os.path.join(BIDDER_MODEL_BASE_PATH, conf['lead']['lead'])),
+            sd_model=LeadSingleDummy(os.path.join(BIDDER_MODEL_BASE_PATH, conf['eval']['lead_single_dummy'])),
             player_models=[
-                player.BatchPlayerLefty('lefty', os.path.join(base_path, conf['cardplay']['lefty'])),
-                player.BatchPlayer('dummy', os.path.join(base_path, conf['cardplay']['dummy'])),
-                player.BatchPlayer('righty', os.path.join(base_path, conf['cardplay']['righty'])),
-                player.BatchPlayer('decl', os.path.join(base_path, conf['cardplay']['decl']))
+                player.BatchPlayerLefty('lefty', os.path.join(BIDDER_MODEL_BASE_PATH, conf['cardplay']['lefty'])),
+                player.BatchPlayer('dummy', os.path.join(BIDDER_MODEL_BASE_PATH, conf['cardplay']['dummy'])),
+                player.BatchPlayer('righty', os.path.join(BIDDER_MODEL_BASE_PATH, conf['cardplay']['righty'])),
+                player.BatchPlayer('decl', os.path.join(BIDDER_MODEL_BASE_PATH, conf['cardplay']['decl']))
             ],
         )
 

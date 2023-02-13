@@ -17,8 +17,9 @@ from bidding import bidding
 from bidding.binary import parse_hand_f
 
 from util import hand_to_str, expected_tricks, p_make_contract
-from utils import Card_,multiple_list_comparaison,remove_same_indexes,Direction
+from utils import Card_,multiple_list_comparaison,remove_same_indexes,Direction,PlayerHand
 from claim_dds import check_claim_from_api
+from sample_analyze import SampleAnalyzer
 
 
 class BotBid:
@@ -57,7 +58,39 @@ class BotBid:
 
         for i in range(len(auction)//4):
             self.get_bid_candidates(auction[:i*4+position_minus_1])
+
         return self.bid(auction)
+
+    def get_samples_from_auction(self,auction) -> List[PlayerHand] :
+        auction = [element for element in auction if element!="PAD_START"]
+        # print(auction)
+        hand_to_alert_index = len(auction) % 4
+        position_minus_1 = len(auction)%4
+        pass
+        for i in range(len(auction)//4):
+            self.get_bid_candidates(auction[:i*4+position_minus_1])
+
+        hands_np = self.sample_hands(auction)
+
+        samples = {dir:[PlayerHand.from_pbn(hand_to_str(hands_np[i,dir.value,:])) for i in range(hands_np.shape[0])] for dir in Direction}
+
+        # for dir, sample in samples.items() :
+        #     print(dir,":")
+        #     print(SampleAnalyzer(sample))
+
+        samples_str = []
+        for i in range( hands_np.shape[0]):
+            samples_str.append('%s %s %s %s' % (
+                hand_to_str(hands_np[i,0,:]),
+                hand_to_str(hands_np[i,1,:]),
+                hand_to_str(hands_np[i,2,:]),
+                hand_to_str(hands_np[i,3,:]),
+            ))
+
+        print(samples_str[:5])
+
+        return samples
+
 
     def bid(self, auction):
         candidates = self.get_bid_candidates(auction)
@@ -65,13 +98,15 @@ class BotBid:
 
 
         samples = []
-        for i in range(min(10, hands_np.shape[0])):
+        for i in range( hands_np.shape[0]):
             samples.append('%s %s %s %s' % (
                 hand_to_str(hands_np[i,0,:]),
                 hand_to_str(hands_np[i,1,:]),
                 hand_to_str(hands_np[i,2,:]),
                 hand_to_str(hands_np[i,3,:]),
             ))
+
+        # print(samples)
 
         if BotBid.do_rollout(auction, candidates):
             ev_candidates = []

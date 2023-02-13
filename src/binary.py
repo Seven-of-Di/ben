@@ -196,6 +196,7 @@ def get_auction_binary(n_steps, auction_input, hand_ix, hand, vuln):
         step_i += 1
         bid_i += 4
 
+    
     return X
 
 

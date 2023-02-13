@@ -27,6 +27,14 @@ class PlaceBid:
         self.auction = ['PAD_START'] * \
             DIRECTIONS.index(self.dealer) + place_bid_request['auction']
 
+class AlertBid:
+    def __init__(self, alert_bid_request) -> None:
+        self.vuln = VULNERABILITIES[alert_bid_request['vuln']]
+        self.hand = alert_bid_request['hand']
+        self.hand_direction = alert_bid_request["hand_direction"]
+        self.dealer = alert_bid_request['dealer']
+        self.auction = alert_bid_request['auction']
+        self.bid_to_alert_index = alert_bid_request['bid_to_alert_index']
 
 class PlayCard:
     def __init__(self, play_card_request):
@@ -195,6 +203,23 @@ async def check_claim() :
             req.claim)
 
         return {'claim_accepted': res}
+    except Exception as e:
+        app.logger.exception(e)
+        return {'error': 'Unexpected error'}
+
+@app.post('/alert_bid')
+async def alert_bid() :
+    try:
+        data = await request.get_json()
+        req = AlertBid(data)
+        bot = AsyncBotBid(
+            req.vuln,
+            req.hand,
+            MODELS
+        )
+        samples = await bot.async_get_samples_from_auction(req.auction)
+
+        return {'samples': "null"}
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}

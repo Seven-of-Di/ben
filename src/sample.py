@@ -349,6 +349,7 @@ def get_bid_scores(nesw_i, auction, vuln, hand, bidder_model):
 
     X = np.zeros((hand.shape[0], n_steps, A.shape[-1]))
 
+    pass
     X[:,:,:2] = A[nesw_i,0,:2]
     X[:,:,7:39] = hand.reshape((-1, 1, 32))
     X[:,:,39:] = A[nesw_i,:,39:]
@@ -511,7 +512,8 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
 
         for h_i in [hidden_1_i, hidden_2_i]:
             h_i_nesw = player_to_nesw_i(h_i, contract)
-
+            if h_i_nesw>=states[h_i].shape[0] :
+                continue
             bid_scores = get_bid_scores(h_i_nesw, auction, vuln, states[h_i][:,0,:32], models.bidder_model)
 
             min_bid_scores = np.minimum(min_bid_scores, bid_scores)

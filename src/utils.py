@@ -414,6 +414,12 @@ class PlayerHand():
         repr_str = ".".join("".join(suit) for suit in suit_arrays)
         return repr_str
 
+    def suit_hcp(self, suit: Suit) -> int:
+        return sum([rank.hcp() for rank in self.suits[suit]])
+
+    def hcp(self) -> int:
+        return sum(self.suit_hcp(suit) for suit in Suit)
+
 
 TOTAL_DECK: List[Card_] = []
 for rank in Rank:
@@ -584,12 +590,11 @@ def softmax(x):
 
 
 def from_lin_to_request(lin_str: str, remove_cards_from_diag_up_to_trick: int = 0):
-    return_dict = {}
     lin_str = lin_str.split("=", maxsplit=1)[1]
-    lin_str = lin_str.split("%", maxsplit=3)[3]
-    diag_lin = lin_str[2:].split("%")[0]
+    lin_str = lin_str.split("|", maxsplit=3)[3]
+    diag_lin = lin_str[2:].split("|")[0]
     diag = Diag.init_from_lin(diag_lin)
-    lin_str = lin_str[2:].split("%", maxsplit=1)[1]
+    lin_str = lin_str[2:].split("|", maxsplit=1)[1]
     lin_str = "".join([substr for substr in lin_str.split("7C")])
 
     def bidding_el_to_pbn(el: str):
@@ -600,12 +605,12 @@ def from_lin_to_request(lin_str: str, remove_cards_from_diag_up_to_trick: int = 
         }
         return el if el not in trans_dict else trans_dict[el]
 
-    bidding_str = lin_str.split("mb%")[1:-1]
-    bidding_str = [bidding_el_to_pbn(el.strip("%")) for el in bidding_str]
+    bidding_str = lin_str.split("mb|")[1:-1]
+    bidding_str = [bidding_el_to_pbn(el.strip("|")) for el in bidding_str]
     print(bidding_str)
 
     play_str = lin_str.split("pc")[1:-1]
-    play = [s.strip("%") for s in play_str]
+    play = [s.strip("|") for s in play_str]
     n = 4
     play_as_list_of_list = [play[i * n:(i + 1) * n]
                             for i in range((len(play) + n - 1) // n)]
@@ -616,6 +621,7 @@ def from_lin_to_request(lin_str: str, remove_cards_from_diag_up_to_trick: int = 
     print(play_as_list_of_list[:remove_cards_from_diag_up_to_trick])
     print(diag.print_as_pbn())
 
+
 if __name__ == "__main__":
-    link = r"https://stage.intobridge.com/hand?lin=pn%7CBen,Ben,guest321,Ben%7Cmd%7C3S6432H7543D976C92,SKHQJ86DJTCAQT743,SAQT75HT9D542CK85,SJ98HAK2DAKQ83CJ6%7Cah%7CBoard%201%7Cmb%7Cp%7Cmb%7C1D%7Cmb%7Cp%7Cmb%7C2C%7Cmb%7C2S%7Cmb%7C3N%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CS4%7Cpc%7CSK%7Cpc%7CSA%7Cpc%7CS8%7Cpc%7CD4%7Cpc%7CD3%7Cpc%7CD6%7Cpc%7CDT%7Cpc%7CDJ%7Cpc%7CD5%7Cpc%7CD8%7Cpc%7CD7%7Cpc%7CH6%7Cpc%7CH9%7Cpc%7CHA%7Cpc%7CH7%7Cpc%7CDA%7Cpc%7CD9%7Cpc%7CC7%7Cpc%7CD2%7Cpc%7CDK%7Cpc%7CS2%7Cpc%7CC3%7Cpc%7CS5%7Cpc%7CDQ%7Cpc%7CH5%7Cpc%7CC4%7Cpc%7CC5%7Cpc%7CHK%7Cpc%7CH4%7Cpc%7CH8%7Cpc%7CHT%7Cpc%7CCJ%7Cpc%7CC2%7Cpc%7CCT%7Cpc%7CCK%7Cpc%7CST%7Cpc%7CS9%7Cpc%7CS6%7Cpc%7CHJ%7Cpc%7CS7%7Cpc%7CSJ%7Cpc%7CS3%7Cpc%7CCQ%7Cpc%7CC6%7Cpc%7CC9%7Cpc%7CCA%7Cpc%7CC8%7Cpc%7CHQ%7Cpc%7CSQ%7Cpc%7CH2%7Cpc%7CH3%7Cmc%7C10%7C"
+    link = r"https://dev.intobridge.com/hand?lin=pn|guest11,Ben,Ben,Ben|md|3SJ3HAKQJ65D9CA753,SKQ852HT873DA4CKQ,ST64H2DQJT873CJT9,SA97H94DK652C8642|ah|Board%205|mb|p|mb|p|mb|1N|mb|p|mb|3C|mb|p|mb|3D|mb|p|mb|p|mb|p|pc|SK|pc|S4|pc|S7|pc|S3|pc|S2|pc|S6|pc|SA|pc|SJ|pc|C2|pc|CA|pc|CQ|pc|C9|pc|HA|pc|H3|pc|H2|pc|H4|pc|HK|pc|H7|pc|CT|pc|H9|pc|HJ|pc|H8|pc|CJ|pc|D6|pc|S9|pc|D9|pc|S5|pc|ST|pc|C3|pc|CK|pc|D3|pc|C6|pc|DQ|pc|D5|pc|H5|pc|DA|pc|D4|pc|DJ|pc|DK|pc|H6|pc|D2|pc|C5|pc|S8|pc|D7|pc|DT|pc|C4|pc|C7|pc|SQ|pc|D8|pc|C8|pc|HQ|pc|HT|mc|8|sv|n|"
     from_lin_to_request(link, 9)

@@ -121,7 +121,7 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
                 if card_players[player_i].check_claim and next_player in [declarer,dummy]:
                     claim_res = await check_claim_from_api(hand_str,dummy_hand_str,declarer.abbreviation(),declarer_str,contract,tricks_str,13-trick_i+card_players[player_i].n_tricks_taken)
                 return {
-                    "card": play_real_card(random_diag.hands[next_player], list(resp.to_dict().values())[0], trump=BiddingSuit.from_str(contract[1]), play_record=play_record, player_direction=next_player, declarer=declarer).__str__(),
+                    "card": play_real_card((PlayerHand.from_pbn(hand_str) if next_player != dummy else PlayerHand.from_pbn(dummy_hand_str)), resp.card.symbol(), trump=BiddingSuit.from_str(contract[1]), play_record=play_record, player_direction=next_player, declarer=declarer).__str__(),
                     "claim_the_rest" : claim_res
                 }
 
@@ -234,15 +234,16 @@ def play_real_card(hand: PlayerHand, card_str: str, trump: BiddingSuit, play_rec
     if not card_str[1] == "x":
         return Card_.from_str(card_str)
     suit_to_play = Suit.from_str(card_str[0])
-    if trump.to_suit() == suit_to_play:
-        return Card_(suit_to_play, pick_random_low(hand, suit_to_play))
     if player_direction == declarer.partner():
         return Card_(suit_to_play, sorted(hand.suits[suit_to_play])[0])
+    if trump.to_suit() == suit_to_play:
+        return Card_(suit_to_play, pick_random_low(hand, suit_to_play))
     if player_direction == declarer:
         return Card_(suit_to_play, pick_random_low(hand, suit_to_play))
     if play_record.record == None:
         raise Exception("play record should not be empty")
-    if len(play_record.record[-1]) % 4 == 0:
+    on_lead = len(play_record.record[-1]) % 4 == 0
+    if on_lead :
         cards_played_by_player = play_record.get_cards_played_by_direction(
             player_direction)
         if any([card.suit == play_record.record[-1].__trick_as_list__()[0][1].suit for card in cards_played_by_player]):

@@ -479,11 +479,7 @@ class CardPlayer:
                     hands[j] = '.'.join(suits)
 
             hands_pbn.append('W:' + ' '.join(hands))
-            if i < 5 and self.verbose:
-                print(hands_pbn[-1])
-
-        t_start = time.time()
-
+            
         # for hand,p in zip(hands_pbn,probabilities_list) :
         #     print(round(p,6),":",hand)
         dd_solved = self.dd.solve(self.strain_i, leader_i, current_trick52, hands_pbn)
@@ -509,11 +505,6 @@ class CardPlayer:
 
         # for key, value in (card_result.items()):
         #     print(Card_.get_from_52(key), value)
-
-        if self.verbose:
-            print('dds took', time.time() - t_start)
-
-            print('dd card res', card_result)
 
         return card_result
 
@@ -542,8 +533,6 @@ class CardPlayer:
     def next_card(self, trick_i, leader_i, current_trick, players_states, card_dd):
         t_start = time.time()
         card_softmax = self.next_card_softmax(trick_i)
-        if self.verbose:
-            print('ncs', time.time() - t_start)
 
         all_cards = np.arange(32)
         s_opt = card_softmax > 0.01
@@ -551,8 +540,6 @@ class CardPlayer:
         card_options, card_scores = all_cards[s_opt], card_softmax[s_opt]
 
         card_nn = {c:s for c, s in zip(card_options, card_scores)}
-        if self.verbose:
-            print(card_nn)
 
         candidate_cards : List[CandidateCard] = []
 
@@ -567,10 +554,6 @@ class CardPlayer:
                 expected_score=e_score
             ))
 
-        candidate_cards = sorted(candidate_cards, key=lambda c: (c.expected_score, c.insta_score + random.random() / 10000), reverse=True)
-        # for candidate_card in candidate_cards :
-        #     print(candidate_card.to_dict())
-
         samples = []
         for i in range(min(20, players_states[0].shape[0])):
             samples.append('%s %s %s %s' % (
@@ -580,13 +563,23 @@ class CardPlayer:
                 hand_to_str(players_states[3][i,0,:32].astype(int)),
             ))
 
-        card_resp = CardResp(
-            card=candidate_cards[0].card,
-            candidates=candidate_cards,
-            samples=samples
-        )
+        candidate_cards = sorted(candidate_cards, key=lambda c: (c.expected_score, c.insta_score + random.random() / 10000), reverse=True)
+        best_card_resp = CardResp(card=candidate_cards[0].card,candidates=candidate_cards,samples=samples)
+        # for candidate_card in candidate_cards :
+        #     print(candidate_card.to_dict())
 
-        if self.verbose:
-            pprint.pprint(card_resp.to_dict())
+        # Max expected score difference ?
+        max_expected_score = max([float(c.expected_score) for c in candidate_cards if c.expected_score is not None])
+        card_with_max_expected_score = {c:c.expected_score for c in candidate_cards if c.expected_score==max_expected_score}
+        if len(card_with_max_expected_score)==1 :
+            return best_card_resp
 
-        return card_resp
+        # NN difference ?
+        max_insta_score = max([float(c.insta_score) for c in card_with_max_expected_score.keys() if c.insta_score is not None])
+        card_with_max_insta_score = {c:c.insta_score for c in candidate_cards if c.insta_score==max_insta_score}
+        if len(card_with_max_insta_score)==1 :
+            return best_card_resp
+
+        # Play some human carding
+        return CardResp(card=Card(candidate_cards[0].card.suit,7,xcards=True),candidates=candidate_cards,samples=samples)
+

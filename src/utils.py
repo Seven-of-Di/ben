@@ -583,10 +583,10 @@ def remove_same_indexes(dict_to_clear, dict_to_take_values_from):
 # new_dict = remove_same_indexes(dict_to_clear,dict_to_take_values_from)
 # print(new_dict)
 
-def softmax(x):
+def convert_to_probability(x):
     """Compute softmax values for each sets of scores in x."""
-    e_x = np.exp(x - np.max(x))
-    return e_x / e_x.sum(axis=0)  # only difference
+    sum_of_proba = np.sum(x, axis=0)
+    return np.divide(x, sum_of_proba)
 
 
 def from_lin_to_request(lin_str: str, remove_cards_from_diag_up_to_trick: int = 0):

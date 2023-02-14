@@ -390,9 +390,6 @@ def get_bid_scores(nesw_i, auction, vuln, hand, bidder_model: Bidder):
 
     X = np.zeros((hand.shape[0], n_steps, A.shape[-1]))
 
-    for i, (val1, val2) in enumerate(zip(A[0, 0, 39:], A[1, 0, 39:])):
-        if val1 != val2:
-            print(i, val1, val2)
     assert np.array_equiv(A[0, :, 39:], A[1, :, 39:])
     X[:, :, :2] = A[0, 0, :2]
     X[:, :, 7:39] = hand.reshape((-1, 1, 32))

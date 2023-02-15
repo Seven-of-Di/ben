@@ -73,7 +73,7 @@ class CandidateCard:
 class CardResp:
 
     def __init__(self, card, candidates, samples):
-        self.card = card
+        self.card : Card = card
         self.candidates = candidates
         self.samples = samples
 

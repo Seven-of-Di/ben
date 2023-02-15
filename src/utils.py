@@ -1,9 +1,10 @@
 from __future__ import annotations
+from copy import deepcopy
 
 from enum import Enum
 from functools import total_ordering
 from random import shuffle
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Optional
 import numpy as np
 
 """
@@ -487,6 +488,23 @@ class Diag():
 
         return Diag(hands)
 
+    @staticmethod
+    def generate_random(fixed_hand: Optional[PlayerHand] = None, fixed_hand_dir: Optional[Direction] = None) -> Diag:
+        if fixed_hand is None and fixed_hand_dir is None:
+            deck = deepcopy(TOTAL_DECK)
+            shuffle(deck)
+            return Diag({dir: PlayerHand.from_cards(deck[i*13:(i+1)*13]) for i, dir in enumerate(Direction)})
+        elif fixed_hand is not None and fixed_hand_dir is not None:
+            deck = [card for card in TOTAL_DECK if card not in fixed_hand.cards]
+            shuffle(deck)
+            data: Dict[Direction, PlayerHand] = {fixed_hand_dir: fixed_hand}
+            for i in range(3):
+                data[fixed_hand_dir.offset(i+1)] = PlayerHand.from_cards(
+                    deck[i*13:(i+1)*13])
+            return Diag(data)
+        raise Exception(
+            "You have to give both or none (fixed_hand and fixed_hand_dir)")
+
     def __str__(self) -> str:
         string = ""
         for direction in Direction:
@@ -590,6 +608,7 @@ def convert_to_probability(x):
 
 
 def from_lin_to_request(lin_str: str, remove_cards_from_diag_up_to_trick: int = 0):
+    lin_str = lin_str.replace("%7C",'|')
     lin_str = lin_str.split("=", maxsplit=1)[1]
     lin_str = lin_str.split("|", maxsplit=3)[3]
     diag_lin = lin_str[2:].split("|")[0]
@@ -623,5 +642,5 @@ def from_lin_to_request(lin_str: str, remove_cards_from_diag_up_to_trick: int = 
 
 
 if __name__ == "__main__":
-    link = r"https://dev.intobridge.com/hand?lin=pn|guest11,Ben,Ben,Ben|md|3SJ3HAKQJ65D9CA753,SKQ852HT873DA4CKQ,ST64H2DQJT873CJT9,SA97H94DK652C8642|ah|Board%205|mb|p|mb|p|mb|1N|mb|p|mb|3C|mb|p|mb|3D|mb|p|mb|p|mb|p|pc|SK|pc|S4|pc|S7|pc|S3|pc|S2|pc|S6|pc|SA|pc|SJ|pc|C2|pc|CA|pc|CQ|pc|C9|pc|HA|pc|H3|pc|H2|pc|H4|pc|HK|pc|H7|pc|CT|pc|H9|pc|HJ|pc|H8|pc|CJ|pc|D6|pc|S9|pc|D9|pc|S5|pc|ST|pc|C3|pc|CK|pc|D3|pc|C6|pc|DQ|pc|D5|pc|H5|pc|DA|pc|D4|pc|DJ|pc|DK|pc|H6|pc|D2|pc|C5|pc|S8|pc|D7|pc|DT|pc|C4|pc|C7|pc|SQ|pc|D8|pc|C8|pc|HQ|pc|HT|mc|8|sv|n|"
-    from_lin_to_request(link, 9)
+    link = r"https://dev.intobridge.com/hand?lin=pn%7CBen,Ben,guest301,guest324%7Cmd%7C3SQ2HQ865DJ97CQT92,SA43HK4DAT8642C86,S765HAJ732DK3CJ75,SKJT98HT9DQ5CAK43%7Cah%7CBoard%201%7Cmb%7Cp%7Cmb%7C1S%7Cmb%7Cp%7Cmb%7C1N%7Cmb%7Cp%7Cmb%7C2C%7Cmb%7Cp%7Cmb%7C3S%7Cmb%7Cp%7Cmb%7C4S%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CD7%7Cpc%7CDA%7Cpc%7CD3%7Cpc%7CD5%7Cpc%7CS3%7Cpc%7CS7%7Cpc%7CSK%7Cpc%7CS2%7Cpc%7CDQ%7Cpc%7CD9%7Cpc%7CD2%7Cpc%7CDK%7Cpc%7CC5%7Cpc%7CCA%7Cpc%7CC2%7Cpc%7CC6%7Cpc%7CCK%7Cpc%7CC9%7Cpc%7CC8%7Cpc%7CC7%7Cpc%7CC4%7Cpc%7CCT%7Cpc%7CS4%7Cpc%7CCJ%7Cpc%7CDT%7Cpc%7CH2%7Cpc%7CS8%7Cpc%7CDJ%7Cpc%7CC3%7Cpc%7CCQ%7Cpc%7CSA%7Cpc%7CH3%7Cpc%7CD8%7Cpc%7CH7%7Cpc%7CH9%7Cpc%7CSQ%7Cpc%7CH5%7Cpc%7CHK%7Cpc%7CHA%7Cpc%7CHT%7Cpc%7CHJ%7Cpc%7CS9%7Cpc%7CH6%7Cpc%7CH4%7Cpc%7CSJ%7Cpc%7CH8%7Cpc%7CD4%7Cpc%7CS5%7Cpc%7CST%7Cpc%7CHQ%7Cpc%7CD6%7Cpc%7CS6%7Cmc%7C10%7C"
+    from_lin_to_request(link, 0)

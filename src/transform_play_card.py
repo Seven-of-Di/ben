@@ -72,13 +72,13 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
 
     card_players = [
         AsyncCardPlayer(MODELS.player_models, 0, lefty_hand,
-                        dummy_hand, contract, is_decl_vuln),
+                        dummy_hand, contract, is_decl_vuln,play_record,declarer=declarer),
         AsyncCardPlayer(MODELS.player_models, 1, dummy_hand,
-                        decl_hand, contract, is_decl_vuln),
+                        decl_hand, contract, is_decl_vuln,play_record,declarer=declarer),
         AsyncCardPlayer(MODELS.player_models, 2, righty_hand,
-                        dummy_hand, contract, is_decl_vuln),
+                        dummy_hand, contract, is_decl_vuln,play_record,declarer=declarer),
         AsyncCardPlayer(MODELS.player_models, 3, decl_hand,
-                        dummy_hand, contract, is_decl_vuln)
+                        dummy_hand, contract, is_decl_vuln,play_record,declarer=declarer)
     ]
 
     player_cards_played = [[] for _ in range(4)]
@@ -117,11 +117,12 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
                     n_samples = 50
                 rollout_states,probabilities_list = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits,
                                                             current_trick, n_samples, padded_auction, card_players[player_i].hand.reshape((-1, 32)), vuls, MODELS)
-                resp = await card_players[player_i].async_play_card(trick_i, leader_i, current_trick52, rollout_states,probabilities_list)
+                card = await card_players[player_i].async_play_card(trick_i, leader_i, current_trick52, rollout_states,probabilities_list)
                 if card_players[player_i].check_claim and next_player in [declarer,dummy]:
                     claim_res = await check_claim_from_api(hand_str,dummy_hand_str,declarer.abbreviation(),declarer_str,contract,tricks_str,13-trick_i+card_players[player_i].n_tricks_taken)
                 return {
-                    "card": play_real_card((PlayerHand.from_pbn(hand_str) if next_player != dummy else PlayerHand.from_pbn(dummy_hand_str)), resp.card.symbol(), trump=BiddingSuit.from_str(contract[1]), play_record=play_record, player_direction=next_player, declarer=declarer).__str__(),
+                    "card": card,
+                    # "card": play_real_card((PlayerHand.from_pbn(hand_str) if next_player != dummy else PlayerHand.from_pbn(dummy_hand_str)), resp.card.symbol(), trump=BiddingSuit.from_str(contract[1]), play_record=play_record, player_direction=next_player, declarer=declarer).__str__(),
                     "claim_the_rest" : claim_res
                 }
 
@@ -218,112 +219,4 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
         "The loop ended without returning a card, something weird is going on")
 
 
-def lead_real_card(hand: PlayerHand, card_str: str, trump: BiddingSuit):
-    if not card_str[1] == "x":
-        return Card_.from_str(card_str)
-    suit_to_play = Suit.from_str(card_str[0])
-    if trump.to_suit() == suit_to_play:
-        return Card_(suit_to_play, pick_random_low(hand, suit_to_play))
-    if trump == BiddingSuit.NO_TRUMP:
-        return Card_(suit_to_play, fourth_best(hand, suit_to_play, partner_suit=False))
-    else:
-        return Card_(suit_to_play, third_fifth(hand, suit_to_play))
 
-
-def play_real_card(hand: PlayerHand, card_str: str, trump: BiddingSuit, play_record: PlayRecord, player_direction: Direction, declarer: Direction) -> Card_:
-    if not card_str[1] == "x":
-        return Card_.from_str(card_str)
-    suit_to_play = Suit.from_str(card_str[0])
-    if player_direction == declarer.partner():
-        return Card_(suit_to_play, sorted(hand.suits[suit_to_play])[0])
-    if trump.to_suit() == suit_to_play:
-        return Card_(suit_to_play, pick_random_low(hand, suit_to_play))
-    if player_direction == declarer:
-        return Card_(suit_to_play, pick_random_low(hand, suit_to_play))
-    if play_record.record == None:
-        raise Exception("play record should not be empty")
-    on_lead = len(play_record.record[-1]) % 4 == 0
-    if on_lead :
-        cards_played_by_player = play_record.get_cards_played_by_direction(
-            player_direction)
-        if any([card.suit == play_record.record[-1].__trick_as_list__()[0][1].suit for card in cards_played_by_player]):
-            return Card_(suit_to_play, sorted(hand.suits[suit_to_play])[0])
-        else:
-            return Card_(suit_to_play, standard_count(hand, suit_to_play))
-    else :
-        cards_played_by_player = play_record.get_cards_played_by_direction(player_direction)
-        if any([card.suit == play_record.record[-1].__trick_as_list__()[0][1].suit for card in cards_played_by_player]):
-            return Card_(suit_to_play, sorted(hand.suits[suit_to_play])[0])
-        else:
-            return Card_(suit_to_play, low_encouraging(hand, suit_to_play))
-
-
-def pick_random_low(hand: PlayerHand, suit: Suit) -> Rank:
-    return random.choice([rank for rank in hand.suits[suit] if rank <= Rank.SEVEN])
-
-def fourth_best(hand: PlayerHand, suit: Suit, partner_suit: bool) -> Rank:
-    length = len(hand.suits[suit])
-    suit_ranks = sorted(hand.suits[suit], reverse=True)
-    if length == 1 or length == 2:
-        return suit_ranks[0]
-    if length == 3:
-        if not partner_suit:
-            if hand.number_of_figures(suit) == 0:
-                return suit_ranks[0]
-            return suit_ranks[2]
-        return suit_ranks[2]
-    if length >= 4:
-        if not partner_suit:
-            if hand.number_of_figures(suit) == 0:
-                return suit_ranks[1]
-            return suit_ranks[3]
-        if partner_suit:
-            if length % 2 == 1:
-                return suit_ranks[-1]
-            if hand.number_of_figures(suit) == 0:
-                return suit_ranks[1]
-            return suit_ranks[2]
-    raise Exception("Couldn't lead 4th best in this suit - too bad")
-
-
-def third_fifth(hand: PlayerHand, suit: Suit) -> Rank:
-    length = len(hand.suits[suit])
-    suit_ranks = sorted(hand.suits[suit], reverse=True)
-    if length == 1 or length == 2:
-        return suit_ranks[0]
-    if length == 3:
-        return suit_ranks[2]
-    if length == 4:
-        if hand.number_of_figures(suit) == 0:
-            return suit_ranks[1]
-        else:
-            return suit_ranks[2]
-    if length >= 5:
-        return suit_ranks[4]
-    raise Exception("Couldn't lead 3rd 5th best in this suit - too bad")
-
-
-def low_encouraging(hand: PlayerHand, suit: Suit) -> Rank:
-    length = len(hand.suits[suit])
-    suit_ranks = sorted(hand.suits[suit], reverse=True)
-    if hand.number_of_figures(suit) == 0:
-        return suit_ranks[0]
-    else:
-        return suit_ranks[-1]
-    raise Exception(
-        "Couldn't lead low encouraging best in this suit - too bad")
-
-
-def standard_count(hand: PlayerHand, suit: Suit) -> Rank:
-    length = len(hand.suits[suit])
-    suit_ranks = sorted(hand.suits[suit], reverse=True)
-    if length % 2 == 1:
-        return suit_ranks[-1]
-    if length == 2:
-        if suit_ranks[0] <= Rank.NINE:
-            return suit_ranks[0]
-        else:
-            return suit_ranks[1]
-    if suit_ranks[1] <= Rank.SEVEN:
-        return suit_ranks[1]
-    return suit_ranks[2]

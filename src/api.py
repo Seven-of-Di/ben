@@ -4,7 +4,8 @@ from nn.models import Models
 from game import AsyncBotBid, AsyncBotLead
 import os
 import conf
-from transform_play_card import get_ben_card_play_answer, lead_real_card
+from transform_play_card import get_ben_card_play_answer
+from human_carding import lead_real_card
 from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit
 from PlayRecord import PlayRecord, Direction
 from claim_dds import check_claim_from_api

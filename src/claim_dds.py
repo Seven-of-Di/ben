@@ -34,7 +34,6 @@ def create_new_suit_rank(diag: Diag, current_trick: List[Card_]) -> Dict[Suit, D
 
 
 def convert_intermediate_cards_to_low(diag: Diag, claim_direction: Direction, shown_out_suits: Dict[Direction, Set[Suit]], current_trick: List[Card_], trick_leader: Direction) -> Tuple[Diag, List[Card_]]:
-    diag.is_valid()
     lowest_max_card_from_claiming_side = {s: Rank.TWO for s in Suit}
     for suit in Suit:
         if any(suit in shown_out_suits[opp] for opp in [claim_direction.offset(1), claim_direction.offset(3)]):
@@ -53,18 +52,21 @@ def convert_intermediate_cards_to_low(diag: Diag, claim_direction: Direction, sh
 
     converter = {s: {} for s in Suit}
     for suit in Suit:
-        claming_side_ranks = [rank for rank in diag.hands[claim_direction].suits[suit]+diag.hands[claim_direction.partner(
-        )].suits[suit]+[c.rank for dir, c in current_trick_dict.items() if c.suit == suit and dir in [claim_direction, claim_direction.partner()]] if rank < lowest_max_card_from_claiming_side[suit]]
-        claming_side_ranks = sorted(claming_side_ranks)
+        claiming_side_in_hand = [rank for rank in (diag.hands[claim_direction].suits[suit]+diag.hands[claim_direction.partner(
+        )].suits[suit]) if rank < lowest_max_card_from_claiming_side[suit]]
+        claming_side_current_trick = [c.rank for dir, c in current_trick_dict.items() if c.suit == suit and dir in [claim_direction, claim_direction.partner()] and c.rank < lowest_max_card_from_claiming_side[suit]]
+        claming_side_ranks = sorted(claiming_side_in_hand + claming_side_current_trick)
+        
         other_side_ranks = [rank for rank in diag.hands[claim_direction.offset(1)].suits[suit]+diag.hands[claim_direction.offset(3)].suits[suit]+[c.rank for dir, c in current_trick_dict.items(
         ) if c.suit == suit and dir in [claim_direction.offset(1), claim_direction.offset(3)]] if rank <= lowest_max_card_from_claiming_side[suit]]
         other_side_ranks = sorted(other_side_ranks, reverse=True)
+        pass
 
         for old_rank, new_rank in zip(claming_side_ranks, Rank):
             converter[suit][old_rank] = new_rank
         for i, old_rank in enumerate(other_side_ranks):
             converter[suit][old_rank] = lowest_max_card_from_claiming_side[suit].offset(
-                -i)
+                -(i+1))
 
     # print(converter)
 
@@ -119,13 +121,14 @@ def dds_check(samples: List[Diag], trump: BiddingSuit, trick_leader: Direction, 
         sample.is_valid()
     # for sample in samples[:5]:
     #     print(sample)
+
     dd_solved = ddsolver.DDSolver(dds_mode=2).solve(trump.strain(), trick_leader.offset(1).value, [
         card.to_52() for card in current_trick], [sample.print_as_pbn() for sample in samples])
     # for key, value in dict(sorted(dd_solved.items())).items():
     #     print(Card_.get_from_52(key), value)
+    
     claimer_turn = claim_direction in [trick_leader.offset(
         len(current_trick)), trick_leader.offset(len(current_trick)+2)]
-    
     #Declarer claim
     if claim_direction == declarer:
         if claimer_turn:

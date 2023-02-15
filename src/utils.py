@@ -607,7 +607,7 @@ def convert_to_probability(x):
     return np.divide(x, sum_of_proba)
 
 
-def from_lin_to_request(lin_str: str, remove_cards_from_diag_up_to_trick: int = 0):
+def from_lin_to_request(lin_str: str, remove_after : Card_|None):
     lin_str = lin_str.replace("%7C",'|')
     lin_str = lin_str.split("=", maxsplit=1)[1]
     lin_str = lin_str.split("|", maxsplit=3)[3]
@@ -633,14 +633,27 @@ def from_lin_to_request(lin_str: str, remove_cards_from_diag_up_to_trick: int = 
     n = 4
     play_as_list_of_list = [play[i * n:(i + 1) * n]
                             for i in range((len(play) + n - 1) // n)]
+    if remove_after is None :
+        print(play_as_list_of_list)
+        print(diag.print_as_pbn())
 
-    for i in range(remove_cards_from_diag_up_to_trick):
+    play_index_cut = 13
+    exit = False
+    for i in range(13):
         for card_str in play_as_list_of_list[i]:
+            if Card_.from_str(card_str)==remove_after :
+                play_index_cut=i
+                diag.remove(Card_.from_str(card_str))
+                exit = True
+                break
             diag.remove(Card_.from_str(card_str))
-    print(play_as_list_of_list[:remove_cards_from_diag_up_to_trick])
+        if exit :
+            break
+        
+    print(play_as_list_of_list[:play_index_cut+1])
     print(diag.print_as_pbn())
 
 
 if __name__ == "__main__":
-    link = r"https://dev.intobridge.com/hand?lin=pn%7CBen,Ben,guest301,guest324%7Cmd%7C3SQ2HQ865DJ97CQT92,SA43HK4DAT8642C86,S765HAJ732DK3CJ75,SKJT98HT9DQ5CAK43%7Cah%7CBoard%201%7Cmb%7Cp%7Cmb%7C1S%7Cmb%7Cp%7Cmb%7C1N%7Cmb%7Cp%7Cmb%7C2C%7Cmb%7Cp%7Cmb%7C3S%7Cmb%7Cp%7Cmb%7C4S%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CD7%7Cpc%7CDA%7Cpc%7CD3%7Cpc%7CD5%7Cpc%7CS3%7Cpc%7CS7%7Cpc%7CSK%7Cpc%7CS2%7Cpc%7CDQ%7Cpc%7CD9%7Cpc%7CD2%7Cpc%7CDK%7Cpc%7CC5%7Cpc%7CCA%7Cpc%7CC2%7Cpc%7CC6%7Cpc%7CCK%7Cpc%7CC9%7Cpc%7CC8%7Cpc%7CC7%7Cpc%7CC4%7Cpc%7CCT%7Cpc%7CS4%7Cpc%7CCJ%7Cpc%7CDT%7Cpc%7CH2%7Cpc%7CS8%7Cpc%7CDJ%7Cpc%7CC3%7Cpc%7CCQ%7Cpc%7CSA%7Cpc%7CH3%7Cpc%7CD8%7Cpc%7CH7%7Cpc%7CH9%7Cpc%7CSQ%7Cpc%7CH5%7Cpc%7CHK%7Cpc%7CHA%7Cpc%7CHT%7Cpc%7CHJ%7Cpc%7CS9%7Cpc%7CH6%7Cpc%7CH4%7Cpc%7CSJ%7Cpc%7CH8%7Cpc%7CD4%7Cpc%7CS5%7Cpc%7CST%7Cpc%7CHQ%7Cpc%7CD6%7Cpc%7CS6%7Cmc%7C10%7C"
-    from_lin_to_request(link, 0)
+    link = r"https://dev.intobridge.com/hand?lin=pn|luc.b,luc.b,Ben,Ben|md|4SKH8732DK62C86532,SQ93HKJ54D4CAT974,SAT765HAQTDQJ93CQ,SJ842H96DAT875CKJ|ah|Board%206|mb|p|mb|p|mb|p|mb|1S|mb|p|mb|p|mb|2C|mb|d|mb|p|mb|p|mb|p|pc|DQ|pc|DA|pc|D2|pc|D4|pc|H6|pc|H7|pc|HJ|pc|HQ|pc|CQ|pc|CK|pc|C2|pc|C7|pc|CJ|pc|C3|pc|CA|pc|S5|pc|C9|pc|S6|pc|S2|pc|C5|pc|S3|pc|S7|pc|SJ|pc|SK|pc|H2|pc|H4|pc|HT|pc|H9|pc|HA|pc|D5|pc|H3|pc|H5|pc|SA|pc|S4|pc|H8|pc|S9|pc|D3|pc|DT|pc|DK|pc|C4|pc|HK|pc|D9|pc|D7|pc|C6|pc|D6|pc|CT|pc|DJ|pc|D8|pc|SQ|pc|ST|pc|S8|pc|C8|mc|6|sv|e|"
+    from_lin_to_request(link, Card_.from_str("D7"))

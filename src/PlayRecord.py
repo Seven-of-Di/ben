@@ -33,8 +33,8 @@ class PlayRecord:
                 cards_played_32[turn.offset(i).value].append(card.to_32())
             trick = Trick(turn, current_trick)
             if trick.shown_out_suit != {}:
-                for key, value in trick.shown_out_suit.items():
-                    shown_out_suits[key].add(value)
+                for dir, suit in trick.shown_out_suit.items():
+                    shown_out_suits[dir].add(suit)
             tricks.append(trick)
             if len(trick) != 4:
                 # print("Length of trick is not 4")
@@ -75,10 +75,10 @@ class PlayRecord:
 
 
 class Trick():
-    def __init__(self, lead: Direction, cards: Dict[Direction, Card_], shown_out_suit: Dict[Direction, Suit] = {}) -> None:
+    def __init__(self, lead: Direction, cards: Dict[Direction, Card_]) -> None:
         self.lead: Direction = lead
         self.cards: Dict[Direction, Card_] = cards
-        self.shown_out_suit: Dict[Direction, Suit] = shown_out_suit
+        self.shown_out_suit: Dict[Direction, Suit] = {dir:cards[lead].suit for dir in cards.keys() if self.cards[dir].suit!= self.cards[lead].suit}
 
     @staticmethod
     def from_list(leader: Direction, trick_as_list: List[Card_]) -> Trick:

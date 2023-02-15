@@ -117,12 +117,16 @@ def dds_check(samples: List[Diag], trump: BiddingSuit, trick_leader: Direction, 
     temp = [card for trick in temp for card in trick]
     for sample in samples:
         sample.is_valid()
+    # for sample in samples[:5]:
+    #     print(sample)
     dd_solved = ddsolver.DDSolver(dds_mode=2).solve(trump.strain(), trick_leader.offset(1).value, [
         card.to_52() for card in current_trick], [sample.print_as_pbn() for sample in samples])
     # for key, value in dict(sorted(dd_solved.items())).items():
     #     print(Card_.get_from_52(key), value)
     claimer_turn = claim_direction in [trick_leader.offset(
         len(current_trick)), trick_leader.offset(len(current_trick)+2)]
+    
+    #Declarer claim
     if claim_direction == declarer:
         if claimer_turn:
             return True if any(all([i >= claim for i in card_res]) for card_res in dd_solved.values()) else False
@@ -132,7 +136,7 @@ def dds_check(samples: List[Diag], trump: BiddingSuit, trick_leader: Direction, 
             return True if all(all([i <= possible_tricks_left-claim for i in card_res]) for card_res in dd_solved.values()) else False
     # Defensive claim
     if claimer_turn:
-        return True if all(all([i >= claim for i in card_res]) for card_res in dd_solved.values()) else False
+        return True if any(all([i >= claim for i in card_res]) for card_res in dd_solved.values()) else False
     else:
         possible_tricks_left = len(
             samples[0].hands[trick_leader]) + (1 if len(current_trick) % 4 != 0 else 0)
@@ -149,9 +153,7 @@ def check_claim(diag: Diag, claim: int, claim_direction: Direction, trump: Biddi
     if claim==0 :
         return True
     dummy = declarer.offset(2)
-    pass
     diag, current_trick = convert_diag_with_new_suit_rank(diag, current_trick)
-    pass
     diag, current_trick = convert_intermediate_cards_to_low(
         diag, claim_direction, shown_out_suits, current_trick, trick_leader)
     diags = generate_diags(diag, claim_direction, dummy,

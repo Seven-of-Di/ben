@@ -191,6 +191,7 @@ async def make_lead():
 
 @app.post('/check_claim')
 async def check_claim() :
+    data = {}
     try:
         data = await request.get_json()
         req = CheckClaim(data)

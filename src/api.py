@@ -205,6 +205,7 @@ async def check_claim() :
         return {'claim_accepted': res}
     except Exception as e:
         app.logger.exception(e)
+        app.logger.error(data)
         return {'error': 'Unexpected error'}
 
 @app.post('/alert_bid')

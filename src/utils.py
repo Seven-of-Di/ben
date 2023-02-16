@@ -639,7 +639,7 @@ def from_lin_to_request(lin_str: str, remove_after : Card_|None):
 
     play_index_cut = 13
     exit = False
-    for i in range(13):
+    for i in range(len(play_as_list_of_list)):
         for card_str in play_as_list_of_list[i]:
             if Card_.from_str(card_str)==remove_after :
                 play_index_cut=i
@@ -655,5 +655,5 @@ def from_lin_to_request(lin_str: str, remove_after : Card_|None):
 
 
 if __name__ == "__main__":
-    link = r"https://dev.intobridge.com/hand?lin=pn%7CBen,Ben,guest311,guest303%7Cmd%7C4S987643HQJ987D4C6,SAT5HA4D762CAK752,SKQJ2H63DA3CT9843,SHKT52DKQJT985CQJ%7Cah%7CBoard%202%7Cmb%7C1D%7Cmb%7Cp%7Cmb%7C2C%7Cmb%7Cp%7Cmb%7C2D%7Cmb%7Cp%7Cmb%7C3D%7Cmb%7Cp%7Cmb%7C4D%7Cmb%7Cp%7Cmb%7C5D%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CHQ%7Cpc%7CHA%7Cpc%7CH3%7Cpc%7CH2%7Cpc%7CD7%7Cpc%7CD3%7Cpc%7CD5%7Cpc%7CD4%7Cpc%7CD6%7Cpc%7CDA%7Cpc%7CD8%7Cpc%7CS3%7Cpc%7CSK%7Cpc%7CD9%7Cpc%7CS4%7Cpc%7CS5%7Cpc%7CDK%7Cpc%7CS6%7Cpc%7CD2%7Cpc%7CC3%7Cpc%7CDQ%7Cpc%7CS7%7Cpc%7CH4%7Cpc%7CS2%7Cpc%7CCQ%7Cpc%7CC6%7Cpc%7CC2%7Cpc%7CC4%7Cpc%7CCJ%7Cpc%7CH7%7Cpc%7CCA%7Cpc%7CC8%7Cpc%7CSA%7Cpc%7CSJ%7Cpc%7CH5%7Cpc%7CS8%7Cpc%7CCK%7Cpc%7CC9%7Cpc%7CHT%7Cpc%7CH8%7Cpc%7CC7%7Cpc%7CCT%7Cpc%7CDJ%7Cpc%7CH9%7Cpc%7CDT%7Cpc%7CHJ%7Cpc%7CC5%7Cpc%7CH6%7Cpc%7CHK%7Cpc%7CS9%7Cpc%7CST%7Cpc%7CSQ%7Cmc%7C12%7Csv%7Cn%7C"
-    from_lin_to_request(link, Card_.from_str("SK"))
+    link = r"https://stage.intobridge.com/hand?lin=pn%7CBen,Ben,guest321,Ben%7Cmd%7C1S985HAT754DKJ74C3,SAQT74HKQ963DQTCT,SHJ8DA9653CA98752,SKJ632H2D82CKQJ64%7Cah%7CBoard%2015%7Cmb%7Cp%7Cmb%7C1S%7Cmb%7C2N%7Cmb%7C4S%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cd%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CDA%7Cpc%7CD2%7Cpc%7CD4%7Cpc%7CDT%7Cpc%7CCA%7Cpc%7CC4%7Cpc%7CC3%7Cpc%7CCT%7Cpc%7CD3%7Cpc%7CD8%7Cpc%7CDK%7Cpc%7CDQ%7Cpc%7CHA%7Cpc%7CH6%7Cpc%7CH8%7Cpc%7CH2%7Cmc%7C8%7Csv%7Cn%7C"
+    from_lin_to_request(link, Card_.from_str("H2"))

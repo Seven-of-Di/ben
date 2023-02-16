@@ -35,38 +35,40 @@ def create_new_suit_rank(diag: Diag, current_trick: List[Card_]) -> Dict[Suit, D
 
 def convert_intermediate_cards_to_low(diag: Diag, claim_direction: Direction, shown_out_suits: Dict[Direction, Set[Suit]], current_trick: List[Card_], trick_leader: Direction) -> Tuple[Diag, List[Card_]]:
     lowest_max_card_from_claiming_side = {s: Rank.TWO for s in Suit}
+    current_trick_dict = {trick_leader.offset(
+        i): card for i, card in enumerate(current_trick)}
     for suit in Suit:
         if any(suit in shown_out_suits[opp] for opp in [claim_direction.offset(1), claim_direction.offset(3)]):
             continue
         rank_tested = max(diag.hands[claim_direction].suits[suit]+diag.hands[claim_direction.partner()].suits[suit]) if len(
             diag.hands[claim_direction].suits[suit]+diag.hands[claim_direction.partner()].suits[suit]) != 0 else Rank.ACE
         for _ in range(13):
-            if not(rank_tested in diag.hands[claim_direction].suits[suit] or rank_tested in diag.hands[claim_direction.partner()].suits[suit]):
+            rank_in_hands = rank_tested in diag.hands[claim_direction].suits[suit] or rank_tested in diag.hands[claim_direction.partner()].suits[suit]
+            rank_in_current_trick = rank_tested in [c.rank for dir,c in current_trick_dict.items() if dir in [claim_direction,claim_direction.partner()] and c.suit==suit]
+            if not(rank_in_hands) and not(rank_in_current_trick):
                 lowest_max_card_from_claiming_side[suit] = rank_tested
                 break
             rank_tested = rank_tested.offset(-1)
 
     # print(lowest_max_card_from_claiming_side)
-    current_trick_dict = {trick_leader.offset(
-        i): card for i, card in enumerate(current_trick)}
 
     converter = {s: {} for s in Suit}
     for suit in Suit:
         claiming_side_in_hand = [rank for rank in (diag.hands[claim_direction].suits[suit]+diag.hands[claim_direction.partner(
         )].suits[suit]) if rank < lowest_max_card_from_claiming_side[suit]]
         claming_side_current_trick = [c.rank for dir, c in current_trick_dict.items() if c.suit == suit and dir in [claim_direction, claim_direction.partner()] and c.rank < lowest_max_card_from_claiming_side[suit]]
-        claming_side_ranks = sorted(claiming_side_in_hand + claming_side_current_trick)
+        claming_side_intermediate_ranks = sorted(claiming_side_in_hand + claming_side_current_trick)
         
-        other_side_ranks = [rank for rank in diag.hands[claim_direction.offset(1)].suits[suit]+diag.hands[claim_direction.offset(3)].suits[suit]+[c.rank for dir, c in current_trick_dict.items(
+        other_side_small_ranks = [rank for rank in diag.hands[claim_direction.offset(1)].suits[suit]+diag.hands[claim_direction.offset(3)].suits[suit]+[c.rank for dir, c in current_trick_dict.items(
         ) if c.suit == suit and dir in [claim_direction.offset(1), claim_direction.offset(3)]] if rank <= lowest_max_card_from_claiming_side[suit]]
-        other_side_ranks = sorted(other_side_ranks, reverse=True)
+        other_side_small_ranks = sorted(other_side_small_ranks, reverse=True)
         pass
 
-        for old_rank, new_rank in zip(claming_side_ranks, Rank):
+        for old_rank, new_rank in zip(claming_side_intermediate_ranks, Rank):
             converter[suit][old_rank] = new_rank
-        for i, old_rank in enumerate(other_side_ranks):
+        for i, old_rank in enumerate(other_side_small_ranks):
             converter[suit][old_rank] = lowest_max_card_from_claiming_side[suit].offset(
-                -(i+1))
+                -(i))
 
     # print(converter)
 

@@ -27,7 +27,7 @@ def get_play_status(hand : PlayerHand, current_trick: List[Card_]):
             return "Follow"
 
 async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_str, auction, contract, declarer_str, next_player_str, tricks_str, MODELS) -> Dict:
-    n_samples = 200
+    n_samples = 100
     claim_res = False
     
     padded_auction = ["PAD_START"] * \

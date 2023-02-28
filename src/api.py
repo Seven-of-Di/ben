@@ -96,6 +96,20 @@ class CheckClaim:
 }
 '''
 
+class PlayFullBoard :
+    def __init__(self, play_full_board_request) -> None:
+        self.vuln = VULNERABILITIES[play_full_board_request['vuln']]
+        self.dealer = play_full_board_request['dealer']
+        self.hands = play_full_board_request['hands']
+
+'''
+{
+    "dealer": "N",
+    "vuln": "None",
+    "hands : {"N":".J8.A9653.A98752", "E":J623K.2.28.KQ4J6,"S": 859.AT754.KJ74.3,"W": AQT74.KQ963.QT.T"}
+}
+'''
+
 
 @app.route('/play_card', methods=['POST'])
 async def play_card():
@@ -214,6 +228,23 @@ async def alert_bid() :
     samples = await bot.async_get_samples_from_auction(req.auction)
 
     return {'samples': "null"}
+
+@app.post('/play_full_board')
+async def play_full_board() :
+    try:
+        data = await request.get_json()
+        req = PlayFullBoard(data)
+        bot = AsyncBotBid(
+            req.vuln,
+            req.hands,
+            MODELS
+        )
+        samples = await bot.async_get_samples_from_auction(req.auction)
+
+        return {'samples': "null"}
+    except Exception as e:
+        app.logger.exception(e)
+        return {'error': 'Unexpected error'}
 
 @app.get('/healthz')
 async def healthz():

@@ -4,6 +4,10 @@ from nn.models import Models
 from game import AsyncBotBid, AsyncBotLead
 import os
 import conf
+import sentry_sdk
+from sentry_sdk.integrations.quart import QuartIntegration
+
+
 from transform_play_card import get_ben_card_play_answer
 from human_carding import lead_real_card
 from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit
@@ -13,6 +17,13 @@ from claim_dds import check_claim_from_api
 import tensorflow.compat.v1 as tf  # type: ignore
 
 tf.disable_v2_behavior()
+
+sentry_sdk.init(
+    os.environ.get("SENTRY_DSN", ""),
+    integrations=[
+        QuartIntegration()
+    ]
+)
 
 app = Quart(__name__)
 
@@ -88,34 +99,30 @@ class CheckClaim:
 
 @app.route('/play_card', methods=['POST'])
 async def play_card():
-    try:
-        data = await request.get_json()
-        # app.logger.warn(data)
-        req = PlayCard(data)
+    data = await request.get_json()
+    # app.logger.warn(data)
+    req = PlayCard(data)
 
-        dict_result = await get_ben_card_play_answer(
-            req.hand,
-            req.dummy_hand,
-            req.dealer,
-            req.vuln,
-            req.auction,
-            req.contract,
-            req.contract_direction,
-            req.next_player,
-            req.tricks,
-            MODELS
-        )
-        """
-        dict_result = {
-            "card": "H4",
-            "claim_the_rest": false
-        }
-        """
+    dict_result = await get_ben_card_play_answer(
+        req.hand,
+        req.dummy_hand,
+        req.dealer,
+        req.vuln,
+        req.auction,
+        req.contract,
+        req.contract_direction,
+        req.next_player,
+        req.tricks,
+        MODELS
+    )
+    """
+    dict_result = {
+        "card": "H4",
+        "claim_the_rest": false
+    }
+    """
 
-        return dict_result
-    except Exception as e:
-        app.logger.exception(e)
-        return {'error': 'Unexpected error'}
+    return dict_result
 
 
 '''
@@ -130,22 +137,18 @@ async def play_card():
 
 @app.post('/place_bid')
 async def place_bid():
-    try:
-        data = await request.get_json()
-        req = PlaceBid(data)
+    data = await request.get_json()
+    req = PlaceBid(data)
 
-        bot = AsyncBotBid(
-            req.vuln,
-            req.hand,
-            MODELS
-        )
+    bot = AsyncBotBid(
+        req.vuln,
+        req.hand,
+        MODELS
+    )
 
-        bid_resp = await bot.async_bid(req.auction)
+    bid_resp = await bot.async_bid(req.auction)
 
-        return {'bid': bid_resp.bid}
-    except Exception as e:
-        app.logger.exception(e)
-        return {'error': 'Unexpected error'}
+    return {'bid': bid_resp.bid}
 
 '''
 {
@@ -159,23 +162,18 @@ async def place_bid():
 
 @app.post('/make_lead')
 async def make_lead():
-    try:
-        data = await request.get_json()
-        req = MakeLead(data)
+    data = await request.get_json()
+    req = MakeLead(data)
 
-        bot = AsyncBotLead(req.vuln, req.hand, MODELS)
+    bot = AsyncBotLead(req.vuln, req.hand, MODELS)
 
-        lead = bot.lead(req.auction)
-        card_str = lead.to_dict()['candidates'][0]['card']
-        contract = next((bid for bid in reversed(req.auction)
-                        if len(bid) == 2 and bid != "XX"), None)
-        if contract is None:
-            raise Exception("contract is None")
-        return {'card': lead_real_card(PlayerHand.from_pbn(req.hand), card_str, BiddingSuit.from_str(contract[1])).__str__()}
-    except Exception as e:
-        app.logger.exception(e)
-        return {'error': 'Unexpected error'}
-
+    lead = bot.lead(req.auction)
+    card_str = lead.to_dict()['candidates'][0]['card']
+    contract = next((bid for bid in reversed(req.auction)
+                    if len(bid) == 2 and bid != "XX"), None)
+    if contract is None:
+        raise Exception("contract is None")
+    return {'card': lead_real_card(PlayerHand.from_pbn(req.hand), card_str, BiddingSuit.from_str(contract[1])).__str__()}
 
 '''
 {
@@ -191,50 +189,39 @@ async def make_lead():
 
 @app.post('/check_claim')
 async def check_claim() :
-    data = {}
-    try:
-        data = await request.get_json()
-        req = CheckClaim(data)
-        res = await check_claim_from_api(
-            req.claiming_hand,
-            req.dummy_hand,
-            req.claiming_direction,
-            req.contract_direction,
-            req.contract,
-            req.tricks,
-            req.claim)
+    data = await request.get_json()
+    req = CheckClaim(data)
+    res = await check_claim_from_api(
+        req.claiming_hand,
+        req.dummy_hand,
+        req.claiming_direction,
+        req.contract_direction,
+        req.contract,
+        req.tricks,
+        req.claim)
 
-        return {'claim_accepted': res}
-    except Exception as e:
-        app.logger.exception(e)
-        app.logger.error(data)
-        return {'error': 'Unexpected error'}
+    return {'claim_accepted': res}
 
 @app.post('/alert_bid')
 async def alert_bid() :
-    try:
-        data = await request.get_json()
-        req = AlertBid(data)
-        bot = AsyncBotBid(
-            req.vuln,
-            req.hand,
-            MODELS
-        )
-        samples = await bot.async_get_samples_from_auction(req.auction)
+    data = await request.get_json()
+    req = AlertBid(data)
+    bot = AsyncBotBid(
+        req.vuln,
+        req.hand,
+        MODELS
+    )
+    samples = await bot.async_get_samples_from_auction(req.auction)
 
-        return {'samples': "null"}
-    except Exception as e:
-        app.logger.exception(e)
-        return {'error': 'Unexpected error'}
+    return {'samples': "null"}
 
 @app.get('/healthz')
 async def healthz():
     return {'status': 'ok'}
 
-port = os.environ.get('PORT', '8081')
-debug = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
-use_reloader = os.environ.get(
-    'USE_RELOADER', 'False').lower() in ('true', '1', 't')
-
 if __name__ == "__main__":
+    port = os.environ.get('PORT', '8081')
+    debug = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
+    use_reloader = os.environ.get('USE_RELOADER', 'False').lower() in ('true', '1', 't')
+
     app.run(host='0.0.0.0', port=int(port), debug=debug, use_reloader=use_reloader)

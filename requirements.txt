@@ -2,3 +2,4 @@ tensorflow==2.11.0
 protobuf==3.19.0
 quart==0.18.3
 hypercorn==0.14.3
+sentry-sdk==1.16.0

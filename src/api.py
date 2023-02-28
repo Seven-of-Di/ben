@@ -4,11 +4,13 @@ from nn.models import Models
 from game import AsyncBotBid, AsyncBotLead
 import os
 import conf
+import pickle
 from transform_play_card import get_ben_card_play_answer
 from human_carding import lead_real_card
 from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit
 from PlayRecord import PlayRecord, Direction
 from claim_dds import check_claim_from_api
+from alert_utils import BidPosition
 
 import tensorflow.compat.v1 as tf  # type: ignore
 
@@ -17,8 +19,12 @@ tf.disable_v2_behavior()
 app = Quart(__name__)
 
 DEFAULT_MODEL_CONF = os.path.join(os.path.dirname(os.getcwd()), 'default.conf')
-MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
+GIB_MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
+HUMAN_MODEL_CONF = os.path.join(os.path.dirname(os.getcwd()), 'human.conf')
+HUMAN_MODELS = Models.from_conf(conf.load(HUMAN_MODEL_CONF))
 
+with open('alerts', 'rb') as f:
+    dict_of_alerts = pickle.load(f)
 
 class PlaceBid:
     def __init__(self, place_bid_request):
@@ -30,10 +36,9 @@ class PlaceBid:
 
 class AlertBid:
     def __init__(self, alert_bid_request) -> None:
+        self.dealer = alert_bid_request["dealer"]
         self.vuln = VULNERABILITIES[alert_bid_request['vuln']]
-        self.hand = alert_bid_request['hand']
-        self.hand_direction = alert_bid_request["hand_direction"]
-        self.dealer = alert_bid_request['dealer']
+        self.vuln = self.vuln if self.dealer in ["N","S"] else [self.vuln[1],self.vuln[0]]
         self.auction = alert_bid_request['auction']
         self.bid_to_alert_index = alert_bid_request['bid_to_alert_index']
 
@@ -103,7 +108,7 @@ async def play_card():
             req.contract_direction,
             req.next_player,
             req.tricks,
-            MODELS
+            GIB_MODELS
         )
         """
         dict_result = {
@@ -133,11 +138,16 @@ async def place_bid():
     try:
         data = await request.get_json()
         req = PlaceBid(data)
+        models = HUMAN_MODELS
+        bid_position = BidPosition([bid for bid in req.auction if bid !="PAD_START"],req.vuln if req.dealer in ["N","S"] else [req.vuln[1],req.vuln[0]])
+        if bid_position in dict_of_alerts :
+            print("GIB model")
+            models = GIB_MODELS
 
         bot = AsyncBotBid(
             req.vuln,
             req.hand,
-            MODELS
+            models
         )
 
         bid_resp = await bot.async_bid(req.auction)
@@ -163,7 +173,7 @@ async def make_lead():
         data = await request.get_json()
         req = MakeLead(data)
 
-        bot = AsyncBotLead(req.vuln, req.hand, MODELS)
+        bot = AsyncBotLead(req.vuln, req.hand, GIB_MODELS)
 
         lead = bot.lead(req.auction)
         card_str = lead.to_dict()['candidates'][0]['card']
@@ -215,14 +225,11 @@ async def alert_bid() :
     try:
         data = await request.get_json()
         req = AlertBid(data)
-        bot = AsyncBotBid(
-            req.vuln,
-            req.hand,
-            MODELS
-        )
-        samples = await bot.async_get_samples_from_auction(req.auction)
+        auction = req.auction[:req.bid_to_alert_index+1]
+        if BidPosition(auction,req.vuln) in dict_of_alerts :
+            return {"alert" : str(dict_of_alerts[BidPosition(auction,req.vuln)]),"bid" : BidPosition(auction,req.vuln)}
 
-        return {'samples': "null"}
+        return {'alert': "No alert available"}
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}

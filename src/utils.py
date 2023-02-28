@@ -607,8 +607,8 @@ def convert_to_probability(x):
     return np.divide(x, sum_of_proba)
 
 
-def from_lin_to_request(lin_str: str, remove_after : Card_|None):
-    lin_str = lin_str.replace("%7C",'|')
+def from_lin_to_request(lin_str: str, remove_after: Card_ | None = None):
+    lin_str = lin_str.replace("%7C", '|')
     lin_str = lin_str.split("=", maxsplit=1)[1]
     lin_str = lin_str.split("|", maxsplit=3)[3]
     diag_lin = lin_str[2:].split("|")[0]
@@ -633,27 +633,29 @@ def from_lin_to_request(lin_str: str, remove_after : Card_|None):
     n = 4
     play_as_list_of_list = [play[i * n:(i + 1) * n]
                             for i in range((len(play) + n - 1) // n)]
-    if remove_after is None :
+    if remove_after is None:
         print(play_as_list_of_list)
         print(diag.print_as_pbn())
+        return
 
     play_index_cut = 13
     exit = False
     for i in range(len(play_as_list_of_list)):
         for card_str in play_as_list_of_list[i]:
-            if Card_.from_str(card_str)==remove_after :
-                play_index_cut=i
+            if Card_.from_str(card_str) == remove_after:
+                play_index_cut = i
                 diag.remove(Card_.from_str(card_str))
                 exit = True
                 break
             diag.remove(Card_.from_str(card_str))
-        if exit :
+        if exit:
             break
-        
+
     print(play_as_list_of_list[:play_index_cut+1])
     print(diag.print_as_pbn())
 
 
 if __name__ == "__main__":
-    link = r"https://stage.intobridge.com/hand?lin=pn%7CBen,Ben,guest321,Ben%7Cmd%7C1S985HAT754DKJ74C3,SAQT74HKQ963DQTCT,SHJ8DA9653CA98752,SKJ632H2D82CKQJ64%7Cah%7CBoard%2015%7Cmb%7Cp%7Cmb%7C1S%7Cmb%7C2N%7Cmb%7C4S%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cd%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CDA%7Cpc%7CD2%7Cpc%7CD4%7Cpc%7CDT%7Cpc%7CCA%7Cpc%7CC4%7Cpc%7CC3%7Cpc%7CCT%7Cpc%7CD3%7Cpc%7CD8%7Cpc%7CDK%7Cpc%7CDQ%7Cpc%7CHA%7Cpc%7CH6%7Cpc%7CH8%7Cpc%7CH2%7Cmc%7C8%7Csv%7Cn%7C"
-    from_lin_to_request(link, Card_.from_str("H2"))
+    link = r"https://play.intobridge.com/hand?lin=pn%7CAzureDrake,Ben,Stefan,katrin1%7Cmd%7C4SAQ642HT942D4CKQ5,SKJT9HK6DAKJ32C96,S8HAJ8753DQ9CJT84,S753HQDT8765CA732%7Cah%7CBoard%202%7Cmb%7Cp%7Cmb%7C1S%7Cmb%7C2D%7Cmb%7Cp%7Cmb%7C3D%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7C3H%7Cmb%7Cp%7Cmb%7C4H%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CD8%7Cpc%7CD4%7Cpc%7CDK%7Cpc%7CD9%7Cpc%7CDA%7Cpc%7CDQ%7Cpc%7CD5%7Cpc%7CH2%7Cpc%7CHT%7Cpc%7CHK%7Cpc%7CHA%7Cpc%7CHQ%7Cpc%7CH3%7Cpc%7CD6%7Cpc%7CH9%7Cpc%7CH6%7Cpc%7CH4%7Cpc%7CD3%7Cpc%7CH5%7Cpc%7CC2%7Cpc%7CC4%7Cpc%7CCA%7Cpc%7CCK%7Cpc%7CC6%7Cpc%7CDT%7Cpc%7CS2%7Cpc%7CD2%7Cpc%7CH7%7Cpc%7CC8%7Cpc%7CC3%7Cpc%7CCQ%7Cpc%7CC9%7Cpc%7CSA%7Cpc%7CS9%7Cpc%7CS8%7Cpc%7CS3%7Cpc%7CS4%7Cpc%7CST%7Cpc%7CH8%7Cpc%7CS5%7Cpc%7CCT%7Cpc%7CC7%7Cpc%7CC5%7Cpc%7CSJ%7Cpc%7CCJ%7Cpc%7CS7%7Cpc%7CS6%7Cpc%7CDJ%7Cpc%7CHJ%7Cpc%7CD7%7Cpc%7CSQ%7Cpc%7CSK%7Cmc%7C11%7Csv%7Cn%7C"
+    from_lin_to_request(link, Card_.from_str("HT"))
+    # from_lin_to_request(link)

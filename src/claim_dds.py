@@ -133,19 +133,19 @@ def dds_check(samples: List[Diag], trump: BiddingSuit, trick_leader: Direction, 
         return check_defensive_claim(dd_solved=dd_solved,claim_direction=claim_direction,trick_leader=trick_leader,claim=claim,current_trick=current_trick,possible_tricks_left=possible_tricks_left)
     
 def check_declarer_claim(dd_solved,claim_direction : Direction,trick_leader : Direction,claim : int,current_trick : List[Card_],possible_tricks_left: int) -> bool :
-        claimer_turn = claim_direction in [trick_leader.offset(
-            len(current_trick)), trick_leader.offset(len(current_trick)+2)]
-        if claimer_turn:
-            return True if any(all([i >= claim for i in card_res]) for card_res in dd_solved.values()) else False
-        else:
-            return True if all(all([i <= possible_tricks_left-claim for i in card_res]) for card_res in dd_solved.values()) else False
+    claimer_turn = claim_direction in [trick_leader.offset(
+        len(current_trick)), trick_leader.offset(len(current_trick)+2)]
+    if claimer_turn:
+        return True if any(all([i >= claim for i in card_res]) for card_res in dd_solved.values()) else False
+    else:
+        return True if all(all([i <= possible_tricks_left-claim for i in card_res]) for card_res in dd_solved.values()) else False
         
 def check_defensive_claim(dd_solved,claim_direction : Direction,trick_leader : Direction,claim : int,current_trick : List[Card_],possible_tricks_left : int) -> bool :
     claimer_in_hand = claim_direction==trick_leader.offset(len(current_trick))
-    claimer_partner__in_hand = claim_direction==trick_leader.offset(len(current_trick)+2)
+    claimer_is_partner = claim_direction==trick_leader.offset(len(current_trick)+2)
     if claimer_in_hand:
         return True if any(all([i >= claim for i in card_res]) for card_res in dd_solved.values()) else False
-    if claimer_partner__in_hand:
+    if claimer_is_partner:
         return True if all(all([i >= claim for i in card_res]) for card_res in dd_solved.values()) else False
     else:
         return True if all(all([i <= possible_tricks_left-claim for i in card_res]) for card_res in dd_solved.values()) else False

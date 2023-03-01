@@ -26,12 +26,11 @@ def get_play_status(hand : PlayerHand, current_trick: List[Card_]):
         else :
             return "Follow"
 
-async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_str, auction, contract, declarer_str, next_player_str, tricks_str, MODELS) -> Dict:
+async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, auction, contract, declarer_str, next_player_str, tricks_str, MODELS) -> Dict:
     n_samples = 100
     claim_res = False
     
-    padded_auction = ["PAD_START"] * \
-        Direction.from_str(dealer_str).value + auction
+    padded_auction = ["PAD_START"] * Direction.from_str(dealer_str).value + auction
 
     contract = bidding.get_contract(padded_auction)
     if contract is None :
@@ -43,7 +42,6 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
     dummy = declarer.offset(2)
     strain_i = bidding.get_strain_i(contract)
     decl_i = bidding.get_decl_i(contract)
-    vuls = VULNERABILITIES[vuln_str]
     is_decl_vuln = [vuls[0], vuls[1], vuls[0], vuls[1]][decl_i]
     play = [item for sublist in tricks_str for item in sublist]
 
@@ -71,13 +69,13 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
     decl_hand = random_diag.hands[declarer].to_pbn()
 
     card_players = [
-        AsyncCardPlayer(MODELS.player_models, 0, lefty_hand,
+        bots.CardPlayer(MODELS.player_models, 0, lefty_hand,
                         dummy_hand, contract, is_decl_vuln,play_record,declarer=declarer),
-        AsyncCardPlayer(MODELS.player_models, 1, dummy_hand,
+        bots.CardPlayer(MODELS.player_models, 1, dummy_hand,
                         decl_hand, contract, is_decl_vuln,play_record,declarer=declarer),
-        AsyncCardPlayer(MODELS.player_models, 2, righty_hand,
+        bots.CardPlayer(MODELS.player_models, 2, righty_hand,
                         dummy_hand, contract, is_decl_vuln,play_record,declarer=declarer),
-        AsyncCardPlayer(MODELS.player_models, 3, decl_hand,
+        bots.CardPlayer(MODELS.player_models, 3, decl_hand,
                         dummy_hand, contract, is_decl_vuln,play_record,declarer=declarer)
     ]
 
@@ -117,7 +115,7 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuln_st
                     n_samples = 50
                 rollout_states,probabilities_list = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits,
                                                             current_trick, n_samples, padded_auction, card_players[player_i].hand.reshape((-1, 32)), vuls, MODELS)
-                card = await card_players[player_i].async_play_card(trick_i, leader_i, current_trick52, rollout_states,probabilities_list)
+                card = card_players[player_i].play_card(trick_i, leader_i, current_trick52, rollout_states,probabilities_list)
                 if card_players[player_i].check_claim and next_player in [declarer,dummy]:
                     claim_res = await check_claim_from_api(hand_str,dummy_hand_str,declarer.abbreviation(),declarer_str,contract,tricks_str,13-trick_i+card_players[player_i].n_tricks_taken)
                 return {

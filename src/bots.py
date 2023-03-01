@@ -17,8 +17,7 @@ from bidding import bidding
 from bidding.binary import parse_hand_f
 
 from util import hand_to_str, expected_tricks, p_make_contract
-from utils import Card_, multiple_list_comparaison, remove_same_indexes, Direction, PlayerHand,BiddingSuit
-from claim_dds import check_claim_from_api
+from utils import Card_, multiple_list_comparaison, Direction, PlayerHand,BiddingSuit
 from human_carding import play_real_card
 from PlayRecord import PlayRecord
 

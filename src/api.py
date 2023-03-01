@@ -1,7 +1,9 @@
+from typing import Dict
 from quart import Quart, request
 
 from nn.models import Models
 from game import AsyncBotBid, AsyncBotLead
+from FullBoardPlayer import AsyncFullBoardPlayer
 import os
 import conf
 import sentry_sdk
@@ -10,7 +12,7 @@ from sentry_sdk.integrations.quart import QuartIntegration
 
 from transform_play_card import get_ben_card_play_answer
 from human_carding import lead_real_card
-from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit
+from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit,Diag
 from PlayRecord import PlayRecord, Direction
 from claim_dds import check_claim_from_api
 
@@ -53,7 +55,7 @@ class PlayCard:
         self.hand = play_card_request['hand']
         self.dummy_hand = play_card_request['dummy_hand']
         self.dealer = play_card_request['dealer']
-        self.vuln = play_card_request['vuln']
+        self.vuln = VULNERABILITIES[play_card_request['vuln']]
         self.auction = play_card_request['auction']
         self.contract = play_card_request['contract']
         self.contract_direction = play_card_request['contract_direction']
@@ -99,14 +101,14 @@ class CheckClaim:
 class PlayFullBoard :
     def __init__(self, play_full_board_request) -> None:
         self.vuln = VULNERABILITIES[play_full_board_request['vuln']]
-        self.dealer = play_full_board_request['dealer']
-        self.hands = play_full_board_request['hands']
+        self.dealer = Direction.from_str(play_full_board_request['dealer'])
+        self.diag = Diag.init_from_pbn(play_full_board_request['hands'])
 
 '''
 {
     "dealer": "N",
     "vuln": "None",
-    "hands : {"N":".J8.A9653.A98752", "E":J623K.2.28.KQ4J6,"S": 859.AT754.KJ74.3,"W": AQT74.KQ963.QT.T"}
+    "hands : "N:.J8.A9653.A98752 K9J236.2.28.64JK 85.AT754.KJ74.3Q AQT74.KQ963.QT.T"
 }
 '''
 
@@ -230,18 +232,19 @@ async def alert_bid() :
     return {'samples': "null"}
 
 @app.post('/play_full_board')
-async def play_full_board() :
+async def play_full_board() -> Dict :
     try:
         data = await request.get_json()
         req = PlayFullBoard(data)
-        bot = AsyncBotBid(
+        bot = AsyncFullBoardPlayer(
+            req.diag,
             req.vuln,
-            req.hands,
+            req.dealer,
             MODELS
         )
-        samples = await bot.async_get_samples_from_auction(req.auction)
-
-        return {'samples': "null"}
+        board_data = await bot.async_full_board()
+        # print(board_data)
+        return board_data
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}

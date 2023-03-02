@@ -12,7 +12,7 @@ from sentry_sdk.integrations.quart import QuartIntegration
 
 from transform_play_card import get_ben_card_play_answer
 from human_carding import lead_real_card
-from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit,Diag
+from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit, Diag
 from PlayRecord import PlayRecord, Direction
 from claim_dds import check_claim_from_api
 
@@ -41,6 +41,7 @@ class PlaceBid:
         self.auction = ['PAD_START'] * \
             DIRECTIONS.index(self.dealer) + place_bid_request['auction']
 
+
 class AlertBid:
     def __init__(self, alert_bid_request) -> None:
         self.vuln = VULNERABILITIES[alert_bid_request['vuln']]
@@ -49,6 +50,7 @@ class AlertBid:
         self.dealer = alert_bid_request['dealer']
         self.auction = alert_bid_request['auction']
         self.bid_to_alert_index = alert_bid_request['bid_to_alert_index']
+
 
 class PlayCard:
     def __init__(self, play_card_request):
@@ -98,11 +100,13 @@ class CheckClaim:
 }
 '''
 
-class PlayFullBoard :
+
+class PlayFullBoard:
     def __init__(self, play_full_board_request) -> None:
         self.vuln = VULNERABILITIES[play_full_board_request['vuln']]
         self.dealer = Direction.from_str(play_full_board_request['dealer'])
-        self.diag = Diag.init_from_pbn(play_full_board_request['hands'])
+        self.hands = Diag.init_from_pbn(play_full_board_request['hands'])
+
 
 '''
 {
@@ -189,6 +193,7 @@ async def make_lead():
                     if len(bid) == 2 and bid != "XX"), None)
     if contract is None:
         raise Exception("contract is None")
+
     return {'card': lead_real_card(PlayerHand.from_pbn(req.hand), card_str, BiddingSuit.from_str(contract[1])).__str__()}
 
 '''
@@ -203,8 +208,9 @@ async def make_lead():
 }
 '''
 
+
 @app.post('/check_claim')
-async def check_claim() :
+async def check_claim():
     data = await request.get_json()
     req = CheckClaim(data)
     res = await check_claim_from_api(
@@ -218,8 +224,9 @@ async def check_claim() :
 
     return {'claim_accepted': res}
 
+
 @app.post('/alert_bid')
-async def alert_bid() :
+async def alert_bid():
     data = await request.get_json()
     req = AlertBid(data)
     bot = AsyncBotBid(
@@ -231,23 +238,29 @@ async def alert_bid() :
 
     return {'samples': "null"}
 
+'''
+{
+    "hand": "N:J962.KA3.87.T983 Q7.QJ965.6.KJA54 KA84.872.TQJA2.6 T53.T4.K9543.Q72",
+    "dealer": "E",
+    "vuln": "None"
+}
+'''
+
+
 @app.post('/play_full_board')
-async def play_full_board() -> Dict :
-    try:
-        data = await request.get_json()
-        req = PlayFullBoard(data)
-        bot = AsyncFullBoardPlayer(
-            req.diag,
-            req.vuln,
-            req.dealer,
-            MODELS
-        )
-        board_data = await bot.async_full_board()
-        # print(board_data)
-        return board_data
-    except Exception as e:
-        app.logger.exception(e)
-        return {'error': 'Unexpected error'}
+async def play_full_board() -> Dict:
+    data = await request.get_json()
+    req = PlayFullBoard(data)
+    bot = AsyncFullBoardPlayer(
+        req.hands,
+        req.vuln,
+        req.dealer,
+        MODELS
+    )
+    board_data = await bot.async_full_board()
+    # print(board_data)
+    return board_data
+
 
 @app.get('/healthz')
 async def healthz():
@@ -256,6 +269,8 @@ async def healthz():
 if __name__ == "__main__":
     port = os.environ.get('PORT', '8081')
     debug = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
-    use_reloader = os.environ.get('USE_RELOADER', 'False').lower() in ('true', '1', 't')
+    use_reloader = os.environ.get(
+        'USE_RELOADER', 'False').lower() in ('true', '1', 't')
 
-    app.run(host='0.0.0.0', port=int(port), debug=debug, use_reloader=use_reloader)
+    app.run(host='0.0.0.0', port=int(port),
+            debug=debug, use_reloader=use_reloader)

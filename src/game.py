@@ -1,10 +1,5 @@
 import bots
 
-def random_deal():
-    deal_str = deck52.random_deal()
-    auction_str = deck52.random_dealer_vuln()
-
-    return deal_str, auction_str
 
 
 class AsyncBotBid(bots.BotBid):

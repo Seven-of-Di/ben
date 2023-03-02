@@ -10,19 +10,21 @@ from human_carding import lead_real_card
 
 class FullBoardPlayer() :
     def __init__(self,diag : Diag,vuls : List[bool],dealer : Direction,models) -> None:
+        diag.is_valid()
         self.diag = diag
         self.vuls = vuls
         self.dealer = dealer
         self.models = models
 
     def get_auction(self) :
-        auction = []
+        auction : List[str] = ["PAD_START"] * Direction.from_str(self.dealer.abbreviation()).value
         bidder_bots: List[bots.BotBid] = [bots.BotBid(
             self.vuls, self.diag.hands[dir].to_pbn(), self.models) for dir in Direction]
         while not bidding.auction_over(auction):
-            current_direction: Direction = Direction(len(auction) % 4).offset(self.dealer.value)
+            current_direction: Direction = Direction(len(auction) % 4)
             auction.append(bidder_bots[current_direction.value].bid(auction).bid)
-        return auction
+            pass
+        return [bid for bid in auction if bid!="PAD_START"]
 
     async def get_card_play(self,auction) :
         padded_auction = ["PAD_START"] * Direction.from_str(self.dealer.abbreviation()).value + auction
@@ -64,5 +66,7 @@ class FullBoardPlayer() :
 class AsyncFullBoardPlayer(FullBoardPlayer)  :
     async def async_full_board(self) -> Dict :
         auction = self.get_auction()
+        if auction == ["PASS"]*4 :
+            return {'auction':auction,"play":[]}
         play = await self.get_card_play(auction)
         return {'auction': auction,"play":play}

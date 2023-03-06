@@ -4,6 +4,10 @@ from quart import Quart, request
 from nn.models import Models
 from game import AsyncBotBid, AsyncBotLead
 from FullBoardPlayer import AsyncFullBoardPlayer
+from health_checker import HealthChecker
+from hypercorn.asyncio import serve
+from hypercorn.config import Config
+
 import os
 import conf
 import sentry_sdk
@@ -27,10 +31,13 @@ sentry_sdk.init(
     ]
 )
 
-app = Quart(__name__)
-
 DEFAULT_MODEL_CONF = os.path.join(os.path.dirname(os.getcwd()), 'default.conf')
 MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
+
+app = Quart(__name__)
+
+health_checker = HealthChecker(app.logger)
+health_checker.start()
 
 
 class PlaceBid:
@@ -264,13 +271,27 @@ async def play_full_board() -> Dict:
 
 @app.get('/healthz')
 async def healthz():
-    return {'status': 'ok'}
+    healthy = health_checker.healthy()
+    if healthy:
+        return 'ok', 200
 
-if __name__ == "__main__":
+    return 'unhealthy', 500
+
+
+def start_dev():
     port = os.environ.get('PORT', '8081')
     debug = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
     use_reloader = os.environ.get(
         'USE_RELOADER', 'False').lower() in ('true', '1', 't')
 
-    app.run(host='0.0.0.0', port=int(port),
-            debug=debug, use_reloader=use_reloader)
+    app.logger.warning("Starting the server")
+    app.run(host='0.0.0.0',
+            port=int(port),
+            debug=debug,
+            use_reloader=use_reloader)
+
+    app.logger.warning("Server started")
+
+
+if __name__ == "__main__":
+    start_dev()

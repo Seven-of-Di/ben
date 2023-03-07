@@ -105,6 +105,8 @@ def generate_suit_length_alert_as_dict(bid_explanation: BidExplanations, suit: S
 
 
 def print_suit_max_length(usual_max_length: int, strict_max_length: int, usual_min_length: int, strict_min_length: int, suit: Suit) -> str:
+    strict_min_length = 0 if strict_min_length==1 else strict_min_length
+    usual_min_length = 0 if usual_min_length==1 else usual_min_length
     max_parenthesis = usual_max_length != strict_max_length
     min_parenthesis = usual_min_length != strict_min_length
     if min_parenthesis and max_parenthesis:
@@ -130,7 +132,7 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
         s: generate_suit_length_alert_as_dict(bid_explanation, s) for s in Suit}
     text = ""
     for s in Suit:
-        print_max_length = suits_length_alert_as_dict[s]["strict_max_length"] < 4
+        print_max_length = suits_length_alert_as_dict[s]["strict_max_length"] < (4 if bid_explanation.n_samples>=50 else 3)
         print_min_length = suits_length_alert_as_dict[s]["usual_min_length"] > 3
         if print_max_length:
             text += print_suit_max_length(usual_max_length=suits_length_alert_as_dict[s]["usual_max_length"], strict_max_length=suits_length_alert_as_dict[s]["strict_max_length"],

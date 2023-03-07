@@ -104,27 +104,42 @@ def generate_suit_length_alert_as_dict(bid_explanation: BidExplanations, suit: S
     }
 
 
+def print_suit_max_length(usual_max_length: int, strict_max_length: int, usual_min_length: int, strict_min_length: int, suit: Suit) -> str:
+    max_parenthesis = usual_max_length != strict_max_length
+    min_parenthesis = usual_min_length != strict_min_length
+    if min_parenthesis and max_parenthesis:
+        return "({}){}-{}({})!{}|".format(strict_min_length, usual_min_length, usual_max_length, strict_max_length, suit.abbreviation())
+    if min_parenthesis:
+        return "({}){}-{}!{}|".format(strict_min_length, usual_min_length, usual_max_length, suit.abbreviation())
+    if max_parenthesis:
+        return "{}-{}({})!{}|".format(usual_min_length, usual_max_length, strict_max_length, suit.abbreviation())
+    if usual_max_length == usual_min_length:
+        return "{}!{}|".format(strict_max_length, suit.abbreviation())
+    return "{}-{}!{}|".format(strict_min_length, strict_max_length, suit.abbreviation())
+
+
+def print_suit_min_length(usual_min_length: int, strict_min_length: int, suit: Suit) -> str:
+    min_parenthesis = usual_min_length != strict_min_length
+    if min_parenthesis:
+        return "({}){}+!{}|".format(strict_min_length, usual_min_length, suit.abbreviation())
+    return "{}+!{}|".format(usual_min_length, suit.abbreviation())
+
+
 def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
     suits_length_alert_as_dict = {
         s: generate_suit_length_alert_as_dict(bid_explanation, s) for s in Suit}
-    min_length_text = ""
-    max_length_text = ""
+    text = ""
     for s in Suit:
-        if suits_length_alert_as_dict[s]["usual_min_length"] == suits_length_alert_as_dict[s]["strict_min_length"] and suits_length_alert_as_dict[s]["usual_min_length"] > 3:
-            min_length_text += "{}!{}+|".format(
-                str(suits_length_alert_as_dict[s]["strict_min_length"]), s.abbreviation())
-        elif suits_length_alert_as_dict[s]["usual_min_length"] > suits_length_alert_as_dict[s]["strict_min_length"] and suits_length_alert_as_dict[s]["usual_min_length"] > 3:
-            min_length_text += "({}){}!{}+|".format(
-                suits_length_alert_as_dict[s]["strict_min_length"], suits_length_alert_as_dict[s]["usual_min_length"], s.abbreviation())
-        if suits_length_alert_as_dict[s]["usual_max_length"] == suits_length_alert_as_dict[s]["strict_max_length"] and suits_length_alert_as_dict[s]["strict_max_length"] < 5:
-            max_length_text += "{}!{}-|".format(
-                str(suits_length_alert_as_dict[s]["strict_max_length"]), s.abbreviation())
-        elif suits_length_alert_as_dict[s]["usual_max_length"] < suits_length_alert_as_dict[s]["strict_max_length"] and suits_length_alert_as_dict[s]["strict_max_length"] < 5:
-            max_length_text += "{}({})!{}-|".format(
-                suits_length_alert_as_dict[s]["usual_max_length"], suits_length_alert_as_dict[s]["strict_max_length"], s.abbreviation())
-    min_length_text = min_length_text[:-1] if min_length_text else min_length_text
-    max_length_text = max_length_text[:-1] if max_length_text else max_length_text
-    return "{}\n{}".format(min_length_text,max_length_text)
+        print_max_length = suits_length_alert_as_dict[s]["strict_max_length"] < 4
+        print_min_length = suits_length_alert_as_dict[s]["usual_min_length"] > 3
+        if print_max_length:
+            text += print_suit_max_length(usual_max_length=suits_length_alert_as_dict[s]["usual_max_length"], strict_max_length=suits_length_alert_as_dict[s]["strict_max_length"],
+                                          usual_min_length=suits_length_alert_as_dict[s]["usual_min_length"], strict_min_length=suits_length_alert_as_dict[s]["strict_min_length"], suit=s)
+        elif print_min_length:
+            text += print_suit_min_length(usual_min_length=suits_length_alert_as_dict[s]["usual_min_length"],strict_min_length=suits_length_alert_as_dict[s]["strict_min_length"],suit=s)
+    text = text[:-1] if text else text
+
+    return "{}".format(text)
 
 
 def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> Dict:
@@ -137,7 +152,7 @@ def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> Dic
             hcp_text, length_text)
         print(final_text)
         return {"text": final_text, "samples": bid_explanation.samples[:10]}
-    return {"text": "Not enough samples to generate a correct alert", "samples": bid_explanation.samples}
+    return {"text": "No alert available", "samples": bid_explanation.samples}
 
 
 if __name__ == "__main__":

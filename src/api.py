@@ -11,6 +11,8 @@ from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit
 from PlayRecord import PlayRecord, Direction
 from claim_dds import check_claim_from_api
 from alert_utils import BidPosition
+from generate_alerts import generate_alert_from_bid_explanation
+from time import time
 
 import tensorflow.compat.v1 as tf  # type: ignore
 
@@ -18,13 +20,19 @@ tf.disable_v2_behavior()
 
 app = Quart(__name__)
 
+start = time()
 DEFAULT_MODEL_CONF = os.path.join(os.path.dirname(os.getcwd()), 'default.conf')
 GIB_MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
+print("Loading GIB models",time()-start)
+start = time()
 HUMAN_MODEL_CONF = os.path.join(os.path.dirname(os.getcwd()), 'human.conf')
 HUMAN_MODELS = Models.from_conf(conf.load(HUMAN_MODEL_CONF))
+print("Loading human models",time()-start)
 
+start = time()
 with open('alerts', 'rb') as f:
     dict_of_alerts = pickle.load(f)
+print("Loading alert data",time()-start)
 
 class PlaceBid:
     def __init__(self, place_bid_request):
@@ -226,10 +234,10 @@ async def alert_bid() :
         data = await request.get_json()
         req = AlertBid(data)
         auction = req.auction[:req.bid_to_alert_index+1]
-        if BidPosition(auction,req.vuln) in dict_of_alerts :
-            return {"alert" : str(dict_of_alerts[BidPosition(auction,req.vuln)]),"bid" : BidPosition(auction,req.vuln)}
+        if BidPosition(auction,[False,False]) in dict_of_alerts :
+            return generate_alert_from_bid_explanation(dict_of_alerts[BidPosition(auction,[False,False])])
 
-        return {'alert': "No alert available"}
+        return {"text" : "This bid has no alert available","samples":[]}
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}

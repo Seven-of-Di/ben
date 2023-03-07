@@ -38,6 +38,8 @@ class FullBoardPlayer() :
         leader = declarer.offset(1)
         raw_lead = bots.BotLead(self.vuls,self.diag.hands[leader].to_pbn(),self.models).lead(auction).to_dict()['candidates'][0]['card']
         lead = lead_real_card(self.diag.hands[leader], raw_lead, BiddingSuit.from_str(contract[1]))
+        self.diag.hands[leader].remove(lead)
+
         tricks = [[str(lead)]]
         current_player = leader.offset(1)
         
@@ -54,6 +56,7 @@ class FullBoardPlayer() :
                 leader = current_player
                 tricks.append([])
 
+        assert all([self.diag.hands[dir].len()==1 for dir in Direction])
         #Last trick
         for _ in range(4) :
             card = self.diag.hands[current_player].cards[0]

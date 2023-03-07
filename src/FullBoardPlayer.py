@@ -43,19 +43,18 @@ class FullBoardPlayer() :
         
         #12 first tricks
         for _ in range(47) :
-            if len(tricks[-1])==4 :
-                last_trick = Trick.from_list(leader=leader,trick_as_list=[Card_.from_str(card) for card in tricks[-1]])
-                current_player = last_trick.winner(trump=trump)
-                leader = current_player
-                tricks.append([])
             dict_result = await get_ben_card_play_answer(hand_str=self.diag.hands[current_player if current_player!=dummy else declarer].to_pbn(),dummy_hand_str=self.diag.hands[dummy].to_pbn(),dealer_str=self.dealer.abbreviation(),vuls=self.vuls,auction=auction,contract=contract,declarer_str=declarer.abbreviation(),next_player_str=current_player.abbreviation(),tricks_str=tricks,MODELS=self.models)
             # print(dict_result)
             tricks[-1].append(str(dict_result["card"]))
             self.diag.hands[current_player].remove(Card_.from_str(dict_result["card"]))
             current_player = current_player.next()
+            if len(tricks[-1])==4 :
+                last_trick = Trick.from_list(leader=leader,trick_as_list=[Card_.from_str(card) for card in tricks[-1]])
+                current_player = last_trick.winner(trump=trump)
+                leader = current_player
+                tricks.append([])
 
         #Last trick
-        tricks.append([])
         for _ in range(4) :
             card = self.diag.hands[current_player].cards[0]
             tricks[-1].append(str(card))

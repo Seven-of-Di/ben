@@ -14,8 +14,9 @@ BIDDER_MODEL_BASE_PATH = os.path.join(os.path.dirname(os.getcwd()))
 
 class Models:
 
-    def __init__(self, bidder_model, binfo, lead, sd_model, player_models):
+    def __init__(self, bidder_model, wide_bidder_model,binfo, lead, sd_model, player_models):
         self.bidder_model = bidder_model
+        self.wide_bidder_model = wide_bidder_model
         self.binfo = binfo
         self.lead = lead
         self.sd_model = sd_model
@@ -26,6 +27,7 @@ class Models:
     def from_conf(cls, conf: ConfigParser) -> "Models":
         return cls(
             bidder_model=Bidder('bidder', os.path.join(BIDDER_MODEL_BASE_PATH, conf['bidding']['bidder'])),
+            wide_bidder_model=Bidder('bidder', os.path.join(BIDDER_MODEL_BASE_PATH, conf['bidding']['wide_bidder'])),
             binfo=BidInfo(os.path.join(BIDDER_MODEL_BASE_PATH, conf['bidding']['info'])),
             lead=Leader(os.path.join(BIDDER_MODEL_BASE_PATH, conf['lead']['lead'])),
             sd_model=LeadSingleDummy(os.path.join(BIDDER_MODEL_BASE_PATH, conf['eval']['lead_single_dummy'])),
@@ -37,19 +39,5 @@ class Models:
             ],
         )
 
-    # TODO: remove this. use `from_conf` instead
-    @classmethod
-    def load(cls, models_dir):
-        return cls(
-            bidder_model=Bidder('gib21', f'{models_dir}/gib21_model/gib21-1000000'),
-            binfo=BidInfo(f'{models_dir}/gib21_info_model/gib21_info-500000'),
-            lead=Leader(f'{models_dir}/lead_model_b/lead-1000000'),
-            sd_model=LeadSingleDummy(f'{models_dir}/lr3_model/lr3-1000000'),
-            player_models=[
-                player.BatchPlayerLefty('lefty', f'{models_dir}/lefty_model/lefty-1000000'),
-                player.BatchPlayer('dummy', f'{models_dir}/dummy_model/dummy-920000'),
-                player.BatchPlayer('righty', f'{models_dir}/righty_model/righty-1000000'),
-                player.BatchPlayer('decl', f'{models_dir}/decl_model/decl-1000000')
-            ],
-        )
+
 

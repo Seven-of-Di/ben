@@ -22,12 +22,8 @@ app = Quart(__name__)
 
 start = time()
 DEFAULT_MODEL_CONF = os.path.join(os.path.dirname(os.getcwd()), 'default.conf')
-GIB_MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
+MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
 print("Loading GIB models",time()-start)
-start = time()
-HUMAN_MODEL_CONF = os.path.join(os.path.dirname(os.getcwd()), 'human.conf')
-HUMAN_MODELS = Models.from_conf(conf.load(HUMAN_MODEL_CONF))
-print("Loading human models",time()-start)
 
 start = time()
 with open('alerts', 'rb') as f:
@@ -116,7 +112,7 @@ async def play_card():
             req.contract_direction,
             req.next_player,
             req.tricks,
-            GIB_MODELS
+            MODELS
         )
         """
         dict_result = {
@@ -146,16 +142,13 @@ async def place_bid():
     try:
         data = await request.get_json()
         req = PlaceBid(data)
-        models = HUMAN_MODELS
-        bid_position = BidPosition([bid for bid in req.auction if bid !="PAD_START"],req.vuln if req.dealer in ["N","S"] else [req.vuln[1],req.vuln[0]])
-        if bid_position in dict_of_alerts :
-            print("GIB model")
-            models = GIB_MODELS
+        bid_position = BidPosition([bid for bid in req.auction if bid !="PAD_START"],[False,False])
 
         bot = AsyncBotBid(
             req.vuln,
             req.hand,
-            models
+            MODELS,
+            human_model=bid_position not in dict_of_alerts
         )
 
         bid_resp = await bot.async_bid(req.auction)
@@ -181,7 +174,7 @@ async def make_lead():
         data = await request.get_json()
         req = MakeLead(data)
 
-        bot = AsyncBotLead(req.vuln, req.hand, GIB_MODELS)
+        bot = AsyncBotLead(req.vuln, req.hand, MODELS)
 
         lead = bot.lead(req.auction)
         card_str = lead.to_dict()['candidates'][0]['card']

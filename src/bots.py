@@ -395,7 +395,7 @@ class BotLead:
 
 class CardPlayer:
 
-    def __init__(self, player_models, player_i, hand_str, public_hand_str, contract, is_decl_vuln, play_record : PlayRecord, declarer : Direction):
+    def __init__(self, player_models, player_i, hand_str, public_hand_str, contract, is_decl_vuln, play_record : PlayRecord, declarer : Direction,player_direction : Direction):
         self.player_models = player_models
         self.model = player_models[player_i]
         self.player_i = player_i
@@ -412,7 +412,7 @@ class CardPlayer:
         self.strain_i = bidding.get_strain_i(contract)
         self.trump=BiddingSuit.from_str(contract[1])
         self.play_record = play_record
-        self.direction = Direction(player_i)
+        self.direction = player_direction
         self.declarer = declarer
 
         self.init_x_play(parse_hand_f(32)(public_hand_str),
@@ -629,7 +629,7 @@ class CardPlayer:
         max_insta_score = max([float(c.insta_score) for c in card_with_max_expected_score.keys(
         ) if c.insta_score is not None])
         card_with_max_insta_score = {
-            c: c.insta_score for c in candidate_cards if c.insta_score == max_insta_score}
+            c: c.insta_score for c in candidate_cards if c.insta_score == max_insta_score and c.expected_score == max_expected_score}
         if len(card_with_max_insta_score) == 1:
             return best_card_resp.card.symbol()
 

@@ -124,7 +124,7 @@ class PlayFullBoard:
 '''
 
 
-@app.route('/play_card', methods=['POST'])
+@app.post('/play_card')
 async def play_card():
     data = await request.get_json()
     # app.logger.warn(data)

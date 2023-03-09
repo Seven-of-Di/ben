@@ -1,6 +1,5 @@
 import random
 from typing import List
-from objects import Card
 from utils import Direction, PlayerHand, VULNERABILITIES, Diag, Suit, Rank, Card_
 from PlayRecord import PlayRecord, BiddingSuit
 
@@ -21,7 +20,7 @@ def play_real_card(hand: PlayerHand, valid_cards : List[Card_], trump: BiddingSu
     if len([c for c in valid_cards if c.suit==suit_to_play])==1 :
         return [c for c in valid_cards if c.suit==suit_to_play][0]
     if player_direction == declarer.partner():
-        return Card_(suit_to_play, sorted(hand.suits[suit_to_play])[0])
+        return Card_(suit_to_play, sorted([c.rank for c in valid_cards if c.suit==suit_to_play])[0])
     if trump.to_suit() == suit_to_play:
         return Card_(suit_to_play, pick_random_from_valid_ranks([c.rank for c in valid_cards if c.suit==suit_to_play]))
     if player_direction == declarer:

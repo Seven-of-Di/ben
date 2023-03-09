@@ -420,6 +420,47 @@ class PlayerHand():
 
     def hcp(self) -> int:
         return sum(self.suit_hcp(suit) for suit in Suit)
+    
+    def pattern(self) -> List[int]:
+        """Return [nb ♠,nb ♥,nb ♦,nb ♣]"""
+        return list(reversed([len(self.suits[suit]) for suit in Suit]))
+
+    def ordered_pattern(self) -> List[int]:
+        """Return the pattern with the longest suit on the left, the shortest on the right"""
+        return sorted(self.pattern(), reverse=True)
+    
+    def balanced(self) -> bool:
+        if self.ordered_pattern() in [[4, 4, 3, 2], [4, 3, 3, 3], [5, 3, 3, 2]]:
+            return True
+        return False
+
+    def semi_balanced(self) -> bool:
+        if self.ordered_pattern() in [[6, 3, 2, 2], [5, 4, 2, 2]]:
+            return True
+        return False
+    
+    def unbalanced(self) -> bool:
+        return not(self.balanced() or self.semi_balanced())
+    
+
+    def one_suiter(self) -> bool:
+        if self.ordered_pattern()[0] <= 5:
+            return False
+        if self.ordered_pattern()[0] == 6 and self.ordered_pattern()[1] == 4:
+            return False
+        if self.ordered_pattern()[1] == 5:
+            return False
+        return True
+
+    def two_suiter(self):
+        if self.balanced() or self.three_suiter() or self.one_suiter():
+            return False
+        return True
+
+    def three_suiter(self) -> bool:
+        if self.ordered_pattern()[2] == 4:
+            return True
+        return False
 
 
 TOTAL_DECK: List[Card_] = []

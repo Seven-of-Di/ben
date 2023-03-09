@@ -20,7 +20,7 @@ MODELS_GIB = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
 diags = [Diag.generate_random() for _ in range(100)]
 
 
-def bid_and_extract_hand(diag: Diag, dict_of_alerts: Dict[BidPosition, BidExplanations]):
+def bid_and_extract_hand(diag: Diag, dict_of_alerts: Dict[BidPosition, BidExplanations],verbose = False):
     # vuls = [bool(random.getrandbits(1)), bool(random.getrandbits(1))]
     vuls = [False, False]
     auction = []
@@ -41,6 +41,13 @@ def bid_and_extract_hand(diag: Diag, dict_of_alerts: Dict[BidPosition, BidExplan
         else:
             dict_of_alerts[position].update(
                 deepcopy(diag.hands[current_direction]))
+    if not verbose :
+        return
+    print(auction)
+    for i,_ in enumerate(auction) :
+        print(auction[i],":",generate_alert_from_bid_explanation(dict_of_alerts[BidPosition(auction[:i+1],vuls)])["text"])
+        print("------------")
+    print("------------\n------------")
 
 
 def generate_alerts(check_point: int):
@@ -62,7 +69,7 @@ def generate_alerts(check_point: int):
 
 
 def generate_usual_alert_from_dict(dic: Dict, ascending: bool) -> int:
-    TRESHOLD = (5/100)*sum(dic.values())
+    TRESHOLD = (10/100)*sum(dic.values())
     tuples_list = dic.items() if ascending else reversed(dic.items())
     cumulative_sum = 0
     for tested_key, occurences in tuples_list:
@@ -82,7 +89,7 @@ def generete_hcp_alert(bid_explanation: BidExplanations) -> str:
         bid_explanation.hcp_distribution, ascending=False)
     minimum_text = str(strict_minimum_hcp) if strict_minimum_hcp == usual_minimum_hcp else "({}){}".format(
         strict_minimum_hcp, usual_minimum_hcp)
-    maximum_text = str(strict_maximum_hcp) if strict_maximum_hcp == usual_maximum_hcp else "({}){}".format(
+    maximum_text = str(strict_maximum_hcp) if strict_maximum_hcp == usual_maximum_hcp else "{}({})".format(
         usual_maximum_hcp, strict_maximum_hcp)
     return "{}-{}hcp".format(minimum_text, maximum_text)
 
@@ -130,30 +137,64 @@ def print_suit_min_length(usual_min_length: int, strict_min_length: int, suit: S
 def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
     suits_length_alert_as_dict = {
         s: generate_suit_length_alert_as_dict(bid_explanation, s) for s in Suit}
-    text = ""
+    suits_text = ""
+    long_suits : List[Suit] = []
+    short_suits : List[Suit] = []
     for s in Suit:
-        print_max_length = suits_length_alert_as_dict[s]["strict_max_length"] < (4 if bid_explanation.n_samples>=50 else 3)
-        print_min_length = suits_length_alert_as_dict[s]["usual_min_length"] > 3
+        print_max_length = (suits_length_alert_as_dict[s]["strict_max_length"] <= 3) if bid_explanation.n_samples>=50 else suits_length_alert_as_dict[s]["usual_max_length"] <= 1
+        print_min_length = suits_length_alert_as_dict[s]["usual_min_length"] >= 4 or suits_length_alert_as_dict[s]["strict_min_length"] >= 3
         if print_max_length:
-            text += print_suit_max_length(usual_max_length=suits_length_alert_as_dict[s]["usual_max_length"], strict_max_length=suits_length_alert_as_dict[s]["strict_max_length"],
+            short_suits.append(s)
+            suits_text += print_suit_max_length(usual_max_length=suits_length_alert_as_dict[s]["usual_max_length"], strict_max_length=suits_length_alert_as_dict[s]["strict_max_length"],
                                           usual_min_length=suits_length_alert_as_dict[s]["usual_min_length"], strict_min_length=suits_length_alert_as_dict[s]["strict_min_length"], suit=s)
         elif print_min_length:
-            text += print_suit_min_length(usual_min_length=suits_length_alert_as_dict[s]["usual_min_length"],strict_min_length=suits_length_alert_as_dict[s]["strict_min_length"],suit=s)
-    text = text[:-1] if text else text
+            long_suits.append(s)
+            suits_text += print_suit_min_length(usual_min_length=suits_length_alert_as_dict[s]["usual_min_length"],strict_min_length=suits_length_alert_as_dict[s]["strict_min_length"],suit=s)
+    suits_text = suits_text[:-1] if suits_text else suits_text
 
-    return "{}".format(text)
+    player_hands = [PlayerHand.from_pbn(pbn_hand) for pbn_hand in bid_explanation.samples]
+    two_suiter_mask = [player_hand.ordered_pattern()[1]>=4 and not player_hand.balanced() for player_hand in player_hands]
+    two_suiter_proba = two_suiter_mask.count(True)/len(two_suiter_mask)
+
+    if two_suiter_proba>0.95 :
+        is_sure = two_suiter_proba==1
+        if len(long_suits)==2 :
+            return "{}two suiter, with {}".format("Usually " if not is_sure else "",suits_text)
+        if len(long_suits)==1 and len(short_suits)==1 and suits_length_alert_as_dict[short_suits[0]]["usual_max_length"]<=1:
+            return "{}splinter, with {}".format("Usually " if not (is_sure and suits_length_alert_as_dict[short_suits[0]]["strict_max_length"]<=1) else "",suits_text)
+        if len(long_suits)==1 :
+            return "{}two suiter, with {} and another unkown suit".format("Usually " if not is_sure else "",suits_text)
+        else :
+            return "{}unknown two suiter, {}".format("Usually " if not is_sure else "",suits_text)
+        
+    six_card_mask = [player_hand.ordered_pattern()[0]>=6 for player_hand in player_hands]
+    six_card_proba = six_card_mask.count(True)/len(six_card_mask)
+
+    if six_card_proba>=0.95 :
+        is_sure = six_card_proba==1
+        if len(long_suits)==1 :
+            return "{}one suiter, with {}".format("Usually " if not is_sure else "",suits_text)
+        else :
+            return "{}unknown one suiter {}".format("Usually " if not is_sure else "",suits_text)
+    
+    five_card_mask = [player_hand.ordered_pattern()[0]>=5 for player_hand in player_hands]
+    five_card_proba = five_card_mask.count(True)/len(five_card_mask)
+    if five_card_proba==0.95 and len(long_suits)==0:
+        is_sure = five_card_proba==1
+        return "{}an unkown five card + suit {}".format("Usually " if not is_sure else "",suits_text)
+    
+    return "{}".format(suits_text)
+
 
 
 def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> Dict:
-    print(bid_explanation.samples)
-    if bid_explanation.n_samples >= 10:
-        print("Number of samples : {}".format(bid_explanation.n_samples))
+    if bid_explanation.n_samples >= 5:
+        # print("Number of samples : {}".format(bid_explanation.n_samples))
         hcp_text = generete_hcp_alert(bid_explanation=bid_explanation)
         length_text = generate_suits_length_alert(bid_explanation)
-        final_text = "{}\n{}".format(
-            hcp_text, length_text)
-        print(final_text)
-        return {"text": final_text, "samples": bid_explanation.samples[:10]}
+        final_text = "{}{}{}".format(
+            hcp_text,"\n" if length_text else "" ,length_text)
+        return {"text": final_text, "samples": bid_explanation.samples[:5]}
     return {"text": "No alert available", "samples": bid_explanation.samples}
 
 

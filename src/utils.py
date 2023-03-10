@@ -656,6 +656,6 @@ def from_lin_to_request(lin_str: str, remove_after: Card_ | None):
 
 
 if __name__ == "__main__":
-    link = r"https://play.intobridge.com/hand?lin=pn|Ben,Ben,Ben,Ben|md|3S8764H86DQ852C832,SAHQ7DKT9643CAKJ6,S3HAKJ9543D7CQ975,SKQJT952HT2DAJCT4|ah|Board%2013|mb|1H|mb|1S|mb|p|mb|3D|mb|p|mb|4S|mb|p|mb|p|mb|p|pc|C8|pc|CK|pc|C9|pc|C4|pc|SA|pc|S3|pc|S2|pc|S4|pc|D3|pc|D7|pc|DA|pc|D2|pc|S9|pc|S7|pc|C6|pc|H3|pc|ST|pc|S6|pc|H7|pc|H4|pc|S5|pc|S8|pc|D6|pc|H5|pc|H8|pc|HQ|pc|HK|pc|H2|pc|HA|pc|HT|pc|H6|pc|D4|pc|HJ|pc|SJ|pc|C2|pc|D9|pc|DJ|pc|D5|pc|DK|pc|H9|pc|DT|pc|C5|pc|SQ|pc|D8|pc|CT|pc|C3|pc|CA|pc|C7|pc|CJ|pc|CQ|pc|SK|pc|DQ|mc|10|sv|b|"
-    from_lin_to_request(link, Card_.from_str("H5"))
+    link = r"https://stage.intobridge.com/hand?lin=pn|Bourricot,Ben,Ben,Ben|md|4SAKQ3HQ4DT7CAK976,S4HT9862DQ52CT432,S862HA7DAKJ986CQ5,SJT975HKJ53D43CJ8|ah|Board%2014|mb|p|mb|1C|mb|p|mb|1D|mb|p|mb|2S|mb|p|mb|3D|mb|p|mb|3N|mb|p|mb|4N|mb|p|mb|p|mb|p|pc|HT|pc|H7|pc|HK|pc|H4|pc|H3|pc|HQ|pc|H2|pc|HA|pc|CQ|pc|C8|pc|C6|pc|CT|pc|C5|pc|CJ|pc|CA|pc|C2|pc|CK|pc|C3|pc|S2|pc|D3|pc|C9|pc|C4|pc|D6|pc|S5|pc|C7|pc|D2|pc|D8|pc|S7|pc|SA|pc|S4|pc|S6|pc|S9|pc|SK|pc|H6|pc|S8|pc|ST|pc|SQ|pc|H8|pc|D9|pc|SJ|mc|12|"
+    from_lin_to_request(link, Card_.from_str("HA"))
     # from_lin_to_request(link, None)

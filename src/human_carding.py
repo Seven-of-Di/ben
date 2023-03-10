@@ -28,19 +28,19 @@ def play_real_card(hand: PlayerHand, valid_cards : List[Card_], trump: BiddingSu
     if play_record.record == None:
         raise Exception("play record should not be empty")
     on_lead = len(play_record.record[-1]) % 4 == 0
-    if on_lead :
+    if not on_lead :
         cards_played_by_player = play_record.get_cards_played_by_direction(
             player_direction)
         if any([card.suit == play_record.record[-1].__trick_as_list__()[0][1].suit for card in cards_played_by_player]):
             return Card_(suit_to_play, sorted(hand.suits[suit_to_play])[0])
         else:
-            return Card_(suit_to_play, standard_count(hand, suit_to_play))
+            return Card_(suit_to_play, standard_count(hand, suit_to_play,valid_cards))
     else :
         cards_played_by_player = play_record.get_cards_played_by_direction(player_direction)
         if any([card.suit == play_record.record[-1].__trick_as_list__()[0][1].suit for card in cards_played_by_player]):
             return Card_(suit_to_play, sorted(hand.suits[suit_to_play])[0])
         else:
-            return Card_(suit_to_play, low_encouraging(hand, suit_to_play))
+            return Card_(suit_to_play, low_encouraging(hand, suit_to_play,valid_cards))
 
 
 def pick_random_from_valid_ranks(valid_ranks : List[Rank]) -> Rank:
@@ -92,9 +92,9 @@ def third_fifth(hand: PlayerHand, suit: Suit) -> Rank:
     raise Exception("Couldn't lead 3rd 5th best in this suit - too bad")
 
 
-def low_encouraging(hand: PlayerHand, suit: Suit) -> Rank:
-    length = len(hand.suits[suit])
-    suit_ranks = sorted(hand.suits[suit], reverse=True)
+def low_encouraging(hand: PlayerHand, suit: Suit,valid_cards : None|List[Card_]) -> Rank:
+    valid_cards = [Card_(suit,rank) for rank in hand.suits[suit]] if valid_cards is None else valid_cards
+    suit_ranks = sorted([c.rank for c in valid_cards], reverse=True)
     if hand.number_of_figures(suit) == 0:
         return suit_ranks[0]
     else:
@@ -103,16 +103,16 @@ def low_encouraging(hand: PlayerHand, suit: Suit) -> Rank:
         "Couldn't lead low encouraging best in this suit - too bad")
 
 
-def standard_count(hand: PlayerHand, suit: Suit) -> Rank:
+def standard_count(hand: PlayerHand, suit: Suit,valid_cards : None|List[Card_]) -> Rank:
+    valid_cards = [Card_(suit,rank) for rank in hand.suits[suit]] if valid_cards is None else valid_cards
+    valid_ranks = sorted([c.rank for c in valid_cards], reverse=True)
     length = len(hand.suits[suit])
     suit_ranks = sorted(hand.suits[suit], reverse=True)
     if length % 2 == 1:
-        return suit_ranks[-1]
+        return valid_ranks[-1]
     if length == 2:
-        if suit_ranks[0] <= Rank.NINE:
-            return suit_ranks[0]
-        else:
-            return suit_ranks[1]
-    if suit_ranks[1] <= Rank.SEVEN:
-        return suit_ranks[1]
-    return suit_ranks[2]
+        return valid_ranks[0]
+    for rank in suit_ranks[1:] :
+        if rank in valid_ranks :
+            return rank 
+    return valid_ranks[-1]

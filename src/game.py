@@ -1,3 +1,4 @@
+from typing import Dict, List
 import bots
 
 
@@ -16,3 +17,4 @@ class AsyncBotLead(bots.BotLead):
 class AsyncCardPlayer(bots.CardPlayer):
     async def async_play_card(self, trick_i, leader_i, current_trick52, players_states,probabilities_list):
         return self.play_card(trick_i, leader_i, current_trick52, players_states,probabilities_list)
+

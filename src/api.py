@@ -1,13 +1,23 @@
+from typing import Dict
 from quart import Quart, request
 
 from nn.models import Models
 from game import AsyncBotBid, AsyncBotLead
+from FullBoardPlayer import AsyncFullBoardPlayer
+from health_checker import HealthChecker
+from hypercorn.asyncio import serve
+from hypercorn.config import Config
+
 import os
 import conf
 import pickle
+import sentry_sdk
+from sentry_sdk.integrations.quart import QuartIntegration
+
+
 from transform_play_card import get_ben_card_play_answer
 from human_carding import lead_real_card
-from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit
+from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit, Diag
 from PlayRecord import PlayRecord, Direction
 from claim_dds import check_claim_from_api
 from alert_utils import BidPosition
@@ -18,17 +28,23 @@ import tensorflow.compat.v1 as tf  # type: ignore
 
 tf.disable_v2_behavior()
 
-app = Quart(__name__)
+sentry_sdk.init(
+    os.environ.get("SENTRY_DSN", ""),
+    integrations=[
+        QuartIntegration()
+    ]
+)
 
 start = time()
 DEFAULT_MODEL_CONF = os.path.join(os.path.dirname(os.getcwd()), 'default.conf')
 MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
 print("Loading GIB models",time()-start)
 
-start = time()
-with open('alerts', 'rb') as f:
-    dict_of_alerts = pickle.load(f)
-print("Loading alert data",time()-start)
+app = Quart(__name__)
+
+health_checker = HealthChecker(app.logger)
+health_checker.start()
+
 
 class PlaceBid:
     def __init__(self, place_bid_request):
@@ -38,6 +54,7 @@ class PlaceBid:
         self.auction = ['PAD_START'] * \
             DIRECTIONS.index(self.dealer) + place_bid_request['auction']
 
+
 class AlertBid:
     def __init__(self, alert_bid_request) -> None:
         self.dealer = alert_bid_request["dealer"]
@@ -46,12 +63,13 @@ class AlertBid:
         self.auction = alert_bid_request['auction']
         self.bid_to_alert_index = alert_bid_request['bid_to_alert_index']
 
+
 class PlayCard:
     def __init__(self, play_card_request):
         self.hand = play_card_request['hand']
         self.dummy_hand = play_card_request['dummy_hand']
         self.dealer = play_card_request['dealer']
-        self.vuln = play_card_request['vuln']
+        self.vuln = VULNERABILITIES[play_card_request['vuln']]
         self.auction = play_card_request['auction']
         self.contract = play_card_request['contract']
         self.contract_direction = play_card_request['contract_direction']
@@ -95,36 +113,48 @@ class CheckClaim:
 '''
 
 
-@app.route('/play_card', methods=['POST'])
+class PlayFullBoard:
+    def __init__(self, play_full_board_request) -> None:
+        self.vuln = VULNERABILITIES[play_full_board_request['vuln']]
+        self.dealer = Direction.from_str(play_full_board_request['dealer'])
+        self.hands = Diag.init_from_pbn(play_full_board_request['hands'])
+
+
+'''
+{
+    "dealer": "N",
+    "vuln": "None",
+    "hands : "N:.J8.A9653.A98752 K9J236.2.28.64JK 85.AT754.KJ74.3Q AQT74.KQ963.QT.T"
+}
+'''
+
+
+@app.post('/play_card')
 async def play_card():
-    try:
-        data = await request.get_json()
-        # app.logger.warn(data)
-        req = PlayCard(data)
+    data = await request.get_json()
+    # app.logger.warn(data)
+    req = PlayCard(data)
 
-        dict_result = await get_ben_card_play_answer(
-            req.hand,
-            req.dummy_hand,
-            req.dealer,
-            req.vuln,
-            req.auction,
-            req.contract,
-            req.contract_direction,
-            req.next_player,
-            req.tricks,
-            MODELS
-        )
-        """
-        dict_result = {
-            "card": "H4",
-            "claim_the_rest": false
-        }
-        """
+    dict_result = await get_ben_card_play_answer(
+        req.hand,
+        req.dummy_hand,
+        req.dealer,
+        req.vuln,
+        req.auction,
+        req.contract,
+        req.contract_direction,
+        req.next_player,
+        req.tricks,
+        MODELS
+    )
+    """
+    dict_result = {
+        "card": "H4",
+        "claim_the_rest": false
+    }
+    """
 
-        return dict_result
-    except Exception as e:
-        app.logger.exception(e)
-        return {'error': 'Unexpected error'}
+    return dict_result
 
 
 '''
@@ -154,6 +184,7 @@ async def place_bid():
         bid_resp = await bot.async_bid(req.auction)
 
         return {'bid': bid_resp.bid}
+
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}
@@ -170,23 +201,19 @@ async def place_bid():
 
 @app.post('/make_lead')
 async def make_lead():
-    try:
-        data = await request.get_json()
-        req = MakeLead(data)
+    data = await request.get_json()
+    req = MakeLead(data)
 
-        bot = AsyncBotLead(req.vuln, req.hand, MODELS)
+    bot = AsyncBotLead(req.vuln, req.hand, MODELS)
 
-        lead = bot.lead(req.auction)
-        card_str = lead.to_dict()['candidates'][0]['card']
-        contract = next((bid for bid in reversed(req.auction)
-                        if len(bid) == 2 and bid != "XX"), None)
-        if contract is None:
-            raise Exception("contract is None")
-        return {'card': lead_real_card(PlayerHand.from_pbn(req.hand), card_str, BiddingSuit.from_str(contract[1])).__str__()}
-    except Exception as e:
-        app.logger.exception(e)
-        return {'error': 'Unexpected error'}
+    lead = bot.lead(req.auction)
+    card_str = lead.to_dict()['candidates'][0]['card']
+    contract = next((bid for bid in reversed(req.auction)
+                    if len(bid) == 2 and bid != "XX"), None)
+    if contract is None:
+        raise Exception("contract is None")
 
+    return {'card': lead_real_card(PlayerHand.from_pbn(req.hand), card_str, BiddingSuit.from_str(contract[1])).__str__()}
 
 '''
 {
@@ -200,26 +227,22 @@ async def make_lead():
 }
 '''
 
-@app.post('/check_claim')
-async def check_claim() :
-    data = {}
-    try:
-        data = await request.get_json()
-        req = CheckClaim(data)
-        res = await check_claim_from_api(
-            req.claiming_hand,
-            req.dummy_hand,
-            req.claiming_direction,
-            req.contract_direction,
-            req.contract,
-            req.tricks,
-            req.claim)
 
-        return {'claim_accepted': res}
-    except Exception as e:
-        app.logger.exception(e)
-        app.logger.error(data)
-        return {'error': 'Unexpected error'}
+@app.post('/check_claim')
+async def check_claim():
+    data = await request.get_json()
+    req = CheckClaim(data)
+    res = await check_claim_from_api(
+        req.claiming_hand,
+        req.dummy_hand,
+        req.claiming_direction,
+        req.contract_direction,
+        req.contract,
+        req.tricks,
+        req.claim)
+
+    return {'claim_accepted': res}
+
 
 @app.post('/alert_bid')
 async def alert_bid() :
@@ -237,12 +260,27 @@ async def alert_bid() :
 
 @app.get('/healthz')
 async def healthz():
-    return {'status': 'ok'}
+    healthy = health_checker.healthy()
+    if healthy:
+        return 'ok', 200
 
-port = os.environ.get('PORT', '8081')
-debug = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
-use_reloader = os.environ.get(
-    'USE_RELOADER', 'False').lower() in ('true', '1', 't')
+    return 'unhealthy', 500
+
+
+def start_dev():
+    port = os.environ.get('PORT', '8081')
+    debug = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
+    use_reloader = os.environ.get(
+        'USE_RELOADER', 'False').lower() in ('true', '1', 't')
+
+    app.logger.warning("Starting the server")
+    app.run(host='0.0.0.0',
+            port=int(port),
+            debug=debug,
+            use_reloader=use_reloader)
+
+    app.logger.warning("Server started")
+
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=int(port), debug=debug, use_reloader=use_reloader)
+    start_dev()

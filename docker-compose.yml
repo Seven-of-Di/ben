@@ -6,17 +6,17 @@ networks:
 
 services:
   app:
-    platform: linux/x86_64
     build: .
     user: root
-    command: "api.py"
+    command: python api.py
     ports:
       - 8081:8081
     volumes:
       - ./src:/app/src
     environment:
-      - FLASK_ENV=development
       - TF_CPP_MIN_LOG_LEVEL=3
+      - PORT=5001
       - DEBUG=true
+      - USE_RELOADER=true
     networks:
       - ben

@@ -17,12 +17,10 @@ from sentry_sdk.integrations.quart import QuartIntegration
 
 from transform_play_card import get_ben_card_play_answer
 from human_carding import lead_real_card
-from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit, Diag
-from PlayRecord import PlayRecord, Direction
+from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit,Diag,Direction
 from claim_dds import check_claim_from_api
-from alert_utils import BidPosition
-from generate_alerts import generate_alert_from_bid_explanation
 from time import time
+import sqlite3
 
 import tensorflow.compat.v1 as tf  # type: ignore
 
@@ -45,6 +43,13 @@ app = Quart(__name__)
 health_checker = HealthChecker(app.logger)
 health_checker.start()
 
+alert_db = sqlite3.connect('alert_database')
+cursor = alert_db.cursor()
+
+start = time()
+with open('alerts', 'rb') as f:
+    dict_of_alerts = pickle.load(f)
+print("Loading alert data",time()-start)
 
 class PlaceBid:
     def __init__(self, place_bid_request):
@@ -172,13 +177,15 @@ async def place_bid():
     try:
         data = await request.get_json()
         req = PlaceBid(data)
-        bid_position = BidPosition([bid for bid in req.auction if bid !="PAD_START"],[False,False])
+        sql_alert_key = "".join([str(bid) for bid in req.auction if bid !="PAD_START"])
+        cursor.execute("SELECT * FROM alert_table WHERE sequence = '{}' ".format(sql_alert_key))
+        alert = cursor.fetchone()
 
         bot = AsyncBotBid(
             req.vuln,
             req.hand,
             MODELS,
-            human_model=bid_position not in dict_of_alerts
+            human_model=alert is None
         )
 
         bid_resp = await bot.async_bid(req.auction)
@@ -249,11 +256,13 @@ async def alert_bid() :
     try:
         data = await request.get_json()
         req = AlertBid(data)
-        auction = req.auction[:req.bid_to_alert_index+1]
-        if BidPosition(auction,[False,False]) in dict_of_alerts :
-            return generate_alert_from_bid_explanation(dict_of_alerts[BidPosition(auction,[False,False])])
+        sql_alert_key = "".join([str(bid) for bid in req.auction if bid !="PAD_START"])
+        cursor.execute("SELECT * FROM alert_table WHERE sequence = '{}' ".format(sql_alert_key))
+        alert = cursor.fetchone()
+        if alert is None :
+            return {"alert" : "No alert available"}
 
-        return {"text" : "This bid has no alert available","samples":[]}
+        return {"text" : alert[1]}
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}

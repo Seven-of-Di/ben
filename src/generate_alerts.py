@@ -206,4 +206,4 @@ def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> Dic
 
 
 if __name__ == "__main__":
-    generate_alerts(100)
+    generate_alerts(1000)

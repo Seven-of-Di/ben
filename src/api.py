@@ -244,6 +244,29 @@ async def check_claim():
 
     return {'claim_accepted': res}
 
+'''
+{
+    "hand": "N:J962.KA3.87.T983 Q7.QJ965.6.KJA54 KA84.872.TQJA2.6 T53.T4.K9543.Q72",
+    "dealer": "E",
+    "vuln": "None"
+}
+'''
+
+
+@app.post('/play_full_board')
+async def play_full_board() -> Dict:
+    data = await request.get_json()
+    req = PlayFullBoard(data)
+    bot = AsyncFullBoardPlayer(
+        req.hands,
+        req.vuln,
+        req.dealer,
+        MODELS
+    )
+    board_data = await bot.async_full_board()
+    # print(board_data)
+    return board_data
+
 
 @app.post('/alert_bid')
 async def alert_bid() :

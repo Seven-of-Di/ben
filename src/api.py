@@ -10,7 +10,6 @@ from hypercorn.config import Config
 
 import os
 import conf
-import pickle
 import sentry_sdk
 from sentry_sdk.integrations.quart import QuartIntegration
 
@@ -45,11 +44,6 @@ health_checker.start()
 
 alert_db = sqlite3.connect('alert_database')
 cursor = alert_db.cursor()
-
-start = time()
-with open('alerts', 'rb') as f:
-    dict_of_alerts = pickle.load(f)
-print("Loading alert data",time()-start)
 
 class PlaceBid:
     def __init__(self, place_bid_request):

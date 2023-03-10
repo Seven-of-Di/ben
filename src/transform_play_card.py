@@ -68,8 +68,6 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, a
     righty_hand = random_diag.hands[declarer.offset(3)].to_pbn()
     decl_hand = random_diag.hands[declarer].to_pbn()
 
-    print(Direction(0))
-
     card_players = [
         bots.CardPlayer(MODELS.player_models, 0, lefty_hand,
                         dummy_hand, contract, is_decl_vuln,play_record,declarer=declarer,player_direction=next_player),

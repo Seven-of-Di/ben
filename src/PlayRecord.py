@@ -4,6 +4,7 @@ import logging
 from typing import Dict, List, Optional, Set, Tuple
 
 from utils import Direction, Card_, BiddingSuit, Suit
+from parsing_tools import Pbn
 
 
 @dataclass
@@ -15,11 +16,32 @@ class PlayRecord:
     cards_played_32: List[List[int]]
 
     @staticmethod
+    def from_pbn(string: str) -> Optional[PlayRecord]:
+        str_leader = Pbn.get_tag_content(string, "Play")
+        str_result = Pbn.get_tag_content(string, "Result")
+        
+        if not str_result:
+            return None
+
+        str_declarer = Pbn.get_tag_content(
+            string, "Declarer") if not str_leader else None
+        if not str_declarer:
+            return None
+        trump = BiddingSuit.from_str(
+            Pbn.get_tag_content(string, "Contract").replace('X', '')[1:])
+        raw_tricks_data = Pbn.get_content_under_tag(string, "Play")
+        str_tricks = raw_tricks_data.split('\n') if raw_tricks_data else None
+        list_of_str_tricks = [[c for c in trick.split()] for trick in str_tricks] if str_tricks else []
+        
+        return PlayRecord.from_tricks_as_list(trump,list_of_tricks=list_of_str_tricks,declarer=Direction.from_str(
+            str_declarer))
+
+    @staticmethod
     def from_tricks_as_list(trump: BiddingSuit, list_of_tricks: List[List[str]], declarer: Direction) -> PlayRecord:
         list_of_tricks_as_cards = [
             [Card_.from_str(card) for card in trick] for trick in list_of_tricks]
         tricks: List[Trick] = []
-        tricks_count = 0
+        tricks_count : int = 0
         turn = declarer.offset(1)
         shown_out_suits: Dict[Direction, Set[Suit]] = {
             d: set() for d in Direction}
@@ -44,6 +66,15 @@ class PlayRecord:
 
         return PlayRecord(tricks=tricks_count, leader=declarer.offset(1), record=tricks, shown_out_suits=shown_out_suits, cards_played_32=cards_played_32)
 
+    def print_as_pbn(self) -> str:
+        string = ""
+        string += "[Result {}]\n".format(self.tricks)
+        string += Pbn.print_tag("Play", self.leader.abbreviation())
+        if self.record:
+            for trick in self.record:
+                string += trick.print_as_pbn(self.leader)+"\n"
+        return string + "*"
+    
     def __str__(self) -> str:
         string = "Tricks : " + str(self.tricks) + "\n"
         if self.record:

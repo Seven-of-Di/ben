@@ -118,6 +118,7 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, a
                 card = card_players[player_i].play_card(trick_i, leader_i, current_trick52, rollout_states,probabilities_list)
                 if card_players[player_i].check_claim and next_player in [declarer,dummy]:
                     claim_res = await check_claim_from_api(hand_str,dummy_hand_str,declarer.abbreviation(),declarer_str,contract,tricks_str,13-trick_i+card_players[player_i].n_tricks_taken)
+                print(card)
                 return {
                     "card": card,
                     # "card": play_real_card((PlayerHand.from_pbn(hand_str) if next_player != dummy else PlayerHand.from_pbn(dummy_hand_str)), resp.card.symbol(), trump=BiddingSuit.from_str(contract[1]), play_record=play_record, player_direction=next_player, declarer=declarer).__str__(),

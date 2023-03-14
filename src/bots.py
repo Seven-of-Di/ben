@@ -525,7 +525,8 @@ class CardPlayer:
 
             hands_pbn.append('W:' + ' '.join(hands))
 
-        # for hand,p in zip(hands_pbn,probabilities_list) :
+        print(self.direction,self.player_i)
+        # for hand,p in zip(hands_pbn[:50],probabilities_list) :
         #     print(round(p,6),":",hand)
         dd_solved = self.dd.solve(
             self.strain_i, leader_i, current_trick52, hands_pbn)

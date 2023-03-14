@@ -1,15 +1,12 @@
 from typing import Dict
 from quart import Quart, request
 
-from nn.models import Models
+from nn.models import MODELS
 from game import AsyncBotBid, AsyncBotLead
 from FullBoardPlayer import AsyncFullBoardPlayer
 from health_checker import HealthChecker
-from hypercorn.asyncio import serve
-from hypercorn.config import Config
 
 import os
-import conf
 import sentry_sdk
 from sentry_sdk.integrations.quart import QuartIntegration
 
@@ -31,8 +28,7 @@ sentry_sdk.init(
     ]
 )
 
-DEFAULT_MODEL_CONF = os.path.join(os.path.dirname(os.getcwd()), 'default.conf')
-MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
+
 
 app = Quart(__name__)
 

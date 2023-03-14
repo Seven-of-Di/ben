@@ -8,6 +8,7 @@ from nn.bidder import Bidder
 from nn.bid_info import BidInfo
 from nn.leader import Leader
 from nn.lead_singledummy import LeadSingleDummy
+import conf
 
 BIDDER_MODEL_BASE_PATH = os.path.join(os.path.dirname(os.getcwd()))
 
@@ -53,3 +54,5 @@ class Models:
             ],
         )
 
+DEFAULT_MODEL_CONF = os.path.join(os.path.dirname(os.getcwd()), 'default.conf')
+MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))

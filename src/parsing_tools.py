@@ -75,7 +75,7 @@ class Pbn:
 
     @staticmethod
     def print_tag(tag: str, content: str):
-        return '['+tag+' "'+content+'"]\n'
+        return '[{} \"{}\"]\n'.format(tag,content)
 
 
 class Lin:

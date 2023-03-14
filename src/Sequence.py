@@ -204,7 +204,7 @@ class Sequence:
 
     def print_as_pbn(self, dealer: Direction, tricks: int, ns_vulnerable: bool, ew_vulnerable: bool) -> str:
         string = ""
-        final_contract = self.final_contract
+        final_contract = self.calculate_final_contract(dealer)
         if final_contract:
             string += final_contract.print_as_pbn()
             if final_contract.declarer and final_contract.bid:  # No 4 Passes

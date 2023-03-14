@@ -1,4 +1,5 @@
 import asyncio
+from copy import deepcopy
 from typing import List
 from utils import board_number_to_vul, Direction, Card_, Diag, DIRECTIONS, BiddingSuit
 from PlayRecord import Trick
@@ -10,6 +11,9 @@ from PlayRecord import PlayRecord
 import json
 from FullBoardPlayer import AsyncFullBoardPlayer
 from score_calculation import calculate_score
+from Board import Board
+import git
+
 
 
 def from_lin_to_request(lin_str: str, card_to_remove_after: Card_ | None = None, bid_to_remove_after: str | None = None):
@@ -114,23 +118,25 @@ def run_tests():
         deal_records: List[Deal] = [Deal.from_pbn(board) for board in boards]
 
     def play_full_deal(deal: Deal):
-        full_play = asyncio.run(AsyncFullBoardPlayer(diag=deal.diag, vuls=[
+        full_play = asyncio.run(AsyncFullBoardPlayer(diag=deepcopy(deal.diag), vuls=[
             deal.ns_vulnerable, deal.ew_vulnerable], dealer=deal.dealer, models=MODELS).async_full_board())
         print(full_play)
         sequence = Sequence.from_str_list(full_play["auction"])
         contract = sequence.calculate_final_contract(dealer=deal.dealer)
-        if contract is None:
+        if contract is None or contract.bid is None or contract.declarer is None:
             return DealRecord(sequence=sequence, play_record=None, score=0, names=None)
-        if contract.bid is None or contract.declarer is None:
-            raise Exception(
-                "contract.bid is None or contract.declarer is None")
         play_record = PlayRecord.from_tricks_as_list(
             trump=contract.bid.suit, list_of_tricks=full_play["play"], declarer=contract.declarer)
         score=calculate_score(level=contract.bid.level,suit=contract.bid.suit,doubled=contract.declaration.value[0],tricks=play_record.tricks,vulnerable=deal.ns_vulnerable if contract.declarer in [Direction.NORTH,Direction.SOUTH] else deal.ew_vulnerable)
         return DealRecord(sequence=sequence, play_record=play_record, score=score,names=None)
 
-    records = [play_full_deal(deal) for deal in deal_records[80:82]]
-    print(records)
+    boards = [Board(deal,play_full_deal(deal)) for deal in deal_records]
+    text_pbn = "\n".join([board.print_as_pbn() for board in boards])
+    repo = git.Repo(search_parent_directories=True) #type:ignore
+    sha = repo.head.object.hexsha
+    with open("./test_data/{}.pbn".format(sha),"w") as f :
+        f.write(text_pbn)
+    print(boards[0].deal)
 
 
 if __name__ == "__main__":

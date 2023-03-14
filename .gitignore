@@ -9,3 +9,4 @@ src/conf.py
 src/examples/Bidding1.ipynb
 dump.txt
 *.pbn
+*.lin

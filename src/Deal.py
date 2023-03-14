@@ -58,7 +58,7 @@ class Deal:
         string += '[Vulnerable "' + \
             Pbn.vul_to_string(self.ns_vulnerable, self.ew_vulnerable)+'"]\n'
         string += '[Board "' + str(self.board_number)+'"]\n'
-        string += self.diag.print_as_pbn() + "\n"
+        string += '[Deal "{}"]\n'.format(self.diag.print_as_pbn())
         return string
 
 

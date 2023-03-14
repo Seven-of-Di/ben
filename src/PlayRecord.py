@@ -68,7 +68,7 @@ class PlayRecord:
 
     def print_as_pbn(self) -> str:
         string = ""
-        string += "[Result {}]\n".format(self.tricks)
+        string += Pbn.print_tag("Result",str(self.tricks))
         string += Pbn.print_tag("Play", self.leader.abbreviation())
         if self.record:
             for trick in self.record:

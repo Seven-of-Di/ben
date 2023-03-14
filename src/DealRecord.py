@@ -65,3 +65,5 @@ class DealRecord:
         if self.play_record:
             string += self.play_record.print_as_pbn()
         return string
+
+

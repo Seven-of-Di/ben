@@ -28,6 +28,8 @@ class Pbn:
 
     @staticmethod
     def get_all_alerts(string: str) -> List[str]:
+        if "[Note" not in string :
+            return []
         list = []
         for alert in re.finditer("[Note ", string):
             list.append((Pbn.get_tag_content(
@@ -41,8 +43,9 @@ class Pbn:
             return None
         string = string[auction_tag+1:]
         start = string.find("\n")
-        end = min(i for i in [string.find(
-            "["), string.find("*"), string.find("\n\n")] if i > 0)
+        end_elements = [i for i in [string.find(
+            "["), string.find("*"), string.find("\n\n")] if i > 0]
+        end = min(end_elements) if end_elements else len(string)
         return string[start+1:end-1]
 
     @staticmethod

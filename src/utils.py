@@ -36,6 +36,14 @@ class Direction(Enum):
     @classmethod
     def from_str(cls, direction_str: str) -> Direction:
         return Direction(cls.__from_str_map__[direction_str.upper()])
+   
+    def to_player_i(self,declarer : Direction) -> int :
+        return {
+            Direction.NORTH:{Direction.NORTH:3,Direction.EAST:0,Direction.SOUTH:1,Direction.WEST:2},
+            Direction.EAST:{Direction.NORTH:2,Direction.EAST:3,Direction.SOUTH:0,Direction.WEST:1},
+            Direction.SOUTH:{Direction.NORTH:1,Direction.EAST:2,Direction.SOUTH:3,Direction.WEST:0},
+            Direction.WEST:{Direction.NORTH:0,Direction.EAST:1,Direction.SOUTH:2,Direction.WEST:3},
+        }[declarer][self]
 
     def __lt__(self, other: Direction) -> bool:
         return self.value < other.value
@@ -68,6 +76,7 @@ class Direction(Enum):
 
     def to_str(self) -> str:
         return self.__to_str__[self.value]
+    
 
     def farest(self, dir1: Direction, dir2: Direction) -> Direction:
         for i in range(4):
@@ -514,12 +523,8 @@ class Diag():
                 self.hands[direction].__str__() + "\n"
         return string
 
-    def print_as_pbn(self) -> str:
-        string = 'N:'
-        for dir in Direction:
-            string += self.hands[dir].print_as_pbn()
-            string += " "
-        return string[:-1]+''
+    def print_as_pbn(self,first_direction = Direction.NORTH) -> str:
+        return "{}:{}".format(first_direction.abbreviation()," ".join([self.hands[dir.offset(first_direction.value)].print_as_pbn() for dir in Direction]))
 
     def is_valid(self):
         try:
@@ -621,3 +626,5 @@ def board_number_to_vul(board : int)-> str :
     raise Exception("Probably an int wasn't provided ? idk")
 
 
+if __name__ == "__main__":
+    print(Direction.SOUTH.to_player_i(Direction.WEST))

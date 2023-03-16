@@ -9,7 +9,7 @@ from parsing_tools import Pbn
 
 @dataclass
 class PlayRecord:
-    tricks: int
+    number_of_tricks: int
     leader: Direction
     record: Optional[List[Trick]]
     shown_out_suits: Dict[Direction, Set[Suit]]
@@ -19,21 +19,22 @@ class PlayRecord:
     def from_pbn(string: str) -> Optional[PlayRecord]:
         str_leader = Pbn.get_tag_content(string, "Play")
         str_result = Pbn.get_tag_content(string, "Result")
-        
-        if not str_result:
+
+        if str_result=="":
             return None
 
         str_declarer = Pbn.get_tag_content(
-            string, "Declarer") if not str_leader else None
-        if not str_declarer:
+            string, "Declarer") if str_leader else ""
+        if str_declarer=="":
             return None
         trump = BiddingSuit.from_str(
             Pbn.get_tag_content(string, "Contract").replace('X', '')[1:])
         raw_tricks_data = Pbn.get_content_under_tag(string, "Play")
         str_tricks = raw_tricks_data.split('\n') if raw_tricks_data else None
-        list_of_str_tricks = [[c for c in trick.split()] for trick in str_tricks] if str_tricks else []
-        
-        return PlayRecord.from_tricks_as_list(trump,list_of_tricks=list_of_str_tricks,declarer=Direction.from_str(
+        list_of_str_tricks = [[c for c in trick.split()]
+                              for trick in str_tricks] if str_tricks else []
+
+        return PlayRecord.from_tricks_as_list(trump, list_of_tricks=list_of_str_tricks, declarer=Direction.from_str(
             str_declarer))
 
     @staticmethod
@@ -41,7 +42,7 @@ class PlayRecord:
         list_of_tricks_as_cards = [
             [Card_.from_str(card) for card in trick] for trick in list_of_tricks]
         tricks: List[Trick] = []
-        tricks_count : int = 0
+        tricks_count: int = 0
         turn = declarer.offset(1)
         shown_out_suits: Dict[Direction, Set[Suit]] = {
             d: set() for d in Direction}
@@ -64,19 +65,22 @@ class PlayRecord:
             turn = trick.winner(trump)
             tricks_count += 1 if turn in [declarer, declarer.partner()] else 0
 
-        return PlayRecord(tricks=tricks_count, leader=declarer.offset(1), record=tricks, shown_out_suits=shown_out_suits, cards_played_32=cards_played_32)
+        return PlayRecord(number_of_tricks=tricks_count, leader=declarer.offset(1), record=tricks, shown_out_suits=shown_out_suits, cards_played_32=cards_played_32)
 
     def print_as_pbn(self) -> str:
         string = ""
-        string += Pbn.print_tag("Result",str(self.tricks))
+        string += Pbn.print_tag("Result", str(self.number_of_tricks))
         string += Pbn.print_tag("Play", self.leader.abbreviation())
         if self.record:
             for trick in self.record:
                 string += trick.print_as_pbn(self.leader)+"\n"
         return string + "*"
-    
+
+    def as_unordered_one_dimension_list(self) -> List[Card_]:
+        return [card for trick in self.record for card in trick.cards.values()] if self.record is not None else []
+
     def __str__(self) -> str:
-        string = "Tricks : " + str(self.tricks) + "\n"
+        string = "Tricks : " + str(self.number_of_tricks) + "\n"
         if self.record:
             string += '{0:3}{1:3}{2:3}{3:3}\n'.format('N', 'E', 'S', 'W')
             for trick in self.record:
@@ -109,7 +113,8 @@ class Trick():
     def __init__(self, lead: Direction, cards: Dict[Direction, Card_]) -> None:
         self.lead: Direction = lead
         self.cards: Dict[Direction, Card_] = cards
-        self.shown_out_suit: Dict[Direction, Suit] = {dir:cards[lead].suit for dir in cards.keys() if self.cards[dir].suit!= self.cards[lead].suit}
+        self.shown_out_suit: Dict[Direction, Suit] = {
+            dir: cards[lead].suit for dir in cards.keys() if self.cards[dir].suit != self.cards[lead].suit}
 
     @staticmethod
     def from_list(leader: Direction, trick_as_list: List[Card_]) -> Trick:
@@ -155,11 +160,11 @@ class Trick():
         trick_as_list: List[Tuple[Direction, int]] = []
         dir: Direction = self.lead
         for _ in range(len(self.cards)):
-            trick_as_list.append((dir,self.cards[dir].to_32()))
+            trick_as_list.append((dir, self.cards[dir].to_32()))
             dir = dir.offset(1)
         return trick_as_list
 
-    def __trick_as_list__(self) -> List[Tuple[Direction, Card_]]:
+    def __trick_as_tuple_list__(self) -> List[Tuple[Direction, Card_]]:
         trick_as_list: List[Tuple[Direction, Card_]] = []
         dir: Direction = self.lead
         for _ in range(len(self.cards)):
@@ -168,7 +173,7 @@ class Trick():
         return trick_as_list
 
     def __getitem__(self, key):
-        return self.__trick_as_list__()[key]
+        return self.__trick_as_tuple_list__()[key]
 
     def __len__(self):
         return len(self.cards)

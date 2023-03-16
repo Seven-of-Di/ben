@@ -15,7 +15,6 @@ from Board import Board
 import git
 
 
-
 def from_lin_to_request(lin_str: str, card_to_remove_after: Card_ | None = None, bid_to_remove_after: str | None = None):
     if card_to_remove_after is not None and bid_to_remove_after is not None:
         raise Exception("bid and play are both not None")
@@ -118,6 +117,7 @@ def run_tests():
         deal_records: List[Deal] = [Deal.from_pbn(board) for board in boards]
 
     def play_full_deal(deal: Deal):
+        print(deal.board_number)
         full_play = asyncio.run(AsyncFullBoardPlayer(diag=deepcopy(deal.diag), vuls=[
             deal.ns_vulnerable, deal.ew_vulnerable], dealer=deal.dealer, models=MODELS).async_full_board())
         print(full_play)
@@ -127,21 +127,55 @@ def run_tests():
             return DealRecord(sequence=sequence, play_record=None, score=0, names=None)
         play_record = PlayRecord.from_tricks_as_list(
             trump=contract.bid.suit, list_of_tricks=full_play["play"], declarer=contract.declarer)
-        score=calculate_score(level=contract.bid.level,suit=contract.bid.suit,doubled=contract.declaration.value[0],tricks=play_record.tricks,vulnerable=deal.ns_vulnerable if contract.declarer in [Direction.NORTH,Direction.SOUTH] else deal.ew_vulnerable)
-        return DealRecord(sequence=sequence, play_record=play_record, score=score,names=None)
+        score = calculate_score(level=contract.bid.level, suit=contract.bid.suit, doubled=contract.declaration.value[0], tricks=play_record.number_of_tricks, vulnerable=deal.ns_vulnerable if contract.declarer in [
+                                Direction.NORTH, Direction.SOUTH] else deal.ew_vulnerable)
+        return DealRecord(sequence=sequence, play_record=play_record, score=score, names=None)
 
-    boards = [Board(deal,play_full_deal(deal)) for deal in deal_records]
+    boards = [Board(deal, play_full_deal(deal)) for deal in deal_records]
     text_pbn = "\n".join([board.print_as_pbn() for board in boards])
-    repo = git.Repo(search_parent_directories=True) #type:ignore
+    repo = git.Repo(search_parent_directories=True)  # type:ignore
     sha = repo.head.object.hexsha
-    with open("./test_data/{}.pbn".format(sha),"w") as f :
+    with open("./test_data/{}.pbn".format(sha), "w") as f:
         f.write(text_pbn)
     print(boards[0].deal)
 
 
+def load_test_pbn(file: str):
+    with open("./test_data/{}".format(file)) as f:
+        raw_str_data = f.read()
+
+    boards_str = raw_str_data.split("\n\n")
+    boards = [Board.from_pbn(board_str) for board_str in boards_str]
+    return boards
+
+
+def compare_two_boards(board_1: Board, board_2: Board):
+    assert board_1.deal.diag == board_1.deal.diag
+    assert board_1.deal_record.sequence and board_2.deal_record.sequence
+    print(board_1.deal.board_number)
+    if board_1.deal_record.sequence != board_2.deal_record.sequence:
+        print("Different sequences")
+    if board_1.deal_record.sequence.calculate_final_contract(board_1.deal.dealer) != board_2.deal_record.sequence.calculate_final_contract(board_1.deal.dealer):
+        return
+    if board_1.deal_record.play_record is None or board_2.deal_record.play_record is None:
+        return
+    if board_1.deal_record.score == board_2.deal_record.score:
+        return
+    print(board_1.deal_record.play_record.as_unordered_one_dimension_list())
+    print(board_2.deal_record.play_record.as_unordered_one_dimension_list())
+
+
+def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]):
+    [compare_two_boards(board_1, board_2) for board_1,
+     board_2 in zip(set_of_boards_1, set_of_boards_2)]
+
+
 if __name__ == "__main__":
-    tests = run_tests()
-    # link = r"https://play.intobridge.com/hand?lin=pn|Bourricot,Ben,Ben,Ben|md|3SAHQJ43DKJ864CJ74,S872HA86DQT7CQT53,SQJT6HKTDA532CAK2,SK9543H9752D9C986|ah|Board%2013|mb|1N|mb|p|mb|2C|mb|p|mb|2S|mb|p|mb|3N|mb|p|mb|p|mb|p|pc|C9|pc|C4|pc|C3|pc|CA|pc|HK|pc|H9|pc|H3|pc|HA|pc|D7|pc|D2|pc|D9|pc|DJ|pc|H4|pc|H6|pc|HT|pc|H2|pc|DA|pc|S3|pc|D4|pc|DT|pc|D3|pc|S4|pc|DK|pc|DQ|pc|D8|pc|S2|pc|D5|pc|S5|pc|D6|pc|S7|pc|S6|pc|H5|pc|SA|pc|S8|pc|ST|pc|S9|pc|HQ|pc|H8|pc|SJ|pc|H7|pc|HJ|pc|C5|pc|SQ|pc|C6|pc|C7|pc|CT|pc|CK|pc|C8|pc|C2|pc|SK|pc|CJ|pc|CQ|mc|11|sv|b|"
-    # print(from_lin_to_request(link, Card_.from_str("AH")))
+    # tests = run_tests()
+    compare_two_tests(load_test_pbn("avant.pbn"),
+                      load_test_pbn("après.pbn"))
+    # load_test_pbn("c4f380988fc67c0fe6e5f4bc5502d67a3b45d2c0.pbn")
+    link = r"https://play.intobridge.com/hand?lin=pn%7CBen,Etha,Ben,Ben%7Cmd%7C4SAKT8HT642DQJCA75,SQ65HAJDAT862C864,SJ943HKQ8DK93CQJ9,S72H9753D754CKT32%7Cah%7CBoard%202%7Cmb%7Cp%7Cmb%7C1C%7Cmb%7C1D%7Cmb%7C1S%7Cmb%7Cp%7Cmb%7C2S%7Cmb%7Cp%7Cmb%7C3C%7Cmb%7Cp%7Cmb%7C4S%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CD4%7Cpc%7CDJ%7Cpc%7CDA%7Cpc%7CD3%7Cpc%7CD6%7Cpc%7CD9%7Cpc%7CD5%7Cpc%7CDQ%7Cpc%7CSA%7Cpc%7CS5%7Cpc%7CS3%7Cpc%7CS2%7Cpc%7CH2%7Cpc%7CHA%7Cpc%7CH8%7Cpc%7CH9%7Cpc%7CHJ%7Cpc%7CHK%7Cpc%7CH3%7Cpc%7CH4%7Cpc%7CDK%7Cpc%7CD7%7Cpc%7CC5%7Cpc%7CD2%7Cpc%7CSJ%7Cpc%7CS7%7Cpc%7CS8%7Cpc%7CSQ%7Cpc%7CS6%7Cpc%7CS4%7Cpc%7CC2%7Cpc%7CST%7Cpc%7CHT%7Cpc%7CD8%7Cpc%7CHQ%7Cpc%7CH5%7Cpc%7CCJ%7Cpc%7CC3%7Cpc%7CC7%7Cpc%7CC4%7Cpc%7CC9%7Cpc%7CCT%7Cpc%7CCA%7Cpc%7CC6%7Cpc%7CH6%7Cpc%7CDT%7Cpc%7CCQ%7Cpc%7CH7%7Cpc%7CCK%7Cpc%7CSK%7Cpc%7CC8%7Cpc%7CS9%7Cmc%7C9%7Csv%7Cn%7C"
+    print(from_lin_to_request(link, Card_.from_str("DT")))
 
     # print(from_lin_to_request(link, None))

@@ -1,11 +1,12 @@
 from __future__ import annotations
+from copy import deepcopy
 import random
 from typing import Dict, List
 import numpy as np
 from datetime import datetime
 
 from objects import Card
-from utils import Direction, PlayerHand, VULNERABILITIES, Diag, Suit, Rank, Card_
+from utils import Direction, PlayerHand, VULNERABILITIES, Diag, Suit, Rank, Card_, TOTAL_DECK
 from PlayRecord import PlayRecord, BiddingSuit
 
 import bots
@@ -16,24 +17,27 @@ import sample
 from game import AsyncCardPlayer
 from claim_dds import check_claim_from_api
 
-def get_play_status(hand : PlayerHand, current_trick: List[Card_]):
-        if current_trick == [] or len(current_trick)==4:
-            return "Lead"
-        if len(hand.suits[current_trick[0].suit])==0 :
-            return "Discard"
-        elif len(hand.suits[current_trick[0].suit])==1:
-            return "Forced"
-        else :
-            return "Follow"
+
+def get_play_status(hand: PlayerHand, current_trick: List[Card_]):
+    if current_trick == [] or len(current_trick) == 4:
+        return "Lead"
+    if len(hand.suits[current_trick[0].suit]) == 0:
+        return "Discard"
+    elif len(hand.suits[current_trick[0].suit]) == 1:
+        return "Forced"
+    else:
+        return "Follow"
+
 
 async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, auction, contract, declarer_str, next_player_str, tricks_str, MODELS) -> Dict:
     n_samples = 100
     claim_res = False
-    
-    padded_auction = ["PAD_START"] * Direction.from_str(dealer_str).value + auction
+
+    padded_auction = ["PAD_START"] * \
+        Direction.from_str(dealer_str).value + auction
 
     contract = bidding.get_contract(padded_auction)
-    if contract is None :
+    if contract is None:
         raise Exception("Contract is None !")
 
     level = int(contract[0])
@@ -45,8 +49,8 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, a
     is_decl_vuln = [vuls[0], vuls[1], vuls[0], vuls[1]][decl_i]
     play = [item for sublist in tricks_str for item in sublist]
 
-    hands_for_diag = {d: PlayerHand.from_pbn(
-        hand_str if next_player == d else "") for d in Direction}
+    hands_for_diag = {dir: PlayerHand.from_pbn(
+        hand_str if next_player == dir else "") for dir in Direction}
     if dummy == next_player:
         hands_for_diag[declarer] = PlayerHand.from_pbn(hand_str)
 
@@ -70,13 +74,13 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, a
 
     card_players = [
         bots.CardPlayer(MODELS.player_models, 0, lefty_hand,
-                        dummy_hand, contract, is_decl_vuln,play_record,declarer=declarer,player_direction=next_player),
+                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str),dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
         bots.CardPlayer(MODELS.player_models, 1, dummy_hand,
-                        decl_hand, contract, is_decl_vuln,play_record,declarer=declarer,player_direction=next_player),
+                        decl_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str),dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
         bots.CardPlayer(MODELS.player_models, 2, righty_hand,
-                        dummy_hand, contract, is_decl_vuln,play_record,declarer=declarer,player_direction=next_player),
+                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str),dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
         bots.CardPlayer(MODELS.player_models, 3, decl_hand,
-                        dummy_hand, contract, is_decl_vuln,play_record,declarer=declarer,player_direction=next_player)
+                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str),dummy_hand=PlayerHand.from_pbn(dummy_hand_str))
     ]
 
     player_cards_played = [[] for _ in range(4)]
@@ -108,21 +112,22 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, a
 
             card_i += 1
             if card_i >= len(play):
-                play_status = get_play_status(hands_for_diag[next_player],[Card_.from_str(card) for card in tricks_str[-1]])
-                if play_status=="Follow" :
-                    n_samples=50
-                if play_status=="Discard" :
+                play_status = get_play_status(hands_for_diag[next_player], [
+                                              Card_.from_str(card) for card in tricks_str[-1]])
+                if play_status == "Follow":
                     n_samples = 50
-                rollout_states,probabilities_list = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits,
-                                                            current_trick, n_samples, padded_auction, card_players[player_i].hand.reshape((-1, 32)), vuls, MODELS)
-                card = card_players[player_i].play_card(trick_i, leader_i, current_trick52, rollout_states,probabilities_list)
-                if card_players[player_i].check_claim and next_player in [declarer,dummy]:
-                    claim_res = await check_claim_from_api(hand_str,dummy_hand_str,declarer.abbreviation(),declarer_str,contract,tricks_str,13-trick_i+card_players[player_i].n_tricks_taken)
-                print(card)
+                if play_status == "Discard":
+                    n_samples = 50
+                rollout_states, probabilities_list = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits,
+                                                                                current_trick, n_samples, padded_auction, card_players[player_i].hand_32.reshape((-1, 32)), vuls, MODELS)
+                card = card_players[player_i].play_card(
+                    trick_i, leader_i, current_trick52, rollout_states, probabilities_list)
+                if card_players[player_i].check_claim and next_player in [declarer, dummy]:
+                    claim_res = await check_claim_from_api(hand_str, dummy_hand_str, declarer.abbreviation(), declarer_str, contract, tricks_str, 13-trick_i+card_players[player_i].n_tricks_taken)
                 return {
                     "card": card,
                     # "card": play_real_card((PlayerHand.from_pbn(hand_str) if next_player != dummy else PlayerHand.from_pbn(dummy_hand_str)), resp.card.symbol(), trump=BiddingSuit.from_str(contract[1]), play_record=play_record, player_direction=next_player, declarer=declarer).__str__(),
-                    "claim_the_rest" : claim_res
+                    "claim_the_rest": claim_res
                 }
 
             card52 = Card.from_symbol(play[card_i]).code()
@@ -216,6 +221,3 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, a
         current_trick52 = []
     raise Exception(
         "The loop ended without returning a card, something weird is going on")
-
-
-

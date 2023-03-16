@@ -24,7 +24,7 @@ class DealRecord:
     @staticmethod
     def from_pbn(string: str) -> Optional[DealRecord]:
         score = Pbn.get_score(string)
-        if score is None :
+        if score is None:
             return None
         sequence = Sequence.from_pbn(string)
         play_record = PlayRecord.from_pbn(string)
@@ -60,10 +60,8 @@ class DealRecord:
                 string += self.sequence.print_as_pbn(
                     dealer=dealer, tricks=0, ns_vulnerable=ns_vulnerable, ew_vulnerable=ew_vulnerable)
             else:
-                string += self.sequence.print_as_pbn(dealer=dealer, tricks=self.play_record.tricks,
+                string += self.sequence.print_as_pbn(dealer=dealer, tricks=self.play_record.number_of_tricks,
                                                      ns_vulnerable=ns_vulnerable, ew_vulnerable=ew_vulnerable)
         if self.play_record:
             string += self.play_record.print_as_pbn()
         return string
-
-

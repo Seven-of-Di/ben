@@ -536,7 +536,7 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
         accept = np.ones_like(accept).astype(bool)
     # end of re-applyconstraints
 
-    # states = [state[accept] for state in states]
+    states = [state[accept] for state in states]
     probability_of_occurence = np.ones(len(states[0]))
 
     # reject samples inconsistent with the opening lead

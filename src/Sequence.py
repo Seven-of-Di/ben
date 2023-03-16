@@ -228,9 +228,10 @@ class Sequence:
                 i += 1
             if j % 4 == 3:
                 string += "\n"
-        string += "\n"
+        string += "\n" 
         for index in range(i):
             string += '[Note "{}:'.format(index+1)+alerts[index]+'"]\n'
+        string = string[:-1] if string[-2:]!="\n\n" else string
         return string
 
     def __str__(self):

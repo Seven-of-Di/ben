@@ -1,4 +1,5 @@
 import ctypes
+from typing import Dict
 
 from ddsolver import dds
 
@@ -95,3 +96,4 @@ def p_made_target(target):
     def fun(card_results):
         return {card: (sum(x for x in values if x >= target)/len(values)) for card, values in card_results.items()}
     return fun
+

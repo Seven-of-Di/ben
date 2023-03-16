@@ -114,13 +114,12 @@ def run_tests():
     from nn.models import MODELS
     with open("./test_data/test_data.pbn") as f:
         boards = f.read().split("\n\n")
-        deal_records: List[Deal] = [Deal.from_pbn(board) for board in boards]
+        deal_records: List[Deal] = [Deal.from_pbn(board) for board in boards[10:14]]
 
     def play_full_deal(deal: Deal):
         print(deal.board_number)
         full_play = asyncio.run(AsyncFullBoardPlayer(diag=deepcopy(deal.diag), vuls=[
             deal.ns_vulnerable, deal.ew_vulnerable], dealer=deal.dealer, models=MODELS).async_full_board())
-        print(full_play)
         sequence = Sequence.from_str_list(full_play["auction"])
         contract = sequence.calculate_final_contract(dealer=deal.dealer)
         if contract is None or contract.bid is None or contract.declarer is None:
@@ -137,7 +136,6 @@ def run_tests():
     sha = repo.head.object.hexsha
     with open("./test_data/{}.pbn".format(sha), "w") as f:
         f.write(text_pbn)
-    print(boards[0].deal)
 
 
 def load_test_pbn(file: str):
@@ -171,9 +169,9 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    # tests = run_tests()
-    compare_two_tests(load_test_pbn("avant.pbn"),
-                      load_test_pbn("après.pbn"))
+    tests = run_tests()
+    # compare_two_tests(load_test_pbn("avant.pbn"),
+    #                   load_test_pbn("après.pbn"))
     # load_test_pbn("c4f380988fc67c0fe6e5f4bc5502d67a3b45d2c0.pbn")
     link = r"https://play.intobridge.com/hand?lin=pn%7CBen,Etha,Ben,Ben%7Cmd%7C4SAKT8HT642DQJCA75,SQ65HAJDAT862C864,SJ943HKQ8DK93CQJ9,S72H9753D754CKT32%7Cah%7CBoard%202%7Cmb%7Cp%7Cmb%7C1C%7Cmb%7C1D%7Cmb%7C1S%7Cmb%7Cp%7Cmb%7C2S%7Cmb%7Cp%7Cmb%7C3C%7Cmb%7Cp%7Cmb%7C4S%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CD4%7Cpc%7CDJ%7Cpc%7CDA%7Cpc%7CD3%7Cpc%7CD6%7Cpc%7CD9%7Cpc%7CD5%7Cpc%7CDQ%7Cpc%7CSA%7Cpc%7CS5%7Cpc%7CS3%7Cpc%7CS2%7Cpc%7CH2%7Cpc%7CHA%7Cpc%7CH8%7Cpc%7CH9%7Cpc%7CHJ%7Cpc%7CHK%7Cpc%7CH3%7Cpc%7CH4%7Cpc%7CDK%7Cpc%7CD7%7Cpc%7CC5%7Cpc%7CD2%7Cpc%7CSJ%7Cpc%7CS7%7Cpc%7CS8%7Cpc%7CSQ%7Cpc%7CS6%7Cpc%7CS4%7Cpc%7CC2%7Cpc%7CST%7Cpc%7CHT%7Cpc%7CD8%7Cpc%7CHQ%7Cpc%7CH5%7Cpc%7CCJ%7Cpc%7CC3%7Cpc%7CC7%7Cpc%7CC4%7Cpc%7CC9%7Cpc%7CCT%7Cpc%7CCA%7Cpc%7CC6%7Cpc%7CH6%7Cpc%7CDT%7Cpc%7CCQ%7Cpc%7CH7%7Cpc%7CCK%7Cpc%7CSK%7Cpc%7CC8%7Cpc%7CS9%7Cmc%7C9%7Csv%7Cn%7C"
     print(from_lin_to_request(link, Card_.from_str("DT")))

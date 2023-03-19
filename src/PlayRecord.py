@@ -148,8 +148,8 @@ class Trick():
 
     def print_as_pbn(self, first_dir: Direction) -> str:
         string = ""
-        for i in range(len(Direction)):
-            if self.cards[first_dir]:
+        for _ in range(4):
+            if first_dir in self.cards:
                 string += self.cards[first_dir].to_pbn()+" "
             else:
                 string += "-  "

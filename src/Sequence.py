@@ -61,6 +61,7 @@ class Sequence:
 
     def append_with_check(self, seq_atom_to_add: SequenceAtom) -> bool:
         """Add a bid if it's valid, return true if it's the case"""
+        print(seq_atom_to_add)
         if self.check_append_validity(seq_atom_to_add=seq_atom_to_add):
             self.sequence.append(seq_atom_to_add)
             return True
@@ -245,6 +246,9 @@ class Sequence:
 
     def get_as_str_list(self) -> List[str]:
         return [at.to_str() for at in self.sequence]
+    
+    def get_as_ben_request(self) -> List[str]:
+        return [at.to_str().upper() for at in self.sequence]
 
     def print_as_ben_format(self, dealer: Direction) -> List[str]:
         res: List[str] = []

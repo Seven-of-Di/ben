@@ -18,8 +18,8 @@ class Bid:
         if self.level not in range(1, 8):
             raise Exception("Invalid level (must be in 1-7 range)")
 
-    def __lt__(self, other) -> bool:
-        return self.level*5 + self.suit.value[0] < other.level*5 + other.suit.value[0]
+    def __lt__(self, other : Bid) -> bool:
+        return self.level*5 + self.suit.rank() < other.level*5 + other.suit.rank()
 
     def __repr__(self) -> str:
         return str(self.level) + self.suit.abbreviation()
@@ -39,8 +39,8 @@ class Bid:
     def value(self) -> int :
         return self.level*5 + self.suit.value[0]
 
-    def to_text(self):
-        return str(self.level)+self.suit.abbreviation(verbose_no_trump=True)
+    def to_text(self,verbose_NT=True):
+        return str(self.level)+self.suit.abbreviation(verbose_NT)
 
     @staticmethod
     def from_str(string: str) -> Bid:
@@ -113,7 +113,7 @@ class SequenceAtom():
         if self.declaration != None:
             return self.declaration.__str__()
         elif self.bid != None:
-            return self.bid.to_text()
+            return self.bid.to_text(verbose_NT=False)
         return ""
 
     def to_symbol(self) -> str:
@@ -234,3 +234,9 @@ class FinalContract:
             return "Contrat final : passe général"
         else:
             return "{}{}{}".format(self.bid.__str__(),self.declaration.abbreviation() if self.declaration!=Declaration.PASS else '',self.declarer.abbreviation())
+    
+    def abbreviation(self) -> str:
+        if not self.bid or not self.declarer:
+            return "P"
+        else:
+            return "{}{}{}".format(self.bid.print_as_pbn(),self.declaration.abbreviation() if self.declaration!=Declaration.PASS else '',self.declarer.abbreviation())

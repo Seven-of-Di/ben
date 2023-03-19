@@ -22,6 +22,7 @@ VULNERABILITIES = {
     'Both': [True, True]
 }
 
+VULS_REVERSE = {tuple(v):k for k,v in VULNERABILITIES.items()}
 
 @total_ordering
 class Direction(Enum):
@@ -242,6 +243,17 @@ class BiddingSuit(Enum):
 
     def strain(self):
         return self.__to_strain__[self.value]
+    
+    def rank(self) :
+        if self==BiddingSuit.CLUBS :
+            return 0
+        if self==BiddingSuit.DIAMONDS :
+            return 1
+        if self==BiddingSuit.HEARTS :
+            return 2
+        if self==BiddingSuit.SPADES :
+            return 3
+        return 4
 
     @classmethod
     def from_str(cls, bidding_suit_str: str) -> BiddingSuit:

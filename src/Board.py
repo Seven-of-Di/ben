@@ -9,10 +9,12 @@ class Board :
     deal : Deal
     deal_record : DealRecord
 
-    def print_as_pbn(self) -> str :
+    def print_as_pbn(self,open_room : bool|None = None) -> str :
         deal_pbn = self.deal.print_as_pbn() 
         record_pbn =self.deal_record.print_as_pbn(dealer = self.deal.dealer,ns_vulnerable=self.deal.ns_vulnerable,ew_vulnerable=self.deal.ew_vulnerable)
-        return "{}{}{}\n".format(Pbn.print_tag("Event","Ben version Test"),deal_pbn,record_pbn)
+        event_tag =Pbn.print_tag("Event","Ben version Test")
+        open_room_tag = "" if open_room is None else Pbn.print_tag("Room","Open" if open_room else "Closed")
+        return "{}{}{}{}\n".format(event_tag,open_room_tag,deal_pbn,record_pbn)
 
     @staticmethod
     def from_pbn(str_data : str) -> Board :

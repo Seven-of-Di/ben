@@ -414,7 +414,8 @@ class CardPlayer:
         self.strain_i = bidding.get_strain_i(contract)
         self.trump = BiddingSuit.from_str(contract[1])
         self.play_record = play_record
-        self.current_trick_as_dict = play_record.record[-1].cards if play_record.record and len(play_record.record[-1])!=4 else {}
+        self.current_trick_as_dict = play_record.record[-1].cards if play_record.record and len(
+            play_record.record[-1]) != 4 else {}
         self.player_direction = player_direction
         self.declarer = declarer
         self.dummy_hand: PlayerHand = dummy_hand
@@ -477,19 +478,20 @@ class CardPlayer:
                 s: [card.rank for card in pips if card.suit == s] for s in Suit}
             for dir in not_visible_hands_directions:
                 diag.hands[dir] = create_hand_from_32(
-                    array_of_array_32[dir.to_player_i(self.declarer)].reshape((4, 8)), pips_as_dict,dir)
+                    array_of_array_32[dir.to_player_i(self.declarer)].reshape((4, 8)), pips_as_dict, dir)
             return diag
 
         def create_hand_from_32(array_of_8_suits: np.ndarray, pips: Dict[Suit, List[Rank]], dir: Direction):
             return PlayerHand({suit: create_suit_from_8(array_8, pips[suit], suit, dir) for array_8, suit in zip(array_of_8_suits, Suit)})
 
         def create_suit_from_8(array_8, pip: List[Rank], suit: Suit, dir: Direction):
-            current_trick_card = None if dir not in self.current_trick_as_dict else self.current_trick_as_dict[dir]
+            current_trick_card = None if dir not in self.current_trick_as_dict else self.current_trick_as_dict[
+                dir]
             high_ranks = [Rank.from_integer(int(i))
                           for i in np.nonzero(array_8[:-1])[0] if current_trick_card is None or Card_(suit, Rank.from_integer(int(i))) != current_trick_card]
             try:
                 low_ranks = [pip.pop()
-                             for _ in range(int(array_8[-1])-(1 if current_trick_card is not None and current_trick_card.rank<=Rank.SEVEN and current_trick_card.suit==suit else 0))]
+                             for _ in range(int(array_8[-1])-(1 if current_trick_card is not None and current_trick_card.rank <= Rank.SEVEN and current_trick_card.suit == suit else 0))]
             except:
                 raise Exception("Pop from empty ?")
             return high_ranks+low_ranks
@@ -525,17 +527,11 @@ class CardPlayer:
             raise Exception("Play record should not be none")
 
         leader_i = (leader_i + self.declarer.offset(2).value) % 4
-        try:
-            unoriented_dd_solved = self.dd.solve(
-                self.strain_i, leader_i, current_trick52, [diag.print_as_pbn(first_direction=Direction.WEST) for diag in samples_as_diag])
-        except :
-            raise Exception("DDS error")
-        reverse_results = self.player_direction in [
-            Direction.EAST, Direction.WEST] and self.declarer in [Direction.EAST, Direction.WEST]
+        dd_solved = self.dd.solve(
+            self.strain_i, leader_i, current_trick52, [diag.print_as_pbn(first_direction=Direction.WEST) for diag in samples_as_diag])
         # dd_solved = self.reverse_dds_results(unoriented_dd_solved) if reverse_results else unoriented_dd_solved
-        dd_solved = unoriented_dd_solved
 
-        if any([all([trick == self.tricks_left for trick in card_res])for card_res in dd_solved.items()]):
+        if any([all([trick == self.tricks_left for trick in card_res]) for card_res in dd_solved.values()]):
             self.check_claim = True
 
         card_tricks = ddsolver.expected_tricks(dd_solved, probabilities_list)

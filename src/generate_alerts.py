@@ -46,7 +46,7 @@ def bid_and_extract_hand(diag: Diag, dict_of_alerts: Dict[BidPosition, BidExplan
     print(auction)
     for i, _ in enumerate(auction):
         print(auction[i], ":", generate_alert_from_bid_explanation(
-            dict_of_alerts[BidPosition(auction[:i+1], vuls)])["text"])
+            dict_of_alerts[BidPosition(auction[:i+1], vuls)]))
         print("------------")
     print("------------\n------------")
 
@@ -71,7 +71,7 @@ def generate_alerts(check_point: int):
 
 def generate_usual_alert_from_dict(dic: Dict, ascending: bool) -> int:
     TRESHOLD = (10/100)*sum(dic.values())
-    tuples_list = dic.items() if ascending else reversed(dic.items())
+    tuples_list = dic.items() if ascending else reversed(list(dic.items()))
     cumulative_sum = 0
     for tested_key, occurences in tuples_list:
         cumulative_sum += occurences
@@ -194,15 +194,16 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
     return "{}".format(suits_text)
 
 
-def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> Dict:
+def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str:
     if bid_explanation.n_samples >= 5:
         # print("Number of samples : {}".format(bid_explanation.n_samples))
         hcp_text = generete_hcp_alert(bid_explanation=bid_explanation)
         length_text = generate_suits_length_alert(bid_explanation)
         final_text = "{}{}{}".format(
             hcp_text, "\n" if length_text else "", length_text)
-        return {"text": final_text, "samples": bid_explanation.samples[:5]}
-    return {"text": "No alert available", "samples": bid_explanation.samples}
+        return final_text
+
+    return "No alert available"
 
 
 if __name__ == "__main__":

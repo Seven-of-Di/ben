@@ -69,3 +69,9 @@ class BidPosition:
     def __hash__(self):
         return hash(repr(self))
 
+
+    def to_dict(self):
+        return {
+            "sequence": self.sequence,
+            "vuls": self.vuls,
+        }

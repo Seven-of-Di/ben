@@ -17,10 +17,10 @@ from score_calculation import calculate_score
 from Board import Board
 import git
 
-NEW_BIDDING_TIME = [0,0]
-OLD_BIDDING_TIME = [0,0]
-NEW_CARD_TIME = [0,0]
-OLD_CARD_TIME = [0,0]
+NEW_BIDDING_TIME : List[float] = [0,0]
+OLD_BIDDING_TIME : List[float] = [0,0]
+NEW_CARD_TIME : List[float] = [0,0]
+OLD_CARD_TIME: List[float]  = [0,0]
 
 def from_lin_to_request(lin_str: str, card_to_remove_after: Card_ | None = None, bid_to_remove_after: str | None = None):
     if card_to_remove_after is not None and bid_to_remove_after is not None:
@@ -147,17 +147,27 @@ def run_tests():
 
 
 def send_request(type_of_action: str, data: Dict, direction: Direction, open_room: bool):
-    if open_room:
-        port = "http://localhost:{}".format(
-            "8081" if direction in [Direction.NORTH, Direction.SOUTH] else "8082")
-    else:
-        port = "http://localhost:{}".format(
-            "8082" if direction in [Direction.NORTH, Direction.SOUTH] else "8081")
+    new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (not open_room and direction in [Direction.EAST,Direction.WEST])
+    port = "http://localhost:{}".format("8081" if new_ben_called else "8082")
     start = time.time()
     res = requests.post('{}/{}'.format(port, type_of_action), json=data)
     request_time = time.time()-start
+    if type_of_action=="play_card" :
+        if new_ben_called :
+            NEW_CARD_TIME[0]+=request_time
+            NEW_CARD_TIME[1]+=1
+        else :
+            OLD_CARD_TIME[0]+=request_time
+            OLD_CARD_TIME[1]+=1
+    elif type_of_action=="place_bid" :
+        if new_ben_called :
+            NEW_BIDDING_TIME[0]+=request_time
+            NEW_BIDDING_TIME[1]+=1
+        else :
+            OLD_BIDDING_TIME[0]+=request_time
+            OLD_BIDDING_TIME[1]+=1
 
-    
+
     
     print(res.json())
     return res.json()
@@ -178,7 +188,7 @@ def bid_deal(deal: Deal, open_room: bool):
         }
         res = send_request("place_bid", data, current_player, open_room)
         if not sequence.append_with_check(SequenceAtom.from_str(res["bid"])):
-            raise Exception
+            raise Exception(res["bid"]+"is not valid ?")
         current_player = current_player.offset(1)
 
     return sequence
@@ -321,6 +331,8 @@ def run_tm_btwn_ben_versions(force_same_sequence: bool = False, force_same_lead:
     for deal in deals:
         pbn = run_deal_on_both_rooms(
             deal, force_same_sequence, force_same_lead, force_same_card_play)
+        print("New Ben times average : bidding : {},carding : {}".format(NEW_BIDDING_TIME[0]/NEW_BIDDING_TIME[1],NEW_CARD_TIME[0]/NEW_CARD_TIME[1]))
+        print("Old Ben times average : bidding : {},carding : {}".format(OLD_BIDDING_TIME[0]/OLD_BIDDING_TIME[1],OLD_CARD_TIME[0]/OLD_CARD_TIME[1]))
         with open("./test_data/{}.pbn".format("First test table"), "a") as f:
             f.write("\n{}".format(pbn))
 
@@ -356,7 +368,7 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    run_tm_btwn_ben_versions(force_same_sequence=True,force_same_lead=True)
+    run_tm_btwn_ben_versions()
     # tests = run_tests()
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))

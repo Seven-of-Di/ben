@@ -2,7 +2,6 @@ import sqlite3
 from sqlitedict import SqliteDict
 import hashlib
 from typing import Dict
-# import pandas as pd
 from alert_utils import BidPosition, BidExplanations
 from generate_alerts import generate_alert_from_bid_explanation
 import pickle5 as pickle
@@ -15,11 +14,7 @@ dict_of_alerts: Dict[BidPosition, BidExplanations] = {}
 with open('dev_alerts', 'rb') as f:
     dict_of_alerts = pickle.load(f)
 
-print(dict_of_alerts)
-
 db = SqliteDict("alert_database_1.sqlite", tablename="alerts", autocommit=False)
-
-print(db['53c1cd78ed54af61c90b49c2751784b6'])
 
 CHUNK_SIZE = 50
 
@@ -35,11 +30,6 @@ for chunk in chunks(dict_of_alerts):
 
     db.commit()
 
-# db["Hello"] = "Hello"
-# db.commit()
-
-# print(db["Hello"])
-# alert_db = sqlite3.connect('dev_alert_database')
 # cursor = alert_db.cursor()
 
 # db = SqliteDict("alert_database_1.sqlite")
@@ -53,7 +43,7 @@ for chunk in chunks(dict_of_alerts):
 #           ''')
 
 
-# cursor.executemany("insert into alert_table (sequence,alert) values (?,?)",tuples)
+# cursor.executemany("INSERT INTO ALERT_TABLE (sequence,alert) VALUES (?,?)", tuples)
 
 # alert_db.commit()
 

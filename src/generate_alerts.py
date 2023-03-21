@@ -54,8 +54,8 @@ def bid_and_extract_hand(diag: Diag, dict_of_alerts: Dict[BidPosition, BidExplan
 def generate_alerts(check_point: int):
     dict_of_alerts: Dict[BidPosition, BidExplanations] = {}
 
-    with open('alerts', 'rb') as f:
-        dict_of_alerts = pickle.load(f)
+    # with open('dev_alerts', 'rb') as f:
+    #     dict_of_alerts = pickle.load(f)
 
     while True:
         start = time.time()
@@ -65,7 +65,7 @@ def generate_alerts(check_point: int):
         end = time.time()
         print('{} diags alerts saved in {} seconds. Current number of sequence {}'.format(
             check_point, end-start, len(dict_of_alerts)))
-        with open('alerts', 'wb') as f:
+        with open('dev_alerts', 'wb') as f:
             pickle.dump(dict_of_alerts, f, pickle.HIGHEST_PROTOCOL)
 
 
@@ -206,4 +206,4 @@ def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> Dic
 
 
 if __name__ == "__main__":
-    generate_alerts(1000)
+    generate_alerts(100)

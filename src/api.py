@@ -42,7 +42,7 @@ app = Quart(__name__)
 health_checker = HealthChecker(app.logger)
 health_checker.start()
 
-alert_db = sqlite3.connect('alert_database')
+alert_db = sqlite3.connect('dev_alert_database')
 cursor = alert_db.cursor()
 
 class PlaceBid:

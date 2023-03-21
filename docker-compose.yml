@@ -8,12 +8,12 @@ services:
   app:
     build: .
     user: root
-    command: python api.py
-    # command: python create_database.py
+    # command: python api.py
+    command: python create_database.py
     ports:
       - 8081:8081
     volumes:
-      - ./src:/app/src
+      - ./:/app
     environment:
       - TF_CPP_MIN_LOG_LEVEL=3
       - PORT=5001

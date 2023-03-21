@@ -1,4 +1,4 @@
-import sqlite3
+import os
 from sqlitedict import SqliteDict
 import hashlib
 from typing import Dict
@@ -10,11 +10,14 @@ import json
 from itertools import islice
 
 dict_of_alerts: Dict[BidPosition, BidExplanations] = {}
+build_directory = os.path.join(os.path.dirname(os.getcwd()), 'build')
 
-with open('dev_alerts', 'rb') as f:
+with open(os.path.join(build_directory, 'dev_alerts'), 'rb') as f:
     dict_of_alerts = pickle.load(f)
 
-db = SqliteDict("alert_database_1.sqlite", tablename="alerts", autocommit=False)
+db = SqliteDict(filename=os.path.join(build_directory, "alert_database_1.sqlite"),
+                tablename="alerts",
+                autocommit=False)
 
 CHUNK_SIZE = 50
 

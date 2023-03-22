@@ -203,7 +203,7 @@ def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str
             hcp_text, "\n" if length_text else "", length_text)
         return final_text
 
-    return "No alert available"
+    return None
 
 
 if __name__ == "__main__":

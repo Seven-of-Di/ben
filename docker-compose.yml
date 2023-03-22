@@ -9,7 +9,7 @@ services:
     build: .
     user: root
     # command: python api.py
-    command: python create_database.py
+    command: python create_alerts_database.py
     ports:
       - 8081:8081
     volumes:

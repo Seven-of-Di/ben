@@ -28,8 +28,10 @@ def chunks(data):
 
 for chunk in chunks(dict_of_alerts):
     for bid_position in chunk:
-        hex = hashlib.md5(json.dumps(bid_position.to_dict(), sort_keys=True).encode('utf-8')).hexdigest()
-        db[hex] = generate_alert_from_bid_explanation(chunk[bid_position])
+        alert = generate_alert_from_bid_explanation(chunk[bid_position])
+
+        if alert != None:
+            db[bid_position.to_hex()] = alert
 
     db.commit()
 

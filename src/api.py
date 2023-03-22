@@ -5,8 +5,7 @@ from nn.models import Models
 from game import AsyncBotBid, AsyncBotLead
 from FullBoardPlayer import AsyncFullBoardPlayer
 from health_checker import HealthChecker
-from hypercorn.asyncio import serve
-from hypercorn.config import Config
+from alerting import find_alert
 
 import os
 import conf
@@ -19,7 +18,6 @@ from human_carding import lead_real_card
 from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit,Diag,Direction
 from claim_dds import check_claim_from_api
 from time import time
-import sqlite3
 
 import tensorflow.compat.v1 as tf  # type: ignore
 
@@ -41,9 +39,6 @@ app = Quart(__name__)
 
 health_checker = HealthChecker(app.logger)
 health_checker.start()
-
-alert_db = sqlite3.connect('dev_alert_database')
-cursor = alert_db.cursor()
 
 class PlaceBid:
     def __init__(self, place_bid_request):
@@ -171,9 +166,8 @@ async def place_bid():
     try:
         data = await request.get_json()
         req = PlaceBid(data)
-        sql_alert_key = "".join([str(bid) for bid in req.auction if bid !="PAD_START"])
-        cursor.execute("SELECT * FROM alert_table WHERE sequence = '{}' ".format(sql_alert_key))
-        alert = cursor.fetchone()
+
+        alert = find_alert(req)
 
         bot = AsyncBotBid(
             req.vuln,
@@ -184,7 +178,7 @@ async def place_bid():
 
         bid_resp = await bot.async_bid(req.auction)
 
-        return {'bid': bid_resp.bid}
+        return {'bid': bid_resp.bid, 'alert': alert}
 
     except Exception as e:
         app.logger.exception(e)

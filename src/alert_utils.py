@@ -1,12 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
-import time
-from bots import BotBid
 from typing import Dict, List
-from bidding import bidding
-from nn.models import Models
-import conf
-import os
+import hashlib
+import json
 
 
 from utils import Card_, multiple_list_comparaison, remove_same_indexes, Direction, PlayerHand, Suit, Diag
@@ -75,3 +71,6 @@ class BidPosition:
             "sequence": self.sequence,
             "vuls": self.vuls,
         }
+
+    def to_hex(self):
+        return hashlib.md5(json.dumps(self.to_dict(), sort_keys=True).encode('utf-8')).hexdigest()

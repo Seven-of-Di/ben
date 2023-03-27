@@ -10,12 +10,17 @@ import json
 from itertools import islice
 
 dict_of_alerts: Dict[BidPosition, BidExplanations] = {}
-build_directory = os.path.join(os.path.dirname(os.getcwd()), 'build')
 
-with open(os.path.join(build_directory, 'dev_alerts'), 'rb') as f:
+db_path = os.environ.get("ALERTS_DB_PATH")
+db_file = os.environ.get("ALERTS_DB_FILE")
+
+prep_path = os.environ.get("ALERTS_PREP_PATH")
+prep_file = os.environ.get("ALERTS_PREP_FILE")
+
+with open(os.path.join(prep_path, prep_file), 'rb') as f:
     dict_of_alerts = pickle.load(f)
 
-db = SqliteDict(filename=os.path.join(build_directory, "alerts_db/alert_database_1.sqlite"),
+db = SqliteDict(filename=os.path.join(db_path, db_file),
                 tablename="alerts",
                 autocommit=False)
 

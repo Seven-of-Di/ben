@@ -13,8 +13,14 @@ services:
     ports:
       - 8081:8081
     volumes:
-      - ./:/app
+      - ./src:/app/src
+      - ./build/alerts_db:/var/lib/alerts_db
+      - ./build/alerts_prep:/var/lib/alerts_prep
     environment:
+      - ALERTS_DB_PATH=/var/lib/alerts_db
+      - ALERTS_DB_FILE=alert_database_1.sqlite
+      - ALERTS_PREP_PATH=/var/lib/alerts_prep
+      - ALERTS_PREP_FILE=dev_alerts
       - TF_CPP_MIN_LOG_LEVEL=3
       - PORT=5001
       - DEBUG=true

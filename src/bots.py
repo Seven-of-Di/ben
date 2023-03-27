@@ -11,6 +11,7 @@ import nn.player as player
 import deck52
 import sample
 import scoring
+import nn.models
 
 from objects import BidResp, CandidateBid, Card, CardResp, CandidateCard
 from bidding import bidding
@@ -24,14 +25,14 @@ from PlayRecord import PlayRecord
 
 class BotBid:
 
-    def __init__(self, vuln, hand_str, models):
+    def __init__(self, vuln, hand_str, models : nn.models.Models, human_model : bool = False):
         self.vuln = vuln
         self.hand_str = hand_str
         self.hand = binary.parse_hand_f(32)(hand_str)
         self.min_candidate_score = 0.15
 
-        self.model = models.bidder_model
-        self.state = models.bidder_model.zero_state
+        self.model = models.bidder_model if not human_model else models.wide_bidder_model
+        self.state = models.bidder_model.zero_state if not human_model else models.wide_bidder_model.zero_state
         self.lead_model = models.lead
         self.sd_model = models.sd_model
 
@@ -525,8 +526,6 @@ class CardPlayer:
 
             hands_pbn.append('W:' + ' '.join(hands))
 
-        # for hand,p in zip(hands_pbn,probabilities_list) :
-        #     print(round(p,6),":",hand)
         dd_solved = self.dd.solve(
             self.strain_i, leader_i, current_trick52, hands_pbn)
         superiors_cards = multiple_list_comparaison(dd_results_dict=dd_solved)

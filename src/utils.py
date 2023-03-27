@@ -420,6 +420,47 @@ class PlayerHand():
 
     def hcp(self) -> int:
         return sum(self.suit_hcp(suit) for suit in Suit)
+    
+    def pattern(self) -> List[int]:
+        """Return [nb ♠,nb ♥,nb ♦,nb ♣]"""
+        return list(reversed([len(self.suits[suit]) for suit in Suit]))
+
+    def ordered_pattern(self) -> List[int]:
+        """Return the pattern with the longest suit on the left, the shortest on the right"""
+        return sorted(self.pattern(), reverse=True)
+    
+    def balanced(self) -> bool:
+        if self.ordered_pattern() in [[4, 4, 3, 2], [4, 3, 3, 3], [5, 3, 3, 2]]:
+            return True
+        return False
+
+    def semi_balanced(self) -> bool:
+        if self.ordered_pattern() in [[6, 3, 2, 2], [5, 4, 2, 2]]:
+            return True
+        return False
+    
+    def unbalanced(self) -> bool:
+        return not(self.balanced() or self.semi_balanced())
+    
+
+    def one_suiter(self) -> bool:
+        if self.ordered_pattern()[0] <= 5:
+            return False
+        if self.ordered_pattern()[0] == 6 and self.ordered_pattern()[1] == 4:
+            return False
+        if self.ordered_pattern()[1] == 5:
+            return False
+        return True
+
+    def two_suiter(self):
+        if self.balanced() or self.three_suiter() or self.one_suiter():
+            return False
+        return True
+
+    def three_suiter(self) -> bool:
+        if self.ordered_pattern()[2] == 4:
+            return True
+        return False
 
 
 TOTAL_DECK: List[Card_] = []
@@ -607,7 +648,7 @@ def convert_to_probability(x):
     return np.divide(x, sum_of_proba)
 
 
-def from_lin_to_request(lin_str: str, remove_after: Card_ | None):
+def from_lin_to_request(lin_str: str, remove_after: Card_ | None = None):
     lin_str = lin_str.replace("%7C", '|')
     lin_str = lin_str.split("=", maxsplit=1)[1]
     lin_str = lin_str.split("|", maxsplit=3)[3]
@@ -656,6 +697,6 @@ def from_lin_to_request(lin_str: str, remove_after: Card_ | None):
 
 
 if __name__ == "__main__":
-    link = r"https://stage.intobridge.com/hand?lin=pn|Bourricot,Ben,Ben,Ben|md|4SAKQ3HQ4DT7CAK976,S4HT9862DQ52CT432,S862HA7DAKJ986CQ5,SJT975HKJ53D43CJ8|ah|Board%2014|mb|p|mb|1C|mb|p|mb|1D|mb|p|mb|2S|mb|p|mb|3D|mb|p|mb|3N|mb|p|mb|4N|mb|p|mb|p|mb|p|pc|HT|pc|H7|pc|HK|pc|H4|pc|H3|pc|HQ|pc|H2|pc|HA|pc|CQ|pc|C8|pc|C6|pc|CT|pc|C5|pc|CJ|pc|CA|pc|C2|pc|CK|pc|C3|pc|S2|pc|D3|pc|C9|pc|C4|pc|D6|pc|S5|pc|C7|pc|D2|pc|D8|pc|S7|pc|SA|pc|S4|pc|S6|pc|S9|pc|SK|pc|H6|pc|S8|pc|ST|pc|SQ|pc|H8|pc|D9|pc|SJ|mc|12|"
-    from_lin_to_request(link, Card_.from_str("HA"))
-    # from_lin_to_request(link, None)
+    link = r"https://play.intobridge.com/hand?lin=pn%7CAzureDrake,Ben,Stefan,katrin1%7Cmd%7C4SAQ642HT942D4CKQ5,SKJT9HK6DAKJ32C96,S8HAJ8753DQ9CJT84,S753HQDT8765CA732%7Cah%7CBoard%202%7Cmb%7Cp%7Cmb%7C1S%7Cmb%7C2D%7Cmb%7Cp%7Cmb%7C3D%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7C3H%7Cmb%7Cp%7Cmb%7C4H%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CD8%7Cpc%7CD4%7Cpc%7CDK%7Cpc%7CD9%7Cpc%7CDA%7Cpc%7CDQ%7Cpc%7CD5%7Cpc%7CH2%7Cpc%7CHT%7Cpc%7CHK%7Cpc%7CHA%7Cpc%7CHQ%7Cpc%7CH3%7Cpc%7CD6%7Cpc%7CH9%7Cpc%7CH6%7Cpc%7CH4%7Cpc%7CD3%7Cpc%7CH5%7Cpc%7CC2%7Cpc%7CC4%7Cpc%7CCA%7Cpc%7CCK%7Cpc%7CC6%7Cpc%7CDT%7Cpc%7CS2%7Cpc%7CD2%7Cpc%7CH7%7Cpc%7CC8%7Cpc%7CC3%7Cpc%7CCQ%7Cpc%7CC9%7Cpc%7CSA%7Cpc%7CS9%7Cpc%7CS8%7Cpc%7CS3%7Cpc%7CS4%7Cpc%7CST%7Cpc%7CH8%7Cpc%7CS5%7Cpc%7CCT%7Cpc%7CC7%7Cpc%7CC5%7Cpc%7CSJ%7Cpc%7CCJ%7Cpc%7CS7%7Cpc%7CS6%7Cpc%7CDJ%7Cpc%7CHJ%7Cpc%7CD7%7Cpc%7CSQ%7Cpc%7CSK%7Cmc%7C11%7Csv%7Cn%7C"
+    from_lin_to_request(link, Card_.from_str("HT"))
+    # from_lin_to_request(link)

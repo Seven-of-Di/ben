@@ -15,7 +15,7 @@ from sentry_sdk.integrations.quart import QuartIntegration
 
 from transform_play_card import get_ben_card_play_answer
 from human_carding import lead_real_card
-from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit,Diag,Direction
+from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit, Diag, Direction
 from claim_dds import check_claim_from_api
 from time import time
 
@@ -33,12 +33,13 @@ sentry_sdk.init(
 start = time()
 DEFAULT_MODEL_CONF = os.path.join(os.path.dirname(os.getcwd()), 'default.conf')
 MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
-print("Loading GIB models",time()-start)
+print("Loading GIB models", time()-start)
 
 app = Quart(__name__)
 
 health_checker = HealthChecker(app.logger)
 health_checker.start()
+
 
 class PlaceBid:
     def __init__(self, place_bid_request):
@@ -53,7 +54,8 @@ class AlertBid:
     def __init__(self, alert_bid_request) -> None:
         self.dealer = alert_bid_request["dealer"]
         self.vuln = VULNERABILITIES[alert_bid_request['vuln']]
-        self.vuln = self.vuln if self.dealer in ["N","S"] else [self.vuln[1],self.vuln[0]]
+        self.vuln = self.vuln if self.dealer in [
+            "N", "S"] else [self.vuln[1], self.vuln[0]]
         self.auction = alert_bid_request['auction']
         self.bid_to_alert_index = alert_bid_request['bid_to_alert_index']
 
@@ -263,20 +265,24 @@ async def play_full_board() -> Dict:
 
 
 @app.post('/alert_bid')
-async def alert_bid() :
+async def alert_bid():
     try:
         data = await request.get_json()
         req = AlertBid(data)
-        sql_alert_key = "".join([str(bid) for bid in req.auction if bid !="PAD_START"])
-        cursor.execute("SELECT * FROM alert_table WHERE sequence = '{}' ".format(sql_alert_key))
+        sql_alert_key = "".join([str(bid)
+                                for bid in req.auction if bid != "PAD_START"])
+        # TODO: This is not working
+        cursor.execute(
+            "SELECT * FROM alert_table WHERE sequence = '{}' ".format(sql_alert_key))
         alert = cursor.fetchone()
-        if alert is None :
-            return {"alert" : "No alert available"}
+        if alert is None:
+            return {"alert": "No alert available"}
 
-        return {"text" : alert[1]}
+        return {"text": alert[1]}
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}
+
 
 @app.get('/healthz')
 async def healthz():

@@ -15,16 +15,18 @@ build_directory = os.path.join(os.path.dirname(os.getcwd()), 'build')
 with open(os.path.join(build_directory, 'dev_alerts'), 'rb') as f:
     dict_of_alerts = pickle.load(f)
 
-db = SqliteDict(filename=os.path.join(build_directory, "alert_database_1.sqlite"),
+db = SqliteDict(filename=os.path.join(build_directory, "alerts_db/alert_database_1.sqlite"),
                 tablename="alerts",
                 autocommit=False)
 
 CHUNK_SIZE = 50
 
+
 def chunks(data):
-   it = iter(data)
-   for _ in range(0, len(data), CHUNK_SIZE):
-      yield {k:data[k] for k in islice(it, CHUNK_SIZE)}
+    it = iter(data)
+    for _ in range(0, len(data), CHUNK_SIZE):
+        yield {k: data[k] for k in islice(it, CHUNK_SIZE)}
+
 
 for chunk in chunks(dict_of_alerts):
     for bid_position in chunk:

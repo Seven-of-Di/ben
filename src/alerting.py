@@ -2,10 +2,9 @@ from sqlitedict import SqliteDict
 from alert_utils import BidPosition
 import os
 
-db_path = os.environ.get("ALERTS_DB_PATH")
 db_file = os.environ.get("ALERTS_DB_FILE")
 
-alerts_db = SqliteDict(filename=os.path.join(db_path, db_file),
+alerts_db = SqliteDict(filename=db_file,
                        tablename="alerts",
                        autocommit=False)
 

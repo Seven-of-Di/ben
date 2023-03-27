@@ -11,16 +11,13 @@ from itertools import islice
 
 dict_of_alerts: Dict[BidPosition, BidExplanations] = {}
 
-db_path = os.environ.get("ALERTS_DB_PATH")
 db_file = os.environ.get("ALERTS_DB_FILE")
-
-prep_path = os.environ.get("ALERTS_PREP_PATH")
 prep_file = os.environ.get("ALERTS_PREP_FILE")
 
-with open(os.path.join(prep_path, prep_file), 'rb') as f:
+with open(prep_file, 'rb') as f:
     dict_of_alerts = pickle.load(f)
 
-db = SqliteDict(filename=os.path.join(db_path, db_file),
+db = SqliteDict(filename=os.path.join(db_file),
                 tablename="alerts",
                 autocommit=False)
 

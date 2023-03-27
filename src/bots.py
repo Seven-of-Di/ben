@@ -22,6 +22,7 @@ from utils import Card_, multiple_list_comparaison, Direction, PlayerHand, Biddi
 from human_carding import play_real_card
 from PlayRecord import PlayRecord
 
+DDS = ddsolver.DDSolver()
 
 class BotBid:
 
@@ -428,7 +429,6 @@ class CardPlayer:
 
         self.score_by_tricks_taken = [scoring.score(
             self.contract, self.is_decl_vuln, n_tricks) for n_tricks in range(14)]
-        self.dd = ddsolver.DDSolver()
 
     def init_x_play(self, public_hand, level, strain_i):
         self.x_play = np.zeros((1, 13, 298))
@@ -527,7 +527,7 @@ class CardPlayer:
             raise Exception("Play record should not be none")
 
         leader_i = (leader_i + self.declarer.offset(2).value) % 4
-        dd_solved = self.dd.solve(
+        dd_solved = DDS.solve(
             self.strain_i, leader_i, current_trick52, [diag.print_as_pbn(first_direction=Direction.WEST) for diag in samples_as_diag])
         # dd_solved = self.reverse_dds_results(unoriented_dd_solved) if reverse_results else unoriented_dd_solved
 

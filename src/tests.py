@@ -326,9 +326,10 @@ def run_deal_on_both_rooms(deal: Deal, force_same_sequence: bool = False, force_
 def run_tm_btwn_ben_versions(force_same_sequence: bool = False, force_same_lead: bool = False, force_same_card_play: bool = False):
     with open("./test_data/test_data.pbn") as f:
         boards = f.read().strip("\n").split("\n\n")
-        deals: List[Deal] = [Deal.from_pbn(board) for board in boards]
+        deals: List[Deal] = [Deal.from_pbn(board) for board in boards[:64]]
 
     for deal in deals:
+        deal.diag = Diag.generate_random()
         pbn = run_deal_on_both_rooms(
             deal, force_same_sequence, force_same_lead, force_same_card_play)
         print("New Ben times average : bidding : {},carding : {}".format(NEW_BIDDING_TIME[0]/NEW_BIDDING_TIME[1],NEW_CARD_TIME[0]/NEW_CARD_TIME[1]))
@@ -368,7 +369,7 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    run_tm_btwn_ben_versions()
+    run_tm_btwn_ben_versions(force_same_card_play=True,force_same_lead=True)
     # tests = run_tests()
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))

@@ -29,7 +29,6 @@ sentry_sdk.init(
     ]
 )
 
-
 app = Quart(__name__)
 
 health_checker = HealthChecker(app.logger)

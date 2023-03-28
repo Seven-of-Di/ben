@@ -1,4 +1,5 @@
-from typing import Dict
+from copy import deepcopy
+from typing import Dict, List
 from quart import Quart, request
 
 from nn.models import MODELS
@@ -16,7 +17,6 @@ from transform_play_card import get_ben_card_play_answer
 from human_carding import lead_real_card
 from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit, Diag, Direction
 from claim_dds import check_claim_from_api
-from time import time
 
 import tensorflow.compat.v1 as tf  # type: ignore
 
@@ -29,10 +29,6 @@ sentry_sdk.init(
     ]
 )
 
-start = time()
-DEFAULT_MODEL_CONF = os.path.join(os.path.dirname(os.getcwd()), 'default.conf')
-MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
-print("Loading GIB models", time()-start)
 
 app = Quart(__name__)
 
@@ -177,7 +173,7 @@ async def place_bid():
 
         bid_resp = await bot.async_bid(req.auction)
 
-        new_auction = req.auction
+        new_auction : List[str] = deepcopy(req.auction)
         new_auction.append(bid_resp.bid)
 
         alert = await find_alert(new_auction, req.vuln)

@@ -32,6 +32,8 @@ class BotBid:
         self.hand_str = hand_str
         self.hand = binary.parse_hand_f(32)(hand_str)
         self.min_candidate_score = 0.15
+        self.getting_doubled = False
+
 
         self.model = models.bidder_model if not human_model else models.wide_bidder_model
         self.state = models.bidder_model.zero_state if not human_model else models.wide_bidder_model.zero_state
@@ -59,6 +61,9 @@ class BotBid:
     def restful_bid(self, auction) -> BidResp:
         start = time.time()
         auction = [element for element in auction if element != "PAD_START"]
+        self.getting_doubled = len(auction)>=3 and (auction[-3:]==['X',"PASS","PASS"] )
+        self.min_candidate_score = 0.01 if self.getting_doubled else self.min_candidate_score 
+
         position_minus_1 = len(auction) % 4
 
         for i in range(len(auction)//4):

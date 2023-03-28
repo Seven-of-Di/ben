@@ -176,7 +176,10 @@ async def place_bid():
         )
 
         bid_resp = await bot.async_bid(req.auction)
-        new_auction = req.auction + bid_resp.bid
+
+        new_auction = req.auction
+        new_auction.append(bid_resp.bid)
+
         alert = await find_alert(new_auction, req.vuln)
 
         if alert == None:
@@ -267,7 +270,7 @@ async def play_full_board() -> Dict:
         MODELS
     )
     board_data = await bot.async_full_board()
-    # print(board_data)
+
     return board_data
 
 

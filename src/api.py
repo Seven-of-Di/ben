@@ -52,12 +52,10 @@ class PlaceBid:
 
 class AlertBid:
     def __init__(self, alert_bid_request) -> None:
-        self.dealer = alert_bid_request["dealer"]
         self.vuln = VULNERABILITIES[alert_bid_request['vuln']]
-        self.vuln = self.vuln if self.dealer in [
-            "N", "S"] else [self.vuln[1], self.vuln[0]]
-        self.auction = alert_bid_request['auction']
-        self.bid_to_alert_index = alert_bid_request['bid_to_alert_index']
+        self.dealer = alert_bid_request["dealer"]
+        self.auction = ['PAD_START'] * \
+            DIRECTIONS.index(self.dealer) + alert_bid_request['auction']
 
 
 class PlayCard:
@@ -169,19 +167,28 @@ async def place_bid():
         data = await request.get_json()
         req = PlaceBid(data)
 
-        alert = find_alert(req)
-
+        # 1NT - (P)
         bot = AsyncBotBid(
             req.vuln,
             req.hand,
-            MODELS,
-            human_model=alert is None
+            MODELS
         )
 
         bid_resp = await bot.async_bid(req.auction)
+        new_auction = req.auction + bid_resp.bid
+        alert = await find_alert(new_auction, req.vuln)
+
+        if alert == None:
+            bot = AsyncBotBid(
+                req.vuln,
+                req.hand,
+                MODELS,
+                human_model=True
+            )
+
+            bid_resp = bot.async_bid(req.auction)
 
         return {'bid': bid_resp.bid, 'alert': alert}
-
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}
@@ -264,21 +271,23 @@ async def play_full_board() -> Dict:
     return board_data
 
 
+'''
+{
+    "dealer": "N",
+    "vuln": "None",
+    "auction": ["1C", "PASS", "PASS"]
+}
+'''
+
+
 @app.post('/alert_bid')
 async def alert_bid():
     try:
         data = await request.get_json()
         req = AlertBid(data)
-        sql_alert_key = "".join([str(bid)
-                                for bid in req.auction if bid != "PAD_START"])
-        # TODO: This is not working
-        cursor.execute(
-            "SELECT * FROM alert_table WHERE sequence = '{}' ".format(sql_alert_key))
-        alert = cursor.fetchone()
-        if alert is None:
-            return {"alert": "No alert available"}
+        alert = await find_alert(req.auction, req.vuln)
 
-        return {"text": alert[1]}
+        return {"alert": alert}
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}

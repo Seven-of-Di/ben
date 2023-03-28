@@ -9,8 +9,8 @@ alerts_db = SqliteDict(filename=db_file,
                        autocommit=False)
 
 
-def find_alert(req):
-    bid_position = BidPosition(req.auction, req.vuln)
+async def find_alert(auction, vuln):
+    bid_position = BidPosition(auction, vuln)
 
     try:
         return alerts_db[bid_position.to_hex()]

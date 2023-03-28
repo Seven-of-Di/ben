@@ -185,8 +185,7 @@ async def place_bid():
                 MODELS,
                 human_model=True
             )
-
-            bid_resp = bot.async_bid(req.auction)
+            bid_resp = await bot.async_bid(req.auction)
 
         return {'bid': bid_resp.bid, 'alert': alert}
     except Exception as e:

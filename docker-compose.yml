@@ -18,7 +18,7 @@ services:
       - ./build/alerts_prep:/var/lib/alerts_prep
     environment:
       - ALERTS_DB_FILE=/var/lib/alerts_db/alert_database_1.sqlite
-      - ALERTS_PREP_FILE=/var/lib/alerts_prep/dev_alerts
+      - ALERTS_PREP_FILE=/var/lib/alerts_prep/alerts.pickle
       - TF_CPP_MIN_LOG_LEVEL=3
       - PORT=5001
       - DEBUG=true

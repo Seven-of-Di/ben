@@ -52,8 +52,8 @@ class BidExplanations():
 
     def __repr__(self) -> str:
         return str(self.samples)
-    
-    def to_json(self) :
+
+    def to_json(self):
         pass
 
 
@@ -65,11 +65,11 @@ class BidPosition:
     def __hash__(self):
         return hash(repr(self))
 
-
+    # HACK: Vulnerabilities are not used when we are alerting so we do not need it in the
+    # to dict representation
     def to_dict(self):
         return {
             "sequence": self.sequence,
-            "vuls": self.vuls,
         }
 
     def to_hex(self):

@@ -1,3 +1,5 @@
+.DS_Store
+
 .ipynb_checkpoints
 __pycache__
 src/gamedb.*
@@ -8,3 +10,10 @@ dds.dll
 src/conf.py
 src/examples/Bidding1.ipynb
 dump.txt
+
+build/**
+!build/.gitkeep
+!build/*/.gitkeep
+
+*.pbn
+*.lin

@@ -536,7 +536,7 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
         accept = np.ones_like(accept).astype(bool)
     # end of re-applyconstraints
 
-    # states = [state[accept] for state in states]
+    states = [state[accept] for state in states]
     probability_of_occurence = np.ones(len(states[0]))
 
     # reject samples inconsistent with the opening lead
@@ -611,6 +611,6 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
     new_state = np.empty_like(states)
     for i, state in enumerate(states):
         new_state[i] = state[arr1inds[::-1]]
-    max_coherent_sample = next((p_index for p_index,p in enumerate(probability_of_occurence_ordered) if p*100 <= probability_of_occurence_ordered[0]),len(probability_of_occurence_ordered))
+    max_coherent_sample = next((p_index for p_index,p in enumerate(probability_of_occurence_ordered) if p*1000 <= probability_of_occurence_ordered[0] and trick_i<=6),len(probability_of_occurence_ordered))
     # print("Number of samples",len(probability_of_occurence_ordered),"coherent_samples",max_coherent_sample)
     return [state[:min(max_coherent_sample,n_samples)] for state in new_state], probability_of_occurence_ordered[:min(max_coherent_sample,n_samples)]

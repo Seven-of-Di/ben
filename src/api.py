@@ -49,8 +49,7 @@ class AlertBid:
     def __init__(self, alert_bid_request) -> None:
         self.vuln = VULNERABILITIES[alert_bid_request['vuln']]
         self.dealer = alert_bid_request["dealer"]
-        self.auction = ['PAD_START'] * \
-            DIRECTIONS.index(self.dealer) + alert_bid_request['auction']
+        self.auction = alert_bid_request['auction']
 
 
 class PlayCard:
@@ -171,7 +170,7 @@ async def place_bid():
 
         bid_resp = await bot.async_bid(req.auction)
 
-        new_auction : List[str] = deepcopy(req.auction)
+        new_auction: List[str] = deepcopy(req.auction)
         new_auction.append(bid_resp.bid)
 
         alert = await find_alert(new_auction, req.vuln)

@@ -51,7 +51,7 @@ class Pbn:
     @staticmethod
     def vul_from_string(string: str) -> Tuple[bool, bool]:
         """Return NS and EW vul from string : NS-> (True,False) """
-        if string == "None":
+        if string == "None" or string =="-":
             return (False, False)
         if string == "NS":
             return (True, False)

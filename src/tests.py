@@ -322,11 +322,24 @@ def run_deal_on_both_rooms(deal: Deal, force_same_sequence: bool = False, force_
 
     return "{}\n{}".format(open_room_board.print_as_pbn(open_room=True), closed_room_board.print_as_pbn(open_room=False))
 
+def count_average_hcp() :
+    with open("./test_data/10K_ranked_deals.pbn") as f:
+        boards = f.read().strip("\n").split("\n\n")
+        deals: List[Deal] = [Deal.from_pbn(board) for board in boards]
+    hcp_per_dir = {dir:0 for dir in Direction}
+    for deal in deals :
+        for dir in Direction :
+            hcp_per_dir[dir]+=deal.diag.hands[dir].hcp()
+    average_hcp_per_dir = {dir:total_hcp/len(deals) for dir,total_hcp in hcp_per_dir.items()}
+    print(len(boards))
+    print(average_hcp_per_dir)
 
 def run_tm_btwn_ben_versions(force_same_sequence: bool = False, force_same_lead: bool = False, force_same_card_play: bool = False):
     with open("./test_data/test_data.pbn") as f:
         boards = f.read().strip("\n").split("\n\n")
-        deals: List[Deal] = [Deal.from_pbn(board) for board in boards[:64]]
+        deals: List[Deal] = [Deal.from_pbn(board) for board in boards]
+        
+
 
     for deal in deals:
         deal.diag = Diag.generate_random()
@@ -374,7 +387,8 @@ if __name__ == "__main__":
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))
     # load_test_pbn("c4f380988fc67c0fe6e5f4bc5502d67a3b45d2c0.pbn")
-    link = r"https://play.intobridge.com/hand?lin=pn%7CStefan,Ben,Ben,Ben%7Cmd%7C3SAKJT54HAKQ74D73C,S972H65DKJ854CJ96,SQ63HT983DT2C7542,S8HJ2DAQ96CAKQT83%7Cah%7CBoard%205%7Cmb%7Cp%7Cmb%7C1C%7Cmb%7C1S%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7C2D%7Cmb%7C4H%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cd%7Cmb%7Cr%7Cmb%7Cp%7Cmb%7C5S%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cd%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CC6%7Cpc%7CC2%7Cpc%7CCQ%7Cpc%7CS4%7Cpc%7CSJ%7Cpc%7CS7%7Cpc%7CS3%7Cpc%7CS8%7Cpc%7CST%7Cpc%7CS2%7Cpc%7CS6%7Cpc%7CC3%7Cpc%7CSK%7Cpc%7CS9%7Cpc%7CSQ%7Cpc%7CH2%7Cpc%7CHA%7Cpc%7CH6%7Cpc%7CH8%7Cpc%7CHJ%7Cmc%7C11%7Csv%7Cn%7C"
+    # link = r"https://play.intobridge.com/hand?lin=pn%7CStefan,Ben,Ben,Ben%7Cmd%7C3SAKJT54HAKQ74D73C,S972H65DKJ854CJ96,SQ63HT983DT2C7542,S8HJ2DAQ96CAKQT83%7Cah%7CBoard%205%7Cmb%7Cp%7Cmb%7C1C%7Cmb%7C1S%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7C2D%7Cmb%7C4H%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cd%7Cmb%7Cr%7Cmb%7Cp%7Cmb%7C5S%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cd%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CC6%7Cpc%7CC2%7Cpc%7CCQ%7Cpc%7CS4%7Cpc%7CSJ%7Cpc%7CS7%7Cpc%7CS3%7Cpc%7CS8%7Cpc%7CST%7Cpc%7CS2%7Cpc%7CS6%7Cpc%7CC3%7Cpc%7CSK%7Cpc%7CS9%7Cpc%7CSQ%7Cpc%7CH2%7Cpc%7CHA%7Cpc%7CH6%7Cpc%7CH8%7Cpc%7CHJ%7Cmc%7C11%7Csv%7Cn%7C"
     # print(from_lin_to_request(link, Card_.from_str("C6")))
 
-    print(from_lin_to_request(link, None))
+    # print(from_lin_to_request(link, None))
+    count_average_hcp()

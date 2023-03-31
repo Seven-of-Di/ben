@@ -37,7 +37,6 @@ health_checker.start()
 
 class PlaceBid:
     def __init__(self, place_bid_request):
-        print("type", type(place_bid_request))
         place_bid_request = dict(place_bid_request)
         self.vuln = VULNERABILITIES[place_bid_request['vuln']]
         self.hand = place_bid_request['hand']

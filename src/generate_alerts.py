@@ -82,16 +82,12 @@ def generate_usual_alert_from_dict(dic: Dict, ascending: bool) -> int:
 
 
 def generete_hcp_alert(bid_explanation: BidExplanations) -> str:
-    strict_minimum_hcp = bid_explanation.min_hcp
-    strict_maximum_hcp = bid_explanation.max_hcp
     usual_minimum_hcp = generate_usual_alert_from_dict(
         bid_explanation.hcp_distribution, ascending=True)
     usual_maximum_hcp = generate_usual_alert_from_dict(
         bid_explanation.hcp_distribution, ascending=False)
-    minimum_text = str(strict_minimum_hcp) if strict_minimum_hcp == usual_minimum_hcp else "({}){}".format(
-        strict_minimum_hcp, usual_minimum_hcp)
-    maximum_text = str(strict_maximum_hcp) if strict_maximum_hcp == usual_maximum_hcp else "{}({})".format(
-        usual_maximum_hcp, strict_maximum_hcp)
+    minimum_text = str(usual_minimum_hcp)
+    maximum_text = str(usual_maximum_hcp)
     return "{}-{}hcp".format(minimum_text, maximum_text)
 
 
@@ -112,26 +108,12 @@ def generate_suit_length_alert_as_dict(bid_explanation: BidExplanations, suit: S
     }
 
 
-def print_suit_max_length(usual_max_length: int, strict_max_length: int, usual_min_length: int, strict_min_length: int, suit: Suit) -> str:
-    strict_min_length = 0 if strict_min_length == 1 else strict_min_length
+def print_suit_max_length(usual_max_length: int, usual_min_length: int,  suit: Suit) -> str:
     usual_min_length = 0 if usual_min_length == 1 else usual_min_length
-    max_parenthesis = usual_max_length != strict_max_length
-    min_parenthesis = usual_min_length != strict_min_length
-    if min_parenthesis and max_parenthesis:
-        return "({}){}-{}({}){}|".format(strict_min_length, usual_min_length, usual_max_length, strict_max_length, suit.symbol())
-    if min_parenthesis:
-        return "({}){}-{}{}|".format(strict_min_length, usual_min_length, usual_max_length, suit.symbol())
-    if max_parenthesis:
-        return "{}-{}({}){}|".format(usual_min_length, usual_max_length, strict_max_length, suit.symbol())
-    if usual_max_length == usual_min_length:
-        return "{}{}|".format(strict_max_length, suit.symbol())
-    return "{}-{}{}|".format(strict_min_length, strict_max_length, suit.symbol())
+    return "{}-{}{}|".format(usual_min_length, usual_max_length, suit.symbol())
 
 
-def print_suit_min_length(usual_min_length: int, strict_min_length: int, suit: Suit) -> str:
-    min_parenthesis = usual_min_length != strict_min_length
-    if min_parenthesis:
-        return "({}){}+{}|".format(strict_min_length, usual_min_length, suit.symbol())
+def print_suit_min_length(usual_min_length: int, suit: Suit) -> str:
     return "{}+{}|".format(usual_min_length, suit.symbol())
 
 
@@ -148,12 +130,12 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
             "usual_min_length"] >= 4 or suits_length_alert_as_dict[s]["strict_min_length"] >= 3
         if print_max_length:
             short_suits.append(s)
-            suits_text += print_suit_max_length(usual_max_length=suits_length_alert_as_dict[s]["usual_max_length"], strict_max_length=suits_length_alert_as_dict[s]["strict_max_length"],
-                                                usual_min_length=suits_length_alert_as_dict[s]["usual_min_length"], strict_min_length=suits_length_alert_as_dict[s]["strict_min_length"], suit=s)
+            suits_text += print_suit_max_length(
+                usual_max_length=suits_length_alert_as_dict[s]["usual_max_length"], usual_min_length=suits_length_alert_as_dict[s]["usual_min_length"],  suit=s)
         elif print_min_length:
             long_suits.append(s)
             suits_text += print_suit_min_length(
-                usual_min_length=suits_length_alert_as_dict[s]["usual_min_length"], strict_min_length=suits_length_alert_as_dict[s]["strict_min_length"], suit=s)
+                usual_min_length=suits_length_alert_as_dict[s]["usual_min_length"], suit=s)
     suits_text = suits_text[:-1] if suits_text else suits_text
 
     player_hands = [PlayerHand.from_pbn(pbn_hand)
@@ -163,33 +145,30 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
     two_suiter_proba = two_suiter_mask.count(True)/len(two_suiter_mask)
 
     if two_suiter_proba > 0.95:
-        is_sure = two_suiter_proba == 1
         if len(long_suits) == 2:
-            return "{}two suiter, with {}".format("Usually " if not is_sure else "", suits_text)
+            return "Two suiter : {}".format(suits_text)
         if len(long_suits) == 1 and len(short_suits) == 1 and suits_length_alert_as_dict[short_suits[0]]["usual_max_length"] <= 1:
-            return "{}splinter, with {}".format("Usually " if not (is_sure and suits_length_alert_as_dict[short_suits[0]]["strict_max_length"] <= 1) else "", suits_text)
+            return "Splinter : {}".format(suits_text)
         if len(long_suits) == 1:
-            return "{}two suiter, with {} and another unkown suit".format("Usually " if not is_sure else "", suits_text)
+            return "Two suiter : {} and another".format(suits_text)
         else:
-            return "{}unknown two suiter, {}".format("Usually " if not is_sure else "", suits_text)
+            return "Unknown two suiter".format()
 
     six_card_mask = [player_hand.ordered_pattern(
     )[0] >= 6 for player_hand in player_hands]
     six_card_proba = six_card_mask.count(True)/len(six_card_mask)
 
     if six_card_proba >= 0.95:
-        is_sure = six_card_proba == 1
         if len(long_suits) == 1:
-            return "{}one suiter, with {}".format("Usually " if not is_sure else "", suits_text)
+            return "{}".format(suits_text)
         else:
-            return "{}unknown one suiter {}".format("Usually " if not is_sure else "", suits_text)
+            return "Unknown one suiter {}".format(suits_text)
 
     five_card_mask = [player_hand.ordered_pattern(
     )[0] >= 5 for player_hand in player_hands]
     five_card_proba = five_card_mask.count(True)/len(five_card_mask)
     if five_card_proba == 0.95 and len(long_suits) == 0:
-        is_sure = five_card_proba == 1
-        return "{}an unkown five card + suit {}".format("Usually " if not is_sure else "", suits_text)
+        return "An unkown five card + suit {}".format("suits_text")
 
     return "{}".format(suits_text)
 

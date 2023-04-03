@@ -86,7 +86,12 @@ class Direction(Enum):
             if self.offset(i) == dir2:
                 return dir1
         raise Exception("???")
+    
 
+SPADES_SYMBOL = '♠️'
+HEARTS_SYMBOL = '♥️'
+DIAMONDS_SYMBOL = '♦️'
+CLUBS_SYMBOL = '♣️'
 
 @total_ordering
 class Suit(Enum):
@@ -95,10 +100,12 @@ class Suit(Enum):
     DIAMONDS = 2
     CLUBS = 3
 
-    __from_str_map__ = {"S": SPADES, "H": HEARTS, "D": DIAMONDS,
-                        "C": CLUBS, '♠': SPADES, '♥': HEARTS, '♦': DIAMONDS, '♣': CLUBS}
 
-    __to_symbol__ = {SPADES: '♠', HEARTS: '♥', DIAMONDS: '♦', CLUBS: '♣'}
+    
+    __from_str_map__ = {"S": SPADES, "H": HEARTS, "D": DIAMONDS,
+                        "C": CLUBS, '♠️': SPADES, '♥️': HEARTS, '♦️': DIAMONDS, '♣️': CLUBS}
+
+    __to_symbol__ = {SPADES: SPADES_SYMBOL, HEARTS: HEARTS_SYMBOL, DIAMONDS: DIAMONDS_SYMBOL, CLUBS: CLUBS_SYMBOL}
 
     __4_colors__ = {SPADES: 'blue', HEARTS: 'red',
                     DIAMONDS: 'orange', CLUBS: 'green'}

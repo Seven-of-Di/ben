@@ -118,21 +118,21 @@ def print_suit_max_length(usual_max_length: int, strict_max_length: int, usual_m
     max_parenthesis = usual_max_length != strict_max_length
     min_parenthesis = usual_min_length != strict_min_length
     if min_parenthesis and max_parenthesis:
-        return "({}){}-{}({})!{}|".format(strict_min_length, usual_min_length, usual_max_length, strict_max_length, suit.abbreviation())
+        return "({}){}-{}({}){}|".format(strict_min_length, usual_min_length, usual_max_length, strict_max_length, suit.symbol())
     if min_parenthesis:
-        return "({}){}-{}!{}|".format(strict_min_length, usual_min_length, usual_max_length, suit.abbreviation())
+        return "({}){}-{}{}|".format(strict_min_length, usual_min_length, usual_max_length, suit.symbol())
     if max_parenthesis:
-        return "{}-{}({})!{}|".format(usual_min_length, usual_max_length, strict_max_length, suit.abbreviation())
+        return "{}-{}({}){}|".format(usual_min_length, usual_max_length, strict_max_length, suit.symbol())
     if usual_max_length == usual_min_length:
-        return "{}!{}|".format(strict_max_length, suit.abbreviation())
-    return "{}-{}!{}|".format(strict_min_length, strict_max_length, suit.abbreviation())
+        return "{}{}|".format(strict_max_length, suit.symbol())
+    return "{}-{}{}|".format(strict_min_length, strict_max_length, suit.symbol())
 
 
 def print_suit_min_length(usual_min_length: int, strict_min_length: int, suit: Suit) -> str:
     min_parenthesis = usual_min_length != strict_min_length
     if min_parenthesis:
-        return "({}){}+!{}|".format(strict_min_length, usual_min_length, suit.abbreviation())
-    return "{}+!{}|".format(usual_min_length, suit.abbreviation())
+        return "({}){}+{}|".format(strict_min_length, usual_min_length, suit.symbol())
+    return "{}+{}|".format(usual_min_length, suit.symbol())
 
 
 def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:

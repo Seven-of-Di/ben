@@ -404,7 +404,7 @@ class BotLead:
 
 class CardPlayer:
 
-    def __init__(self, player_models, player_i, hand_str, public_hand_str, contract, is_decl_vuln, play_record: PlayRecord, declarer: Direction, player_direction: Direction, dummy_hand: PlayerHand, player_hand: PlayerHand):
+    def __init__(self, player_models, player_i, hand_str, public_hand_str, contract, is_decl_vuln, play_record: PlayRecord, declarer: Direction, player_direction: Direction, dummy_hand: PlayerHand, player_hand: PlayerHand, debug:bool = False):
         self.player_models = player_models
         self.model = player_models[player_i]
         self.player_i = player_i
@@ -435,6 +435,7 @@ class CardPlayer:
 
         self.score_by_tricks_taken = [scoring.score(
             self.contract, self.is_decl_vuln, n_tricks) for n_tricks in range(14)]
+        self.debug = debug
 
     def init_x_play(self, public_hand, level, strain_i):
         self.x_play = np.zeros((1, 13, 298))
@@ -524,10 +525,8 @@ class CardPlayer:
         samples_as_diag = [create_diag_from_32([players_states[j][i, trick_i, :32] for j in range(
             4)], low_hidden_cards) for i in range(n_samples)]
 
-        # print(self.player_direction)
-        # for diag, p in zip(samples_as_diag[:2], probabilities_list):
-        #     print(round(p, 2), ":", diag.print_as_pbn(
-        #         first_direction=Direction.WEST))
+
+        print(self.player_direction)
 
         if self.play_record.record is None:
             raise Exception("Play record should not be none")
@@ -547,8 +546,19 @@ class CardPlayer:
         for key in dd_solved.keys():
             card_result[key] = (card_tricks[key], card_ev[key])
 
-        # for key, value in (card_result.items()):
-        #     print(Card_.get_from_52(key), value)
+        if self.debug :
+            for i,(diag, p), in enumerate(zip(samples_as_diag, probabilities_list)):
+                string = ""
+                for card,res in dd_solved.items() :
+                    string += "{}:{},".format(Card_.get_from_52(card),res[i])
+                print(round(p, 5), ":", diag.print_as_pbn(
+                    first_direction=Direction.WEST),string)
+            for key, value in (card_result.items()):
+                print(Card_.get_from_52(key), value)
+            print("   {}".format([i for i in range(len(samples_as_diag))]))
+            for key, value in (dd_solved.items()):
+                print(Card_.get_from_52(key), value)
+            
 
         return card_result
 

@@ -22,7 +22,8 @@ VULNERABILITIES = {
     'Both': [True, True]
 }
 
-VULS_REVERSE = {tuple(v):k for k,v in VULNERABILITIES.items()}
+VULS_REVERSE = {tuple(v): k for k, v in VULNERABILITIES.items()}
+
 
 @total_ordering
 class Direction(Enum):
@@ -37,13 +38,13 @@ class Direction(Enum):
     @classmethod
     def from_str(cls, direction_str: str) -> Direction:
         return Direction(cls.__from_str_map__[direction_str.upper()])
-   
-    def to_player_i(self,declarer : Direction) -> int :
+
+    def to_player_i(self, declarer: Direction) -> int:
         return {
-            Direction.NORTH:{Direction.NORTH:3,Direction.EAST:0,Direction.SOUTH:1,Direction.WEST:2},
-            Direction.EAST:{Direction.NORTH:2,Direction.EAST:3,Direction.SOUTH:0,Direction.WEST:1},
-            Direction.SOUTH:{Direction.NORTH:1,Direction.EAST:2,Direction.SOUTH:3,Direction.WEST:0},
-            Direction.WEST:{Direction.NORTH:0,Direction.EAST:1,Direction.SOUTH:2,Direction.WEST:3},
+            Direction.NORTH: {Direction.NORTH: 3, Direction.EAST: 0, Direction.SOUTH: 1, Direction.WEST: 2},
+            Direction.EAST: {Direction.NORTH: 2, Direction.EAST: 3, Direction.SOUTH: 0, Direction.WEST: 1},
+            Direction.SOUTH: {Direction.NORTH: 1, Direction.EAST: 2, Direction.SOUTH: 3, Direction.WEST: 0},
+            Direction.WEST: {Direction.NORTH: 0, Direction.EAST: 1, Direction.SOUTH: 2, Direction.WEST: 3},
         }[declarer][self]
 
     def __lt__(self, other: Direction) -> bool:
@@ -77,7 +78,6 @@ class Direction(Enum):
 
     def to_str(self) -> str:
         return self.__to_str__[self.value]
-    
 
     def farest(self, dir1: Direction, dir2: Direction) -> Direction:
         for i in range(4):
@@ -86,12 +86,15 @@ class Direction(Enum):
             if self.offset(i) == dir2:
                 return dir1
         raise Exception("???")
-    
 
-SPADES_SYMBOL = '♠️'
-HEARTS_SYMBOL = '♥️'
-DIAMONDS_SYMBOL = '♦️'
-CLUBS_SYMBOL = '♣️'
+
+SPADES_SYMBOL = '!s'
+HEARTS_SYMBOL = '!h'
+DIAMONDS_SYMBOL = '!d'
+CLUBS_SYMBOL = '!c'
+
+symbol_map = dict()
+
 
 @total_ordering
 class Suit(Enum):
@@ -100,12 +103,11 @@ class Suit(Enum):
     DIAMONDS = 2
     CLUBS = 3
 
-
-    
     __from_str_map__ = {"S": SPADES, "H": HEARTS, "D": DIAMONDS,
-                        "C": CLUBS, '♠️': SPADES, '♥️': HEARTS, '♦️': DIAMONDS, '♣️': CLUBS}
+                        "C": CLUBS, '!s': SPADES, '!h': HEARTS, '!d': DIAMONDS, '!c': CLUBS}
 
-    __to_symbol__ = {SPADES: SPADES_SYMBOL, HEARTS: HEARTS_SYMBOL, DIAMONDS: DIAMONDS_SYMBOL, CLUBS: CLUBS_SYMBOL}
+    __to_symbol__ = {SPADES: SPADES_SYMBOL, HEARTS: HEARTS_SYMBOL,
+                     DIAMONDS: DIAMONDS_SYMBOL, CLUBS: CLUBS_SYMBOL}
 
     __4_colors__ = {SPADES: 'blue', HEARTS: 'red',
                     DIAMONDS: 'orange', CLUBS: 'green'}
@@ -221,9 +223,9 @@ class BiddingSuit(Enum):
 
     __from_str_map__ = {"S": SPADES, "H": HEARTS,
                         "D": DIAMONDS, "C": CLUBS, "N": NO_TRUMP, "NT": NO_TRUMP,
-                        '♠': SPADES, '♥': HEARTS, '♦': DIAMONDS, '♣': CLUBS, 'SA': NO_TRUMP}
-    __to_symbol__ = {SPADES: '♠', HEARTS: '♥',
-                     DIAMONDS: '♦', CLUBS: '♣', NO_TRUMP: "NT"}
+                        '!s': SPADES, '!h': HEARTS, '!d': DIAMONDS, '!c': CLUBS, 'SA': NO_TRUMP}
+    __to_symbol__ = {SPADES: SPADES_SYMBOL, HEARTS: HEARTS_SYMBOL,
+                     DIAMONDS: DIAMONDS_SYMBOL, CLUBS: CLUBS_SYMBOL, NO_TRUMP: "NT"}
     __4_colors__ = {SPADES: 'blue', HEARTS: 'red',
                     DIAMONDS: 'orange', CLUBS: 'green', NO_TRUMP: 'black'}
     __to_strain__ = {NO_TRUMP: 0, SPADES: 1, HEARTS: 2, DIAMONDS: 3, CLUBS: 4}
@@ -250,15 +252,15 @@ class BiddingSuit(Enum):
 
     def strain(self):
         return self.__to_strain__[self.value]
-    
-    def rank(self) :
-        if self==BiddingSuit.CLUBS :
+
+    def rank(self):
+        if self == BiddingSuit.CLUBS:
             return 0
-        if self==BiddingSuit.DIAMONDS :
+        if self == BiddingSuit.DIAMONDS:
             return 1
-        if self==BiddingSuit.HEARTS :
+        if self == BiddingSuit.HEARTS:
             return 2
-        if self==BiddingSuit.SPADES :
+        if self == BiddingSuit.SPADES:
             return 3
         return 4
 
@@ -417,7 +419,8 @@ class PlayerHand():
         return f"PlayerHand({repr_str})"
 
     def __str__(self) -> str:
-        suit_arrays = [['♠'], ['♥'], ['♦'], ['♣']]
+        suit_arrays = [[SPADES_SYMBOL], [HEARTS_SYMBOL],
+                       [DIAMONDS_SYMBOL], [CLUBS_SYMBOL]]
         for card in sorted(self.cards, reverse=True):
             suit_arrays[card.suit.value].append(repr(card))
         repr_str = " ".join("".join(suit) for suit in suit_arrays)
@@ -450,7 +453,7 @@ class PlayerHand():
 
     def hcp(self) -> int:
         return sum(self.suit_hcp(suit) for suit in Suit)
-    
+
     def pattern(self) -> List[int]:
         """Return [nb ♠,nb ♥,nb ♦,nb ♣]"""
         return list(reversed([len(self.suits[suit]) for suit in Suit]))
@@ -458,7 +461,7 @@ class PlayerHand():
     def ordered_pattern(self) -> List[int]:
         """Return the pattern with the longest suit on the left, the shortest on the right"""
         return sorted(self.pattern(), reverse=True)
-    
+
     def balanced(self) -> bool:
         if self.ordered_pattern() in [[4, 4, 3, 2], [4, 3, 3, 3], [5, 3, 3, 2]]:
             return True
@@ -468,10 +471,9 @@ class PlayerHand():
         if self.ordered_pattern() in [[6, 3, 2, 2], [5, 4, 2, 2]]:
             return True
         return False
-    
+
     def unbalanced(self) -> bool:
-        return not(self.balanced() or self.semi_balanced())
-    
+        return not (self.balanced() or self.semi_balanced())
 
     def one_suiter(self) -> bool:
         if self.ordered_pattern()[0] <= 5:
@@ -583,8 +585,8 @@ class Diag():
                 self.hands[direction].__str__() + "\n"
         return string
 
-    def print_as_pbn(self,first_direction = Direction.NORTH) -> str:
-        return "{}:{}".format(first_direction.abbreviation()," ".join([self.hands[dir.offset(first_direction.value)].print_as_pbn() for dir in Direction]))
+    def print_as_pbn(self, first_direction=Direction.NORTH) -> str:
+        return "{}:{}".format(first_direction.abbreviation(), " ".join([self.hands[dir.offset(first_direction.value)].print_as_pbn() for dir in Direction]))
 
     def is_valid(self):
         try:
@@ -673,15 +675,16 @@ def convert_to_probability(x):
     sum_of_proba = np.sum(x, axis=0)
     return np.divide(x, sum_of_proba)
 
-def board_number_to_vul(board : int)-> str :
+
+def board_number_to_vul(board: int) -> str:
     board %= 17
-    if board in [1,8,11,14] :
+    if board in [1, 8, 11, 14]:
         return "None"
-    if board in [2,5,12,15] :
+    if board in [2, 5, 12, 15]:
         return "N-S"
-    if board in [3,6,9,16] :
+    if board in [3, 6, 9, 16]:
         return "E-W"
-    if board in [4,7,10,13] :
+    if board in [4, 7, 10, 13]:
         return "Both"
     raise Exception("Probably an int wasn't provided ? idk")
 

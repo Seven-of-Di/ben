@@ -8,8 +8,9 @@ from bidding import bidding
 from nn.models import Models
 import conf
 import os
-from utils import Direction, PlayerHand, Suit, Diag
+from utils import Direction, PlayerHand, Suit, Diag, BiddingSuit
 from alert_utils import BidExplanations, BidPosition
+from SequenceAtom import Bid
 import pickle
 
 
@@ -18,6 +19,48 @@ MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
 
 
 diags = [Diag.generate_random() for _ in range(100)]
+
+
+def manual_alert(seq_str: List[str]) -> str | None:
+    if len(seq_str) == seq_str.count("PASS"):
+        return "0-11 hcp"
+    if not(seq_str[-1] != "PASS" and len(seq_str)-seq_str.count("PASS") == 1):
+        return None
+    bid = Bid.from_str(seq_str[-1])
+    if not bid <= Bid.from_str("3S"):
+        return None
+    if bid == Bid(1, BiddingSuit.CLUBS):
+        return "Better minor, 12+hcp,3+!C"
+    if bid == Bid(1, BiddingSuit.DIAMONDS):
+        return "Better minor, 12+hcp,3+!D"
+    if bid == Bid(1, BiddingSuit.HEARTS):
+        return "5th major, 12+hcp,5+!H"
+    if bid == Bid(1, BiddingSuit.SPADES):
+        return "5th major, 12+hcp,5+!S"
+    if bid == Bid(1, BiddingSuit.NO_TRUMP):
+        return "15-17 hcp balanced"
+    if bid == Bid(2, BiddingSuit.CLUBS):
+        return "Any strong hand, 21+hcp"
+    if bid == Bid(2, BiddingSuit.DIAMONDS):
+        return "Natural preempt, 6-10 hcp, 6!D"
+    if bid == Bid(2, BiddingSuit.HEARTS):
+        return "Natural preempt, 6-10 hcp, 6!H"
+    if bid == Bid(2, BiddingSuit.SPADES):
+        return "Natural preempt, 6-10 hcp, 6!S"
+    if bid == Bid(2, BiddingSuit.NO_TRUMP):
+        return "20-21 hcp balanced"
+    if bid == Bid(2, BiddingSuit.SPADES):
+        return "Natural preempt, 6-10 hcp, 6!S"
+    if bid == Bid(3, BiddingSuit.CLUBS):
+        return "Natural preempt, 6-10 hcp, 7!C"
+    if bid == Bid(3, BiddingSuit.DIAMONDS):
+        return "Natural preempt, 6-10 hcp, 7!D"
+    if bid == Bid(3, BiddingSuit.HEARTS):
+        return "Natural preempt, 6-10 hcp, 7!H"
+    if bid == Bid(3, BiddingSuit.SPADES):
+        return "Natural preempt, 6-10 hcp, 7!S"
+
+    raise Exception
 
 
 def bid_and_extract_hand(diag: Diag, dict_of_alerts: Dict[BidPosition, BidExplanations], verbose=False):
@@ -54,8 +97,8 @@ def bid_and_extract_hand(diag: Diag, dict_of_alerts: Dict[BidPosition, BidExplan
 def generate_alerts(check_point: int):
     dict_of_alerts: Dict[BidPosition, BidExplanations] = {}
 
-    # with open('dev_alerts', 'rb') as f:
-    #     dict_of_alerts = pickle.load(f)
+    with open('C:/Users/lucbe/OneDrive/Documents/Bridge/alerts.pickle', 'rb') as f:
+        dict_of_alerts = pickle.load(f)
 
     while True:
         start = time.time()
@@ -65,7 +108,7 @@ def generate_alerts(check_point: int):
         end = time.time()
         print('{} diags alerts saved in {} seconds. Current number of sequence {}'.format(
             check_point, end-start, len(dict_of_alerts)))
-        with open('dev_alerts', 'wb') as f:
+        with open('C:/Users/lucbe/OneDrive/Documents/Bridge/alerts.pickle', 'wb') as f:
             pickle.dump(dict_of_alerts, f, pickle.HIGHEST_PROTOCOL)
 
 
@@ -146,7 +189,7 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
 
     if two_suiter_proba > 0.95:
         if len(long_suits) == 2:
-            return "Two suiter : {}".format(suits_text)
+            return "{}".format(suits_text)
         if len(long_suits) == 1 and len(short_suits) == 1 and suits_length_alert_as_dict[short_suits[0]]["usual_max_length"] <= 1:
             return "Splinter : {}".format(suits_text)
         if len(long_suits) == 1:
@@ -173,7 +216,7 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
     return "{}".format(suits_text)
 
 
-def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str:
+def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str|None:
     if bid_explanation.n_samples >= 5:
         # print("Number of samples : {}".format(bid_explanation.n_samples))
         hcp_text = generete_hcp_alert(bid_explanation=bid_explanation)
@@ -182,8 +225,18 @@ def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str
             hcp_text, "\n" if length_text else "", length_text)
         return final_text
 
-    return ""
+    return None
+
+
+def request_from_pickle_file(str_sequence: List[str]):
+    with open('C:/Users/lucbe/OneDrive/Documents/Bridge/alerts.pickle', 'rb') as f:
+        dict_of_alerts: Dict[BidPosition, BidExplanations] = pickle.load(f)
+
+    position = BidPosition(str_sequence, [False, False])
+    print(dict_of_alerts[position])
 
 
 if __name__ == "__main__":
-    generate_alerts(100)
+    # generate_alerts(100)
+    # request_from_pickle_file(["2N","PASS","3S"])
+    print(manual_alert(["PASS", "PASS", "1S"]))

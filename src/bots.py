@@ -309,6 +309,12 @@ class BotLead:
                 expected_tricks=np.mean(tricks[:, i, 0]),
                 p_make_contract=np.mean(tricks[:, i, 1])
             ))
+            print(Card_.get_from_52(deck52.card32to52(card_i)))
+            print((tricks[:, i, 0]))
+            print(np.mean((tricks[:, i, 0])))
+            print(tricks[:, i, 1])
+            print(np.mean(tricks[:, i, 1]))
+            pass
         candidate_cards = sorted(
             candidate_cards, key=lambda c: c.p_make_contract)
 

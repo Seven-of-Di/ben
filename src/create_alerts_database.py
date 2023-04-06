@@ -3,8 +3,9 @@ from sqlitedict import SqliteDict
 import hashlib
 from typing import Dict
 from alert_utils import BidPosition, BidExplanations
-from generate_alerts import generate_alert_from_bid_explanation
+from generate_alerts import generate_alert_from_bid_explanation,manual_alert
 import pickle5 as pickle
+# import pickle
 import numpy as np
 import json
 from itertools import islice
@@ -32,8 +33,12 @@ def chunks(data):
 
 for chunk in chunks(dict_of_alerts):
     for bid_position in chunk:
-        alert = generate_alert_from_bid_explanation(chunk[bid_position])
+        alert = manual_alert(bid_position.sequence)
+        if alert != None:
+            db[bid_position.to_hex()] = alert
+            continue
 
+        alert = generate_alert_from_bid_explanation(chunk[bid_position])
         if alert != None:
             db[bid_position.to_hex()] = alert
 

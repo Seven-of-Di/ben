@@ -17,10 +17,11 @@ from score_calculation import calculate_score
 from Board import Board
 import git
 
-NEW_BIDDING_TIME : List[float] = [0,0]
-OLD_BIDDING_TIME : List[float] = [0,0]
-NEW_CARD_TIME : List[float] = [0,0]
-OLD_CARD_TIME: List[float]  = [0,0]
+NEW_BIDDING_TIME: List[float] = [0, 0]
+OLD_BIDDING_TIME: List[float] = [0, 0]
+NEW_CARD_TIME: List[float] = [0, 0]
+OLD_CARD_TIME: List[float] = [0, 0]
+
 
 def from_lin_to_request(lin_str: str, card_to_remove_after: Card_ | None = None, bid_to_remove_after: str | None = None):
     if card_to_remove_after is not None and bid_to_remove_after is not None:
@@ -105,7 +106,7 @@ def from_lin_to_request(lin_str: str, card_to_remove_after: Card_ | None = None,
         turn_to_play = leader
 
     return json.dumps({
-        "hand": diag.hands[turn_to_play].print_as_pbn(),
+        "hand": diag.hands[turn_to_play].print_as_pbn() if turn_to_play != dealer.offset(2) else diag.hands[declarer].print_as_pbn(),
         "dummy_hand": diag.hands[declarer.offset(2)].print_as_pbn(),
         "dealer": dealer.abbreviation(),
         "vuln": vul_str,
@@ -147,28 +148,27 @@ def run_tests():
 
 
 def send_request(type_of_action: str, data: Dict, direction: Direction, open_room: bool):
-    new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (not open_room and direction in [Direction.EAST,Direction.WEST])
+    new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (
+        not open_room and direction in [Direction.EAST, Direction.WEST])
     port = "http://localhost:{}".format("8081" if new_ben_called else "8082")
     start = time.time()
     res = requests.post('{}/{}'.format(port, type_of_action), json=data)
     request_time = time.time()-start
-    if type_of_action=="play_card" :
-        if new_ben_called :
-            NEW_CARD_TIME[0]+=request_time
-            NEW_CARD_TIME[1]+=1
-        else :
-            OLD_CARD_TIME[0]+=request_time
-            OLD_CARD_TIME[1]+=1
-    elif type_of_action=="place_bid" :
-        if new_ben_called :
-            NEW_BIDDING_TIME[0]+=request_time
-            NEW_BIDDING_TIME[1]+=1
-        else :
-            OLD_BIDDING_TIME[0]+=request_time
-            OLD_BIDDING_TIME[1]+=1
+    if type_of_action == "play_card":
+        if new_ben_called:
+            NEW_CARD_TIME[0] += request_time
+            NEW_CARD_TIME[1] += 1
+        else:
+            OLD_CARD_TIME[0] += request_time
+            OLD_CARD_TIME[1] += 1
+    elif type_of_action == "place_bid":
+        if new_ben_called:
+            NEW_BIDDING_TIME[0] += request_time
+            NEW_BIDDING_TIME[1] += 1
+        else:
+            OLD_BIDDING_TIME[0] += request_time
+            OLD_BIDDING_TIME[1] += 1
 
-
-    
     print(res.json())
     return res.json()
 
@@ -334,19 +334,33 @@ def count_average_hcp() :
     print(len(boards))
     print(average_hcp_per_dir)
 
+def count_average_hcp():
+    with open("./test_data/10K_ranked_deals.pbn") as f:
+        boards = f.read().strip("\n").split("\n\n")
+        deals: List[Deal] = [Deal.from_pbn(board) for board in boards]
+    hcp_per_dir = {dir: 0 for dir in Direction}
+    for deal in deals:
+        for dir in Direction:
+            hcp_per_dir[dir] += deal.diag.hands[dir].hcp()
+    average_hcp_per_dir = {dir: total_hcp /
+                           len(deals) for dir, total_hcp in hcp_per_dir.items()}
+    print(len(boards))
+    print(average_hcp_per_dir)
+
+
 def run_tm_btwn_ben_versions(force_same_sequence: bool = False, force_same_lead: bool = False, force_same_card_play: bool = False):
     with open("./test_data/test_data.pbn") as f:
         boards = f.read().strip("\n").split("\n\n")
         deals: List[Deal] = [Deal.from_pbn(board) for board in boards]
-        
-
 
     for deal in deals:
         deal.diag = Diag.generate_random()
         pbn = run_deal_on_both_rooms(
             deal, force_same_sequence, force_same_lead, force_same_card_play)
-        print("New Ben times average : bidding : {},carding : {}".format(NEW_BIDDING_TIME[0]/NEW_BIDDING_TIME[1],NEW_CARD_TIME[0]/NEW_CARD_TIME[1]))
-        print("Old Ben times average : bidding : {},carding : {}".format(OLD_BIDDING_TIME[0]/OLD_BIDDING_TIME[1],OLD_CARD_TIME[0]/OLD_CARD_TIME[1]))
+        print("New Ben times average : bidding : {},carding : {}".format(
+            NEW_BIDDING_TIME[0]/NEW_BIDDING_TIME[1], NEW_CARD_TIME[0]/NEW_CARD_TIME[1]))
+        print("Old Ben times average : bidding : {},carding : {}".format(
+            OLD_BIDDING_TIME[0]/OLD_BIDDING_TIME[1], OLD_CARD_TIME[0]/OLD_CARD_TIME[1]))
         with open("./test_data/{}.pbn".format("First test table"), "a") as f:
             f.write("\n{}".format(pbn))
 
@@ -387,8 +401,8 @@ if __name__ == "__main__":
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))
     # load_test_pbn("c4f380988fc67c0fe6e5f4bc5502d67a3b45d2c0.pbn")
-    link = r"https://play.intobridge.com/hand?lin=pn%7CBen,Ben,Ben,Etha%7Cmd%7C1SAQ643HAD532CKT64,SK2HJ4DQJ98CAQ853,SJT97HQ632DAK6C92,S85HKT9875DT74CJ7%7Cah%7CBoard%203%7Cmb%7C1S%7Cmb%7C2C%7Cmb%7C3C%7Cmb%7Cp%7Cmb%7C4S%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CDQ%7Cpc%7CDK%7Cpc%7CD4%7Cpc%7CD3%7Cpc%7CH2%7Cpc%7CH5%7Cpc%7CHA%7Cpc%7CHJ%7Cpc%7CD2%7Cpc%7CD8%7Cpc%7CDA%7Cpc%7CD7%7Cpc%7CH3%7Cpc%7CH9%7Cpc%7CS6%7Cpc%7CH4%7Cpc%7CSA%7Cpc%7CSK%7Cpc%7CS7%7Cpc%7CS5%7Cpc%7CS3%7Cpc%7CS2%7Cpc%7CS9%7Cpc%7CS8%7Cpc%7CH6%7Cpc%7CH7%7Cpc%7CS4%7Cpc%7CC3%7Cpc%7CD5%7Cpc%7CD9%7Cpc%7CD6%7Cpc%7CDT%7Cpc%7CHK%7Cpc%7CSQ%7Cpc%7CC5%7Cpc%7CHQ%7Cpc%7CC6%7Cpc%7CCQ%7Cpc%7CC2%7Cpc%7CC7%7Cpc%7CCA%7Cpc%7CC9%7Cpc%7CCJ%7Cpc%7CC4%7Cpc%7CC8%7Cpc%7CST%7Cpc%7CH8%7Cpc%7CCT%7Cpc%7CSJ%7Cpc%7CHT%7Cpc%7CCK%7Cpc%7CDJ%7Cmc%7C10%7Csv%7Ce%7C"
-    print(from_lin_to_request(link, Card_.from_str("SA")))
+    link = r"https://play.intobridge.com/hand?lin=pn%7CBen,Etha,Ben,Ben%7Cmd%7C3SAJ986HAK5D9764C8,SQ543H97642D5CT76,SKT2HQJTD82CAKQJ9,S7H83DAKQJT3C5432%7Cah%7CBoard%201%7Cmb%7C1N%7Cmb%7C2C%7Cmb%7C2H%7Cmb%7Cp%7Cmb%7C2S%7Cmb%7Cp%7Cmb%7C3D%7Cmb%7Cp%7Cmb%7C3S%7Cmb%7Cp%7Cmb%7C3N%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CC4%7Cpc%7CC8%7Cpc%7CCT%7Cpc%7CCQ%7Cpc%7CCA%7Cpc%7CC2%7Cpc%7CD4%7Cpc%7CC7%7Cpc%7CCK%7Cpc%7CC3%7Cpc%7CD6%7Cpc%7CC6%7Cpc%7CCJ%7Cpc%7CC5%7Cpc%7CD7%7Cpc%7CH2%7Cpc%7CC9%7Cpc%7CD3%7Cpc%7CD9%7Cpc%7CH4%7Cpc%7CHT%7Cpc%7CH3%7Cpc%7CH5%7Cpc%7CH6%7Cpc%7CHJ%7Cpc%7CH8%7Cpc%7CHK%7Cpc%7CH7%7Cpc%7CS9%7Cpc%7CS3%7Cpc%7CSK%7Cpc%7CS7%7Cpc%7CHQ%7Cpc%7CDT%7Cpc%7CHA%7Cpc%7CH9%7Cpc%7CSA%7Cpc%7CS4%7Cpc%7CS2%7Cpc%7CDJ%7Cpc%7CSJ%7Cpc%7CSQ%7Cpc%7CST%7Cpc%7CDK%7Cpc%7CD5%7Cpc%7CD2%7Cpc%7CDQ%7Cpc%7CS6%7Cpc%7CDA%7Cpc%7CS8%7Cpc%7CS5%7Cpc%7CD8%7Cmc%7C10%7C"
+    print(from_lin_to_request(link, Card_.from_str("CA")))
 
     # print(from_lin_to_request(link, None))
     # count_average_hcp()

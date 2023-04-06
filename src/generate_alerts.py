@@ -8,8 +8,9 @@ from bidding import bidding
 from nn.models import Models
 import conf
 import os
-from utils import Direction, PlayerHand, Suit, Diag
+from utils import Direction, PlayerHand, Suit, Diag, BiddingSuit
 from alert_utils import BidExplanations, BidPosition
+from SequenceAtom import Bid
 import pickle
 
 
@@ -18,6 +19,48 @@ MODELS = Models.from_conf(conf.load(DEFAULT_MODEL_CONF))
 
 
 diags = [Diag.generate_random() for _ in range(100)]
+
+
+def manual_alert(seq_str: List[str]) -> str | None:
+    if len(seq_str) == seq_str.count("PASS"):
+        return "0-11 hcp"
+    if not(seq_str[-1] != "PASS" and len(seq_str)-seq_str.count("PASS") == 1):
+        return None
+    bid = Bid.from_str(seq_str[-1])
+    if not bid <= Bid.from_str("3S"):
+        return None
+    if bid == Bid(1, BiddingSuit.CLUBS):
+        return "Better minor, 12+hcp,3+!C"
+    if bid == Bid(1, BiddingSuit.DIAMONDS):
+        return "Better minor, 12+hcp,3+!D"
+    if bid == Bid(1, BiddingSuit.HEARTS):
+        return "5th major, 12+hcp,5+!H"
+    if bid == Bid(1, BiddingSuit.SPADES):
+        return "5th major, 12+hcp,5+!S"
+    if bid == Bid(1, BiddingSuit.NO_TRUMP):
+        return "15-17 hcp balanced"
+    if bid == Bid(2, BiddingSuit.CLUBS):
+        return "Any strong hand, 21+hcp"
+    if bid == Bid(2, BiddingSuit.DIAMONDS):
+        return "Natural preempt, 6-10 hcp, 6!D"
+    if bid == Bid(2, BiddingSuit.HEARTS):
+        return "Natural preempt, 6-10 hcp, 6!H"
+    if bid == Bid(2, BiddingSuit.SPADES):
+        return "Natural preempt, 6-10 hcp, 6!S"
+    if bid == Bid(2, BiddingSuit.NO_TRUMP):
+        return "20-21 hcp balanced"
+    if bid == Bid(2, BiddingSuit.SPADES):
+        return "Natural preempt, 6-10 hcp, 6!S"
+    if bid == Bid(3, BiddingSuit.CLUBS):
+        return "Natural preempt, 6-10 hcp, 7!C"
+    if bid == Bid(3, BiddingSuit.DIAMONDS):
+        return "Natural preempt, 6-10 hcp, 7!D"
+    if bid == Bid(3, BiddingSuit.HEARTS):
+        return "Natural preempt, 6-10 hcp, 7!H"
+    if bid == Bid(3, BiddingSuit.SPADES):
+        return "Natural preempt, 6-10 hcp, 7!S"
+
+    raise Exception
 
 
 def bid_and_extract_hand(diag: Diag, dict_of_alerts: Dict[BidPosition, BidExplanations], verbose=False):
@@ -54,8 +97,8 @@ def bid_and_extract_hand(diag: Diag, dict_of_alerts: Dict[BidPosition, BidExplan
 def generate_alerts(check_point: int):
     dict_of_alerts: Dict[BidPosition, BidExplanations] = {}
 
-    # with open('dev_alerts', 'rb') as f:
-    #     dict_of_alerts = pickle.load(f)
+    with open('C:/Users/lucbe/OneDrive/Documents/Bridge/alerts.pickle', 'rb') as f:
+        dict_of_alerts = pickle.load(f)
 
     while True:
         start = time.time()
@@ -65,7 +108,7 @@ def generate_alerts(check_point: int):
         end = time.time()
         print('{} diags alerts saved in {} seconds. Current number of sequence {}'.format(
             check_point, end-start, len(dict_of_alerts)))
-        with open('dev_alerts', 'wb') as f:
+        with open('C:/Users/lucbe/OneDrive/Documents/Bridge/alerts.pickle', 'wb') as f:
             pickle.dump(dict_of_alerts, f, pickle.HIGHEST_PROTOCOL)
 
 
@@ -82,16 +125,12 @@ def generate_usual_alert_from_dict(dic: Dict, ascending: bool) -> int:
 
 
 def generete_hcp_alert(bid_explanation: BidExplanations) -> str:
-    strict_minimum_hcp = bid_explanation.min_hcp
-    strict_maximum_hcp = bid_explanation.max_hcp
     usual_minimum_hcp = generate_usual_alert_from_dict(
         bid_explanation.hcp_distribution, ascending=True)
     usual_maximum_hcp = generate_usual_alert_from_dict(
         bid_explanation.hcp_distribution, ascending=False)
-    minimum_text = str(strict_minimum_hcp) if strict_minimum_hcp == usual_minimum_hcp else "({}){}".format(
-        strict_minimum_hcp, usual_minimum_hcp)
-    maximum_text = str(strict_maximum_hcp) if strict_maximum_hcp == usual_maximum_hcp else "{}({})".format(
-        usual_maximum_hcp, strict_maximum_hcp)
+    minimum_text = str(usual_minimum_hcp)
+    maximum_text = str(usual_maximum_hcp)
     return "{}-{}hcp".format(minimum_text, maximum_text)
 
 
@@ -112,26 +151,12 @@ def generate_suit_length_alert_as_dict(bid_explanation: BidExplanations, suit: S
     }
 
 
-def print_suit_max_length(usual_max_length: int, strict_max_length: int, usual_min_length: int, strict_min_length: int, suit: Suit) -> str:
-    strict_min_length = 0 if strict_min_length == 1 else strict_min_length
+def print_suit_max_length(usual_max_length: int, usual_min_length: int,  suit: Suit) -> str:
     usual_min_length = 0 if usual_min_length == 1 else usual_min_length
-    max_parenthesis = usual_max_length != strict_max_length
-    min_parenthesis = usual_min_length != strict_min_length
-    if min_parenthesis and max_parenthesis:
-        return "({}){}-{}({}){}|".format(strict_min_length, usual_min_length, usual_max_length, strict_max_length, suit.symbol())
-    if min_parenthesis:
-        return "({}){}-{}{}|".format(strict_min_length, usual_min_length, usual_max_length, suit.symbol())
-    if max_parenthesis:
-        return "{}-{}({}){}|".format(usual_min_length, usual_max_length, strict_max_length, suit.symbol())
-    if usual_max_length == usual_min_length:
-        return "{}{}|".format(strict_max_length, suit.symbol())
-    return "{}-{}{}|".format(strict_min_length, strict_max_length, suit.symbol())
+    return "{}-{}{}|".format(usual_min_length, usual_max_length, suit.symbol())
 
 
-def print_suit_min_length(usual_min_length: int, strict_min_length: int, suit: Suit) -> str:
-    min_parenthesis = usual_min_length != strict_min_length
-    if min_parenthesis:
-        return "({}){}+{}|".format(strict_min_length, usual_min_length, suit.symbol())
+def print_suit_min_length(usual_min_length: int, suit: Suit) -> str:
     return "{}+{}|".format(usual_min_length, suit.symbol())
 
 
@@ -148,12 +173,12 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
             "usual_min_length"] >= 4 or suits_length_alert_as_dict[s]["strict_min_length"] >= 3
         if print_max_length:
             short_suits.append(s)
-            suits_text += print_suit_max_length(usual_max_length=suits_length_alert_as_dict[s]["usual_max_length"], strict_max_length=suits_length_alert_as_dict[s]["strict_max_length"],
-                                                usual_min_length=suits_length_alert_as_dict[s]["usual_min_length"], strict_min_length=suits_length_alert_as_dict[s]["strict_min_length"], suit=s)
+            suits_text += print_suit_max_length(
+                usual_max_length=suits_length_alert_as_dict[s]["usual_max_length"], usual_min_length=suits_length_alert_as_dict[s]["usual_min_length"],  suit=s)
         elif print_min_length:
             long_suits.append(s)
             suits_text += print_suit_min_length(
-                usual_min_length=suits_length_alert_as_dict[s]["usual_min_length"], strict_min_length=suits_length_alert_as_dict[s]["strict_min_length"], suit=s)
+                usual_min_length=suits_length_alert_as_dict[s]["usual_min_length"], suit=s)
     suits_text = suits_text[:-1] if suits_text else suits_text
 
     player_hands = [PlayerHand.from_pbn(pbn_hand)
@@ -163,38 +188,35 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
     two_suiter_proba = two_suiter_mask.count(True)/len(two_suiter_mask)
 
     if two_suiter_proba > 0.95:
-        is_sure = two_suiter_proba == 1
         if len(long_suits) == 2:
-            return "{}two suiter, with {}".format("Usually " if not is_sure else "", suits_text)
+            return "{}".format(suits_text)
         if len(long_suits) == 1 and len(short_suits) == 1 and suits_length_alert_as_dict[short_suits[0]]["usual_max_length"] <= 1:
-            return "{}splinter, with {}".format("Usually " if not (is_sure and suits_length_alert_as_dict[short_suits[0]]["strict_max_length"] <= 1) else "", suits_text)
+            return "Splinter : {}".format(suits_text)
         if len(long_suits) == 1:
-            return "{}two suiter, with {} and another unkown suit".format("Usually " if not is_sure else "", suits_text)
+            return "Two suiter : {} and another".format(suits_text)
         else:
-            return "{}unknown two suiter, {}".format("Usually " if not is_sure else "", suits_text)
+            return "Unknown two suiter".format()
 
     six_card_mask = [player_hand.ordered_pattern(
     )[0] >= 6 for player_hand in player_hands]
     six_card_proba = six_card_mask.count(True)/len(six_card_mask)
 
     if six_card_proba >= 0.95:
-        is_sure = six_card_proba == 1
         if len(long_suits) == 1:
-            return "{}one suiter, with {}".format("Usually " if not is_sure else "", suits_text)
+            return "{}".format(suits_text)
         else:
-            return "{}unknown one suiter {}".format("Usually " if not is_sure else "", suits_text)
+            return "Unknown one suiter {}".format(suits_text)
 
     five_card_mask = [player_hand.ordered_pattern(
     )[0] >= 5 for player_hand in player_hands]
     five_card_proba = five_card_mask.count(True)/len(five_card_mask)
     if five_card_proba == 0.95 and len(long_suits) == 0:
-        is_sure = five_card_proba == 1
-        return "{}an unkown five card + suit {}".format("Usually " if not is_sure else "", suits_text)
+        return "An unkown five card + suit {}".format("suits_text")
 
     return "{}".format(suits_text)
 
 
-def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str:
+def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str|None:
     if bid_explanation.n_samples >= 5:
         # print("Number of samples : {}".format(bid_explanation.n_samples))
         hcp_text = generete_hcp_alert(bid_explanation=bid_explanation)
@@ -203,8 +225,18 @@ def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str
             hcp_text, "\n" if length_text else "", length_text)
         return final_text
 
-    return ""
+    return None
+
+
+def request_from_pickle_file(str_sequence: List[str]):
+    with open('C:/Users/lucbe/OneDrive/Documents/Bridge/alerts.pickle', 'rb') as f:
+        dict_of_alerts: Dict[BidPosition, BidExplanations] = pickle.load(f)
+
+    position = BidPosition(str_sequence, [False, False])
+    print(dict_of_alerts[position])
 
 
 if __name__ == "__main__":
-    generate_alerts(100)
+    generate_alerts(1000)
+    # request_from_pickle_file(["2N","PASS","3S"])
+    # print(manual_alert(["PASS", "PASS", "1S"]))

@@ -193,7 +193,7 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
         if len(long_suits) == 1 and len(short_suits) == 1 and suits_length_alert_as_dict[short_suits[0]]["usual_max_length"] <= 1:
             return "Splinter : {}".format(suits_text)
         if len(long_suits) == 1:
-            return "Two suiter : {} and another".format(suits_text)
+            return "{} and 4+ other".format(suits_text)
         else:
             return "Unknown two suiter".format()
 

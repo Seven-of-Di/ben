@@ -237,6 +237,6 @@ def request_from_pickle_file(str_sequence: List[str]):
 
 
 if __name__ == "__main__":
-    # generate_alerts(100)
+    generate_alerts(1000)
     # request_from_pickle_file(["2N","PASS","3S"])
-    print(manual_alert(["PASS", "PASS", "1S"]))
+    # print(manual_alert(["PASS", "PASS", "1S"]))

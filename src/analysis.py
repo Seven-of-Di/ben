@@ -6,6 +6,7 @@ import deck52
 from bidding import bidding
 from objects import BidResp, Card, CardResp
 
+
 class CardByCard:
 
     def __init__(self, dealer, vuln, hands, auction, play, models):
@@ -28,18 +29,20 @@ class CardByCard:
         self.analyze_play()
 
     def analyze_bidding(self):
-        bidder_bots = [bots.BotBid(self.vuln, hand, self.models) for hand in self.hands]
+        bidder_bots = [bots.BotBid(self.vuln, hand, self.models)
+                       for hand in self.hands]
 
         player_i = self.dealer_i
         bid_i = self.dealer_i
 
         while bid_i < len(self.padded_auction):
             bid_resp = bidder_bots[player_i].bid(self.padded_auction[:bid_i])
-            self.bid_responses.append(BidResp(self.padded_auction[bid_i], bid_resp.candidates, bid_resp.samples))
+            self.bid_responses.append(
+                BidResp(self.padded_auction[bid_i], bid_resp.candidates, bid_resp.samples))
             type(self).bid_eval(self.padded_auction[bid_i], bid_resp)
             bid_i += 1
             player_i = (player_i + 1) % 4
-    
+
     @staticmethod
     def bid_eval(bid, bid_resp):
         qualifier = '.'
@@ -63,20 +66,23 @@ class CardByCard:
         contract = bidding.get_contract(self.padded_auction)
         decl_i = bidding.get_decl_i(contract)
 
-        bot_lead = bots.BotLead(self.vuln, self.hands[(decl_i + 1) % 4], self.models)
+        bot_lead = bots.BotLead(
+            self.vuln, self.hands[(decl_i + 1) % 4], self.models)
 
         card_resp = bot_lead.lead(self.padded_auction)
-        card_resp = CardResp(Card.from_symbol(self.play[0]), card_resp.candidates, card_resp.samples)
+        card_resp = CardResp(Card.from_symbol(
+            self.play[0]), card_resp.candidates, card_resp.samples)
         self.card_responses.append(card_resp)
         self.cards[card_resp.card.symbol()] = card_resp
 
     def analyze_play(self):
         contract = bidding.get_contract(self.padded_auction)
-        
+
         level = int(contract[0])
         strain_i = bidding.get_strain_i(contract)
         decl_i = bidding.get_decl_i(contract)
-        is_decl_vuln = [self.vuln[0], self.vuln[1], self.vuln[0], self.vuln[1]][decl_i]
+        is_decl_vuln = [self.vuln[0], self.vuln[1],
+                        self.vuln[0], self.vuln[1]][decl_i]
 
         lefty_hand = self.hands[(decl_i + 1) % 4]
         dummy_hand = self.hands[(decl_i + 2) % 4]
@@ -84,10 +90,14 @@ class CardByCard:
         decl_hand = self.hands[decl_i]
 
         card_players = [
-            bots.CardPlayer(self.models.player_models, 0, lefty_hand, dummy_hand, contract, is_decl_vuln),
-            bots.CardPlayer(self.models.player_models, 1, dummy_hand, decl_hand, contract, is_decl_vuln),
-            bots.CardPlayer(self.models.player_models, 2, righty_hand, dummy_hand, contract, is_decl_vuln),
-            bots.CardPlayer(self.models.player_models, 3, decl_hand, dummy_hand, contract, is_decl_vuln)
+            bots.CardPlayer(self.models.player_models, 0,
+                            lefty_hand, dummy_hand, contract, is_decl_vuln),
+            bots.CardPlayer(self.models.player_models, 1,
+                            dummy_hand, decl_hand, contract, is_decl_vuln),
+            bots.CardPlayer(self.models.player_models, 2,
+                            righty_hand, dummy_hand, contract, is_decl_vuln),
+            bots.CardPlayer(self.models.player_models, 3,
+                            decl_hand, dummy_hand, contract, is_decl_vuln)
         ]
 
         player_cards_played = [[] for _ in range(4)]
@@ -112,19 +122,23 @@ class CardByCard:
             for player_i in map(lambda x: x % 4, range(leader_i, leader_i + 4)):
                 if trick_i == 0 and player_i == 0:
                     for i, card_player in enumerate(card_players):
-                        card_player.set_card_played(trick_i=trick_i, leader_i=leader_i, i=0, card=opening_lead)
+                        card_player.set_card_played(
+                            trick_i=trick_i, leader_i=leader_i, i=0, card=opening_lead)
                     continue
-                
+
                 rollout_states = None
                 if isinstance(card_players[player_i], bots.CardPlayer):
-                    rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits, current_trick, 50, self.padded_auction, card_players[player_i].hand.reshape((-1, 32)), self.vuln, self.models)
-                    if player_i==3 and trick_i==2 :
+                    rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits,
+                                                                current_trick, 50, self.padded_auction, card_players[player_i].hand_32.reshape((-1, 32)), self.vuln, self.models)
+                    if player_i == 3 and trick_i == 2:
                         with np.printoptions(threshold=np.inf):
-                            print(card_players[player_i].x_play[0,2,:32])
+                            print(card_players[player_i].x_play[0, 2, :32])
                             # print(card_players[player_i].x_play)
-                card_resp = card_players[player_i].play_card(trick_i, leader_i, current_trick52, rollout_states)
+                card_resp = card_players[player_i].play_card(
+                    trick_i, leader_i, current_trick52, rollout_states)
 
-                card_resp = CardResp(Card.from_symbol(self.play[card_i]), card_resp.candidates, card_resp.samples)
+                card_resp = CardResp(Card.from_symbol(
+                    self.play[card_i]), card_resp.candidates, card_resp.samples)
                 self.card_responses.append(card_resp)
                 self.cards[self.play[card_i]] = card_resp
 
@@ -133,12 +147,13 @@ class CardByCard:
                 card_i += 1
                 if card_i >= len(self.play):
                     return
-                
+
                 card52 = card_resp.card.code()
                 card = deck52.card52to32(card52)
 
                 for card_player in card_players:
-                    card_player.set_card_played(trick_i=trick_i, leader_i=leader_i, i=player_i, card=card)
+                    card_player.set_card_played(
+                        trick_i=trick_i, leader_i=leader_i, i=player_i, card=card)
 
                 current_trick.append(card)
 
@@ -152,7 +167,8 @@ class CardByCard:
                     card_players[1].set_public_card_played52(card52)
 
                 # update shown out state
-                if card // 8 != current_trick[0] // 8:  # card is different suit than lead card
+                # card is different suit than lead card
+                if card // 8 != current_trick[0] // 8:
                     shown_out_suits[player_i].add(current_trick[0] // 8)
 
             # sanity checks after trick completed
@@ -170,19 +186,23 @@ class CardByCard:
             # initializing for the next trick
             # initialize hands
             for i, card in enumerate(current_trick):
-                card_players[(leader_i + i) % 4].x_play[:, trick_i + 1, 0:32] = card_players[(leader_i + i) % 4].x_play[:, trick_i, 0:32]
-                card_players[(leader_i + i) % 4].x_play[:, trick_i + 1, 0 + card] -= 1
+                card_players[(leader_i + i) % 4].x_play[:, trick_i + 1,
+                                                        0:32] = card_players[(leader_i + i) % 4].x_play[:, trick_i, 0:32]
+                card_players[(leader_i + i) % 4].x_play[:,
+                                                        trick_i + 1, 0 + card] -= 1
 
             # initialize public hands
             for i in (0, 2, 3):
-                card_players[i].x_play[:, trick_i + 1, 32:64] = card_players[1].x_play[:, trick_i + 1, 0:32]
-            card_players[1].x_play[:, trick_i + 1, 32:64] = card_players[3].x_play[:, trick_i + 1, 0:32]
+                card_players[i].x_play[:, trick_i + 1,
+                                       32:64] = card_players[1].x_play[:, trick_i + 1, 0:32]
+            card_players[1].x_play[:, trick_i + 1,
+                                   32:64] = card_players[3].x_play[:, trick_i + 1, 0:32]
 
             for card_player in card_players:
                 # initialize last trick
                 for i, card in enumerate(current_trick):
                     card_player.x_play[:, trick_i + 1, 64 + i * 32 + card] = 1
-                    
+
                 # initialize last trick leader
                 card_player.x_play[:, trick_i + 1, 288 + leader_i] = 1
 
@@ -196,10 +216,13 @@ class CardByCard:
             for i, card_player in enumerate(card_players):
                 assert np.min(card_player.x_play[:, trick_i + 1, 0:32]) == 0
                 assert np.min(card_player.x_play[:, trick_i + 1, 32:64]) == 0
-                assert np.sum(card_player.x_play[:, trick_i + 1, 0:32], axis=1) == 13 - trick_i - 1
-                assert np.sum(card_player.x_play[:, trick_i + 1, 32:64], axis=1) == 13 - trick_i - 1
+                assert np.sum(
+                    card_player.x_play[:, trick_i + 1, 0:32], axis=1) == 13 - trick_i - 1
+                assert np.sum(
+                    card_player.x_play[:, trick_i + 1, 32:64], axis=1) == 13 - trick_i - 1
 
-            trick_winner = (leader_i + deck52.get_trick_winner_i(current_trick52, (strain_i - 1) % 5)) % 4
+            trick_winner = (
+                leader_i + deck52.get_trick_winner_i(current_trick52, (strain_i - 1) % 5)) % 4
             trick_won_by.append(trick_winner)
 
             if trick_winner % 2 == 0:
@@ -212,8 +235,7 @@ class CardByCard:
             # update cards shown
             for i, card in enumerate(current_trick):
                 player_cards_played[(leader_i + i) % 4].append(card)
-            
+
             leader_i = trick_winner
             current_trick = []
             current_trick52 = []
-

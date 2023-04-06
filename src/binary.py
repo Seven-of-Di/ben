@@ -1,6 +1,6 @@
 import numpy as np
 
-from bidding import bidding
+from bidding import bidding 
 
 ## input
 #   0:32  player hand
@@ -183,7 +183,7 @@ def get_auction_binary(n_steps, auction_input, hand_ix, hand, vuln):
     X[:,:,7:39] = hand.reshape((n_samples, 1, 32))
 
     step_i = 0
-    s_all = np.arange(n_samples, dtype=np.int)
+    s_all = np.arange(n_samples, dtype=int)
     while step_i < n_steps:
         lho_bid = auction[:, bid_i - 3] if bid_i - 3 >= 0 else bidding.BID2ID['PAD_START']
         partner_bid = auction[:, bid_i - 2] if bid_i - 2 >= 0 else bidding.BID2ID['PAD_START']
@@ -202,6 +202,8 @@ def get_auction_binary(n_steps, auction_input, hand_ix, hand, vuln):
 
 def get_lead_binary(auction, hand, binfo, vuln):
     contract = bidding.get_contract(auction)
+    if contract is None :
+        raise Exception("Contract should not be None if asking for a lead")
 
     level = int(contract[0])
     strain = bidding.get_strain_i(contract)

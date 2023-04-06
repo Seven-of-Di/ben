@@ -1,7 +1,8 @@
+from copy import deepcopy
 import time
 import random
 import pprint
-from typing import List
+from typing import Dict, List
 
 import numpy as np
 
@@ -11,27 +12,31 @@ import nn.player as player
 import deck52
 import sample
 import scoring
+import nn.models
 
 from objects import BidResp, CandidateBid, Card, CardResp, CandidateCard
 from bidding import bidding
 from bidding.binary import parse_hand_f
 
 from util import hand_to_str, expected_tricks, p_make_contract
-from utils import Card_, multiple_list_comparaison, Direction, PlayerHand,BiddingSuit
+from utils import Card_, multiple_list_comparaison, Direction, PlayerHand, BiddingSuit, Rank, Suit, TOTAL_DECK, Diag
 from human_carding import play_real_card
 from PlayRecord import PlayRecord
 
+DDS = ddsolver.DDSolver()
 
 class BotBid:
 
-    def __init__(self, vuln, hand_str, models):
+    def __init__(self, vuln, hand_str, models : nn.models.Models, human_model : bool = False):
         self.vuln = vuln
         self.hand_str = hand_str
         self.hand = binary.parse_hand_f(32)(hand_str)
         self.min_candidate_score = 0.15
+        self.getting_doubled = False
 
-        self.model = models.bidder_model
-        self.state = models.bidder_model.zero_state
+
+        self.model = models.bidder_model if not human_model else models.wide_bidder_model
+        self.state = models.bidder_model.zero_state if not human_model else models.wide_bidder_model.zero_state
         self.lead_model = models.lead
         self.sd_model = models.sd_model
 
@@ -56,6 +61,9 @@ class BotBid:
     def restful_bid(self, auction) -> BidResp:
         start = time.time()
         auction = [element for element in auction if element != "PAD_START"]
+        self.getting_doubled = len(auction)>=3 and ((auction[-3:]==['X',"PASS","PASS"] )  or auction[-2:]==['XX',"PASS"])
+        self.min_candidate_score = 0.01 if self.getting_doubled else self.min_candidate_score 
+
         position_minus_1 = len(auction) % 4
 
         for i in range(len(auction)//4):
@@ -77,7 +85,8 @@ class BotBid:
 
         hands_np = self.sample_hands(auction)
 
-        samples = [PlayerHand.from_pbn(hand_to_str(hands_np[i, (len(auction)-1)%4, :])) for i in range(hands_np.shape[0])] 
+        samples = [PlayerHand.from_pbn(hand_to_str(
+            hands_np[i, (len(auction)-1) % 4, :])) for i in range(hands_np.shape[0])]
 
         # for dir, sample in samples.items() :
         #     print(dir,":")
@@ -101,7 +110,7 @@ class BotBid:
         hands_np = self.sample_hands(auction)
 
         samples = []
-        for i in range(min(5,hands_np.shape[0])):
+        for i in range(min(5, hands_np.shape[0])):
             samples.append('%s %s %s %s' % (
                 hand_to_str(hands_np[i, 0, :]),
                 hand_to_str(hands_np[i, 1, :]),
@@ -300,6 +309,12 @@ class BotLead:
                 expected_tricks=np.mean(tricks[:, i, 0]),
                 p_make_contract=np.mean(tricks[:, i, 1])
             ))
+            # print(Card_.get_from_52(deck52.card32to52(card_i)))
+            # print((tricks[:, i, 0]))
+            # print(np.mean((tricks[:, i, 0])))
+            # print(tricks[:, i, 1])
+            # print(np.mean(tricks[:, i, 1]))
+            pass
         candidate_cards = sorted(
             candidate_cards, key=lambda c: c.p_make_contract)
 
@@ -395,11 +410,11 @@ class BotLead:
 
 class CardPlayer:
 
-    def __init__(self, player_models, player_i, hand_str, public_hand_str, contract, is_decl_vuln, play_record : PlayRecord, declarer : Direction,player_direction : Direction):
+    def __init__(self, player_models, player_i, hand_str, public_hand_str, contract, is_decl_vuln, play_record: PlayRecord, declarer: Direction, player_direction: Direction, dummy_hand: PlayerHand, player_hand: PlayerHand, debug:bool = False):
         self.player_models = player_models
         self.model = player_models[player_i]
         self.player_i = player_i
-        self.hand = parse_hand_f(32)(hand_str).reshape(32)
+        self.hand_32 = parse_hand_f(32)(hand_str).reshape(32)
         self.hand52 = parse_hand_f(52)(hand_str).reshape(52)
         self.public52 = parse_hand_f(52)(public_hand_str).reshape(52)
         self.contract = contract
@@ -410,21 +425,27 @@ class CardPlayer:
         self.verbose = False
         self.level = int(contract[0])
         self.strain_i = bidding.get_strain_i(contract)
-        self.trump=BiddingSuit.from_str(contract[1])
+        self.trump = BiddingSuit.from_str(contract[1])
         self.play_record = play_record
-        self.direction = player_direction
+        self.current_trick_as_dict = play_record.record[-1].cards if play_record.record and len(
+            play_record.record[-1]) != 4 else {}
+        self.player_direction = player_direction
         self.declarer = declarer
+        self.dummy_hand: PlayerHand = dummy_hand
+        self.hand: PlayerHand = player_hand
+        self.hidden_cards = [
+            card for card in deepcopy(TOTAL_DECK) if card not in dummy_hand.cards+player_hand.cards+play_record.as_unordered_one_dimension_list()]
 
         self.init_x_play(parse_hand_f(32)(public_hand_str),
                          self.level, self.strain_i)
 
         self.score_by_tricks_taken = [scoring.score(
             self.contract, self.is_decl_vuln, n_tricks) for n_tricks in range(14)]
-        self.dd = ddsolver.DDSolver()
+        self.debug = debug
 
     def init_x_play(self, public_hand, level, strain_i):
         self.x_play = np.zeros((1, 13, 298))
-        binary.BinaryInput(self.x_play[:, 0, :]).set_player_hand(self.hand)
+        binary.BinaryInput(self.x_play[:, 0, :]).set_player_hand(self.hand_32)
         binary.BinaryInput(self.x_play[:, 0, :]).set_public_hand(public_hand)
         self.x_play[:, 0, 292] = level
         self.x_play[:, 0, 293+strain_i] = 1
@@ -455,102 +476,93 @@ class CardPlayer:
 
     def play_card(self, trick_i, leader_i, current_trick52, players_states, probabilities_list):
         current_trick = [deck52.card52to32(c) for c in current_trick52]
-        card52_dd = self.next_card52(
+        card52_dd = self.get_cards_dd_evaluation(
             trick_i, leader_i, current_trick52, players_states, probabilities_list)
         card_resp = self.next_card(
             trick_i, leader_i, current_trick, players_states, card52_dd)
 
         return card_resp
 
-    def next_card52(self, trick_i, leader_i, current_trick52, players_states, probabilities_list):
+    def get_cards_dd_evaluation(self, trick_i, leader_i, current_trick52, players_states, probabilities_list):
+
+        def create_diag_from_32(array_of_array_32: List[np.ndarray], pips: List[Card_]):
+            diag = deepcopy(base_diag)
+            pips_as_dict = {
+                s: [card.rank for card in pips if card.suit == s] for s in Suit}
+            for dir in not_visible_hands_directions:
+                diag.hands[dir] = create_hand_from_32(
+                    array_of_array_32[dir.to_player_i(self.declarer)].reshape((4, 8)), pips_as_dict, dir)
+            return diag
+
+        def create_hand_from_32(array_of_8_suits: np.ndarray, pips: Dict[Suit, List[Rank]], dir: Direction):
+            return PlayerHand({suit: create_suit_from_8(array_8, pips[suit], suit, dir) for array_8, suit in zip(array_of_8_suits, Suit)})
+
+        def create_suit_from_8(array_8, pip: List[Rank], suit: Suit, dir: Direction):
+            current_trick_card = None if dir not in self.current_trick_as_dict else self.current_trick_as_dict[
+                dir]
+            high_ranks = [Rank.from_integer(int(i))
+                          for i in np.nonzero(array_8[:-1])[0] if current_trick_card is None or Card_(suit, Rank.from_integer(int(i))) != current_trick_card]
+            try:
+                low_ranks = [pip.pop()
+                             for _ in range(int(array_8[-1])-(1 if current_trick_card is not None and current_trick_card.rank <= Rank.SEVEN and current_trick_card.suit == suit else 0))]
+            except:
+                raise Exception("Pop from empty ?")
+            return high_ranks+low_ranks
+
+        def get_base_diag() -> Diag:
+
+            base_diag = Diag({dir: PlayerHand({s: [] for s in Suit})
+                              for dir in Direction}, autocomplete=False)
+            if self.declarer.offset(2) == self.player_direction:
+                base_diag.hands[self.player_direction] = self.dummy_hand
+                base_diag.hands[self.declarer] = self.hand
+            else:
+                base_diag.hands[self.player_direction] = self.hand
+                base_diag.hands[self.declarer.offset(2)] = self.dummy_hand
+
+            return base_diag
+
+        base_diag = get_base_diag()
+        not_visible_hands_directions = [dir for dir in Direction if dir not in [
+            self.player_direction, self.declarer.offset(2) if self.player_direction != self.declarer.offset(2) else self.declarer]]
+        low_hidden_cards = [
+            c for c in self.hidden_cards if c.rank <= Rank.SEVEN]
         n_samples = players_states[0].shape[0]
+        samples_as_diag = [create_diag_from_32([players_states[j][i, trick_i, :32] for j in range(
+            4)], low_hidden_cards) for i in range(n_samples)]
 
-        unavailable_cards = set(list(np.nonzero(self.hand52)[
-                                0]) + list(np.nonzero(self.public52)[0]) + current_trick52)
 
-        pips = [
-            [c for c in range(7, 13) if i*13+c not in unavailable_cards] for i in range(4)
-        ]
+        if self.play_record.record is None:
+            raise Exception("Play record should not be none")
 
-        symbols = 'AKQJT98765432'
+        leader_i = (leader_i + self.declarer.offset(2).value) % 4
+        dd_solved = DDS.solve(
+            self.strain_i, leader_i, current_trick52, [diag.print_as_pbn(first_direction=Direction.WEST) for diag in samples_as_diag])
+        # dd_solved = self.reverse_dds_results(unoriented_dd_solved) if reverse_results else unoriented_dd_solved
 
-        current_trick_players = [(leader_i + i) %
-                                 4 for i in range(len(current_trick52))]
-
-        hands_pbn = []
-        for i in range(n_samples):
-            hands = [None, None, None, None]
-            for j in range(4):
-                random.shuffle(pips[j])
-            pip_i = [0, 0, 0, 0]
-
-            hands[self.player_i] = deck52.hand_to_str(self.hand52)
-            hands[[1, 3, 1, 1][self.player_i]] = deck52.hand_to_str(self.public52)
-
-            for j in range(4):
-                if hands[j] is None:
-                    suits = []
-                    hand32 = players_states[j][i,
-                                               trick_i, :32].copy().astype(int)
-
-                    # if already played to the trick, subtract the card from the hand
-                    if j in current_trick_players:
-                        card_of_j = current_trick52[current_trick_players.index(
-                            j)]
-                        hand32[deck52.card52to32(card_of_j)] -= 1
-                    hand_suits = hand32.reshape((4, 8))
-
-                    for suit_i in range(4):
-                        suit = []
-                        for card_i in np.nonzero(hand_suits[suit_i])[0]:
-                            if card_i < 7:
-                                if suit_i * 13 + card_i not in current_trick52:
-                                    suit.append(card_i)
-                            else:
-                                for _ in range(hand_suits[suit_i, card_i]):
-                                    try:
-                                        if pip_i[suit_i] < len(pips[suit_i]):
-                                            pip = pips[suit_i][pip_i[suit_i]]
-
-                                            if suit_i * 13 + pip not in current_trick52:
-                                                suit.append(pip)
-                                                pip_i[suit_i] += 1
-                                    except:
-                                        import pdb
-                                        pdb.set_trace()
-
-                        suits.append(''.join([symbols[card]
-                                     for card in sorted(suit)]))
-                    hands[j] = '.'.join(suits)
-
-            hands_pbn.append('W:' + ' '.join(hands))
-
-        # for hand,p in zip(hands_pbn,probabilities_list) :
-        #     print(round(p,6),":",hand)
-        dd_solved = self.dd.solve(
-            self.strain_i, leader_i, current_trick52, hands_pbn)
-        superiors_cards = multiple_list_comparaison(dd_results_dict=dd_solved)
-
-        if all(trick == self.tricks_left for trick in dd_solved[superiors_cards[0]]):
+        if any([all([trick == self.tricks_left for trick in card_res]) for card_res in dd_solved.values()]):
             self.check_claim = True
 
-        # print("Before removing")
-        # print(dd_solved)
-        # print(ddsolver.expected_tricks(dd_solved))
-        # dd_solved = remove_same_indexes(dd_solved,{card:values for card,values in dd_solved.items() if card in superiors_cards})
-        # print("After removing")
-        # print(dd_solved)
         card_tricks = ddsolver.expected_tricks(dd_solved, probabilities_list)
         card_ev = self.get_card_ev(dd_solved)
 
         card_result = {}
         for key in dd_solved.keys():
-            # print(Card_.get_from_52(key),dd_solved[key])
-            card_result[key] = (card_tricks[key], card_ev[key],
-                                (True if key in superiors_cards else False))
+            card_result[key] = (card_tricks[key], card_ev[key])
 
-        # for key, value in (card_result.items()):
-        #     print(Card_.get_from_52(key), value)
+        if self.debug :
+            for i,(diag, p), in enumerate(zip(samples_as_diag, probabilities_list)):
+                string = ""
+                for card,res in dd_solved.items() :
+                    string += "{}:{},".format(Card_.get_from_52(card),res[i])
+                print(round(p, 5), ":", diag.print_as_pbn(
+                    first_direction=Direction.WEST),string)
+            for key, value in (card_result.items()):
+                print(Card_.get_from_52(key), value)
+            print("   {}".format([i for i in range(len(samples_as_diag))]))
+            for key, value in (dd_solved.items()):
+                print(Card_.get_from_52(key), value)
+            
 
         return card_result
 
@@ -568,6 +580,9 @@ class CardPlayer:
             card_ev[card] = ev_sum / len(future_tricks)
 
         return card_ev
+
+    def reverse_dds_results(self, dd_solved: Dict[int, List[int]]):
+        return {card: [self.tricks_left-old_res for old_res in res] for card, res in dd_solved.items()}
 
     def next_card_softmax(self, trick_i):
         return player.follow_suit(
@@ -590,7 +605,7 @@ class CardPlayer:
 
         candidate_cards: List[CandidateCard] = []
 
-        for card52, (e_tricks, e_score, superior_card) in card_dd.items():
+        for card52, (e_tricks, e_score) in card_dd.items():
             card32 = deck52.card52to32(card52)
 
             candidate_cards.append(CandidateCard(
@@ -612,7 +627,7 @@ class CardPlayer:
 
         candidate_cards = sorted(candidate_cards, key=lambda c: (
             c.expected_score, c.insta_score + random.random() / 10000), reverse=True)
-        best_card_resp : CardResp = CardResp(
+        best_card_resp: CardResp = CardResp(
             card=candidate_cards[0].card, candidates=candidate_cards, samples=samples)
         # for candidate_card in candidate_cards :
         #     print(candidate_card.to_dict())
@@ -635,5 +650,6 @@ class CardPlayer:
 
         # Play some human carding
         hand = PlayerHand.from_pbn(deck52.hand_to_str(self.hand52))
-        valid_cards = [Card_.from_str(c.card.symbol()) for c in card_with_max_insta_score.keys()]
-        return str(play_real_card(hand,valid_cards,self.trump,self.play_record,self.direction,self.declarer))
+        valid_cards = [Card_.from_str(c.card.symbol())
+                       for c in card_with_max_insta_score.keys()]
+        return str(play_real_card(hand, valid_cards, self.trump, self.play_record, self.player_direction, self.declarer))

@@ -8,12 +8,17 @@ services:
   app:
     build: .
     user: root
-    command: python api.py
+    # command: python api.py
+    command: python create_alerts_database.py
     ports:
       - 8081:8081
     volumes:
       - ./src:/app/src
+      - ./build/alerts_db:/var/lib/alerts_db
+      - ./build/alerts_prep:/var/lib/alerts_prep
     environment:
+      - ALERTS_DB_FILE=/var/lib/alerts_db/alert_database_1.sqlite
+      - ALERTS_PREP_FILE=/var/lib/alerts_prep/alerts.pickle
       - TF_CPP_MIN_LOG_LEVEL=3
       - PORT=5001
       - DEBUG=true

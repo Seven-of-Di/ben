@@ -3,9 +3,11 @@ from copy import deepcopy
 
 from enum import Enum
 from functools import total_ordering
+import json
 from random import shuffle
 from typing import Dict, Iterable, List, Optional
 import numpy as np
+from bidding import bidding
 
 """
 Common bridge concepts such as Cardinal Direction, Suit, and Card Rank represented as Enums
@@ -19,6 +21,8 @@ VULNERABILITIES = {
     'E-W': [False, True],
     'Both': [True, True]
 }
+
+VULS_REVERSE = {tuple(v): k for k, v in VULNERABILITIES.items()}
 
 
 @total_ordering
@@ -34,6 +38,14 @@ class Direction(Enum):
     @classmethod
     def from_str(cls, direction_str: str) -> Direction:
         return Direction(cls.__from_str_map__[direction_str.upper()])
+
+    def to_player_i(self, declarer: Direction) -> int:
+        return {
+            Direction.NORTH: {Direction.NORTH: 3, Direction.EAST: 0, Direction.SOUTH: 1, Direction.WEST: 2},
+            Direction.EAST: {Direction.NORTH: 2, Direction.EAST: 3, Direction.SOUTH: 0, Direction.WEST: 1},
+            Direction.SOUTH: {Direction.NORTH: 1, Direction.EAST: 2, Direction.SOUTH: 3, Direction.WEST: 0},
+            Direction.WEST: {Direction.NORTH: 0, Direction.EAST: 1, Direction.SOUTH: 2, Direction.WEST: 3},
+        }[declarer][self]
 
     def __lt__(self, other: Direction) -> bool:
         return self.value < other.value
@@ -76,6 +88,14 @@ class Direction(Enum):
         raise Exception("???")
 
 
+SPADES_SYMBOL = '!s'
+HEARTS_SYMBOL = '!h'
+DIAMONDS_SYMBOL = '!d'
+CLUBS_SYMBOL = '!c'
+
+symbol_map = dict()
+
+
 @total_ordering
 class Suit(Enum):
     SPADES = 0
@@ -84,9 +104,10 @@ class Suit(Enum):
     CLUBS = 3
 
     __from_str_map__ = {"S": SPADES, "H": HEARTS, "D": DIAMONDS,
-                        "C": CLUBS, '♠': SPADES, '♥': HEARTS, '♦': DIAMONDS, '♣': CLUBS}
+                        "C": CLUBS, '!s': SPADES, '!h': HEARTS, '!d': DIAMONDS, '!c': CLUBS}
 
-    __to_symbol__ = {SPADES: '♠', HEARTS: '♥', DIAMONDS: '♦', CLUBS: '♣'}
+    __to_symbol__ = {SPADES: SPADES_SYMBOL, HEARTS: HEARTS_SYMBOL,
+                     DIAMONDS: DIAMONDS_SYMBOL, CLUBS: CLUBS_SYMBOL}
 
     __4_colors__ = {SPADES: 'blue', HEARTS: 'red',
                     DIAMONDS: 'orange', CLUBS: 'green'}
@@ -202,9 +223,9 @@ class BiddingSuit(Enum):
 
     __from_str_map__ = {"S": SPADES, "H": HEARTS,
                         "D": DIAMONDS, "C": CLUBS, "N": NO_TRUMP, "NT": NO_TRUMP,
-                        '♠': SPADES, '♥': HEARTS, '♦': DIAMONDS, '♣': CLUBS, 'SA': NO_TRUMP}
-    __to_symbol__ = {SPADES: '♠', HEARTS: '♥',
-                     DIAMONDS: '♦', CLUBS: '♣', NO_TRUMP: "NT"}
+                        '!s': SPADES, '!h': HEARTS, '!d': DIAMONDS, '!c': CLUBS, 'SA': NO_TRUMP}
+    __to_symbol__ = {SPADES: SPADES_SYMBOL, HEARTS: HEARTS_SYMBOL,
+                     DIAMONDS: DIAMONDS_SYMBOL, CLUBS: CLUBS_SYMBOL, NO_TRUMP: "NT"}
     __4_colors__ = {SPADES: 'blue', HEARTS: 'red',
                     DIAMONDS: 'orange', CLUBS: 'green', NO_TRUMP: 'black'}
     __to_strain__ = {NO_TRUMP: 0, SPADES: 1, HEARTS: 2, DIAMONDS: 3, CLUBS: 4}
@@ -231,6 +252,17 @@ class BiddingSuit(Enum):
 
     def strain(self):
         return self.__to_strain__[self.value]
+
+    def rank(self):
+        if self == BiddingSuit.CLUBS:
+            return 0
+        if self == BiddingSuit.DIAMONDS:
+            return 1
+        if self == BiddingSuit.HEARTS:
+            return 2
+        if self == BiddingSuit.SPADES:
+            return 3
+        return 4
 
     @classmethod
     def from_str(cls, bidding_suit_str: str) -> BiddingSuit:
@@ -387,7 +419,8 @@ class PlayerHand():
         return f"PlayerHand({repr_str})"
 
     def __str__(self) -> str:
-        suit_arrays = [['♠'], ['♥'], ['♦'], ['♣']]
+        suit_arrays = [[SPADES_SYMBOL], [HEARTS_SYMBOL],
+                       [DIAMONDS_SYMBOL], [CLUBS_SYMBOL]]
         for card in sorted(self.cards, reverse=True):
             suit_arrays[card.suit.value].append(repr(card))
         repr_str = " ".join("".join(suit) for suit in suit_arrays)
@@ -420,6 +453,46 @@ class PlayerHand():
 
     def hcp(self) -> int:
         return sum(self.suit_hcp(suit) for suit in Suit)
+
+    def pattern(self) -> List[int]:
+        """Return [nb ♠,nb ♥,nb ♦,nb ♣]"""
+        return list(reversed([len(self.suits[suit]) for suit in Suit]))
+
+    def ordered_pattern(self) -> List[int]:
+        """Return the pattern with the longest suit on the left, the shortest on the right"""
+        return sorted(self.pattern(), reverse=True)
+
+    def balanced(self) -> bool:
+        if self.ordered_pattern() in [[4, 4, 3, 2], [4, 3, 3, 3], [5, 3, 3, 2]]:
+            return True
+        return False
+
+    def semi_balanced(self) -> bool:
+        if self.ordered_pattern() in [[6, 3, 2, 2], [5, 4, 2, 2]]:
+            return True
+        return False
+
+    def unbalanced(self) -> bool:
+        return not (self.balanced() or self.semi_balanced())
+
+    def one_suiter(self) -> bool:
+        if self.ordered_pattern()[0] <= 5:
+            return False
+        if self.ordered_pattern()[0] == 6 and self.ordered_pattern()[1] == 4:
+            return False
+        if self.ordered_pattern()[1] == 5:
+            return False
+        return True
+
+    def two_suiter(self):
+        if self.balanced() or self.three_suiter() or self.one_suiter():
+            return False
+        return True
+
+    def three_suiter(self) -> bool:
+        if self.ordered_pattern()[2] == 4:
+            return True
+        return False
 
 
 TOTAL_DECK: List[Card_] = []
@@ -512,12 +585,8 @@ class Diag():
                 self.hands[direction].__str__() + "\n"
         return string
 
-    def print_as_pbn(self) -> str:
-        string = 'N:'
-        for dir in Direction:
-            string += self.hands[dir].print_as_pbn()
-            string += " "
-        return string[:-1]+''
+    def print_as_pbn(self, first_direction=Direction.NORTH) -> str:
+        return "{}:{}".format(first_direction.abbreviation(), " ".join([self.hands[dir.offset(first_direction.value)].print_as_pbn() for dir in Direction]))
 
     def is_valid(self):
         try:
@@ -607,55 +676,18 @@ def convert_to_probability(x):
     return np.divide(x, sum_of_proba)
 
 
-def from_lin_to_request(lin_str: str, remove_after: Card_ | None):
-    lin_str = lin_str.replace("%7C", '|')
-    lin_str = lin_str.split("=", maxsplit=1)[1]
-    lin_str = lin_str.split("|", maxsplit=3)[3]
-    diag_lin = lin_str[2:].split("|")[0]
-    diag = Diag.init_from_lin(diag_lin)
-    lin_str = lin_str[2:].split("|", maxsplit=1)[1]
-    lin_str = "".join([substr for substr in lin_str.split("7C")])
-
-    def bidding_el_to_pbn(el: str):
-        trans_dict = {
-            "d": "X",
-            "r": "XX",
-            "p": "PASS"
-        }
-        return el if el not in trans_dict else trans_dict[el]
-
-    bidding_str = lin_str.split("mb|")[1:-1]
-    bidding_str = [bidding_el_to_pbn(el.strip("|")) for el in bidding_str]
-    print(bidding_str)
-
-    play_str = lin_str.split("pc")[1:-1]
-    play = [s.strip("|") for s in play_str]
-    n = 4
-    play_as_list_of_list = [play[i * n:(i + 1) * n]
-                            for i in range((len(play) + n - 1) // n)]
-    if remove_after is None:
-        print(play_as_list_of_list)
-        print(diag.print_as_pbn())
-        return
-
-    play_index_cut = 13
-    exit = False
-    for i in range(len(play_as_list_of_list)):
-        for card_str in play_as_list_of_list[i]:
-            if Card_.from_str(card_str) == remove_after:
-                play_index_cut = i
-                diag.remove(Card_.from_str(card_str))
-                exit = True
-                break
-            diag.remove(Card_.from_str(card_str))
-        if exit:
-            break
-
-    print(play_as_list_of_list[:play_index_cut+1])
-    print(diag.print_as_pbn())
+def board_number_to_vul(board: int) -> str:
+    board %= 17
+    if board in [1, 8, 11, 14]:
+        return "None"
+    if board in [2, 5, 12, 15]:
+        return "N-S"
+    if board in [3, 6, 9, 16]:
+        return "E-W"
+    if board in [4, 7, 10, 13]:
+        return "Both"
+    raise Exception("Probably an int wasn't provided ? idk")
 
 
 if __name__ == "__main__":
-    link = r"https://stage.intobridge.com/hand?lin=pn|Bourricot,Ben,Ben,Ben|md|4SAKQ3HQ4DT7CAK976,S4HT9862DQ52CT432,S862HA7DAKJ986CQ5,SJT975HKJ53D43CJ8|ah|Board%2014|mb|p|mb|1C|mb|p|mb|1D|mb|p|mb|2S|mb|p|mb|3D|mb|p|mb|3N|mb|p|mb|4N|mb|p|mb|p|mb|p|pc|HT|pc|H7|pc|HK|pc|H4|pc|H3|pc|HQ|pc|H2|pc|HA|pc|CQ|pc|C8|pc|C6|pc|CT|pc|C5|pc|CJ|pc|CA|pc|C2|pc|CK|pc|C3|pc|S2|pc|D3|pc|C9|pc|C4|pc|D6|pc|S5|pc|C7|pc|D2|pc|D8|pc|S7|pc|SA|pc|S4|pc|S6|pc|S9|pc|SK|pc|H6|pc|S8|pc|ST|pc|SQ|pc|H8|pc|D9|pc|SJ|mc|12|"
-    from_lin_to_request(link, Card_.from_str("HA"))
-    # from_lin_to_request(link, None)
+    print(Direction.SOUTH.to_player_i(Direction.WEST))

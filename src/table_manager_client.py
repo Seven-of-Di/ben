@@ -16,6 +16,7 @@ from objects import Card
 
 SEATS = ['North', 'East', 'South', 'West']
 
+
 class TMClient:
 
     def __init__(self, name, seat, models):
@@ -51,7 +52,7 @@ class TMClient:
             self.dummy_hand_str = await self.receive_dummy()
 
         await self.play(auction, opening_lead52)
-        
+
     async def connect(self, host, port):
         self.reader, self.writer = await asyncio.open_connection(host, port)
 
@@ -60,7 +61,7 @@ class TMClient:
         await self.send_message(f'Connecting "{self.name}" as {self.seat} using protocol version 18.\n')
 
         print(await self.receive_line())
-        
+
         await self.send_message(f'{self.seat} ready for teams.\n')
 
         print(await self.receive_line())
@@ -68,7 +69,7 @@ class TMClient:
     async def bidding(self):
         vuln = [self.vuln_ns, self.vuln_ew]
         bot = bots.BotBid(vuln, self.hand_str, self.models)
-        
+
         auction = ['PAD_START'] * self.dealer_i
 
         player_i = self.dealer_i
@@ -92,13 +93,13 @@ class TMClient:
         contract = bidding.get_contract(auction)
         decl_i = bidding.get_decl_i(contract)
         on_lead_i = (decl_i + 1) % 4
-        
+
         if self.player_i == on_lead_i:
             # this player is on lead
             print(await self.receive_line())
 
             bot_lead = bots.BotLead(
-                [self.vuln_ns, self.vuln_ew], 
+                [self.vuln_ns, self.vuln_ew],
                 self.hand_str,
                 self.models
             )
@@ -113,13 +114,16 @@ class TMClient:
 
     async def play(self, auction, opening_lead52):
         contract = bidding.get_contract(auction)
-        
+
         level = int(contract[0])
         strain_i = bidding.get_strain_i(contract)
         decl_i = bidding.get_decl_i(contract)
-        is_decl_vuln = [self.vuln_ns, self.vuln_ew, self.vuln_ns, self.vuln_ew][decl_i]
-        cardplayer_i = (self.player_i + 3 - decl_i) % 4  # lefty=0, dummy=1, righty=2, decl=3
-        print(f'play starts. decl_i={decl_i}, player_i={self.player_i}, cardplayer_i={cardplayer_i}')
+        is_decl_vuln = [self.vuln_ns, self.vuln_ew,
+                        self.vuln_ns, self.vuln_ew][decl_i]
+        # lefty=0, dummy=1, righty=2, decl=3
+        cardplayer_i = (self.player_i + 3 - decl_i) % 4
+        print(
+            f'play starts. decl_i={decl_i}, player_i={self.player_i}, cardplayer_i={cardplayer_i}')
 
         own_hand_str = self.hand_str
         dummy_hand_str = '...'
@@ -130,20 +134,24 @@ class TMClient:
         lefty_hand_str = '...'
         if cardplayer_i == 0:
             lefty_hand_str = own_hand_str
-        
+
         righty_hand_str = '...'
         if cardplayer_i == 2:
             righty_hand_str = own_hand_str
-        
+
         decl_hand_str = '...'
         if cardplayer_i == 3:
             decl_hand_str = own_hand_str
 
         card_players = [
-            bots.CardPlayer(self.models.player_models, 0, lefty_hand_str, dummy_hand_str, contract, is_decl_vuln),
-            bots.CardPlayer(self.models.player_models, 1, dummy_hand_str, decl_hand_str, contract, is_decl_vuln),
-            bots.CardPlayer(self.models.player_models, 2, righty_hand_str, dummy_hand_str, contract, is_decl_vuln),
-            bots.CardPlayer(self.models.player_models, 3, decl_hand_str, dummy_hand_str, contract, is_decl_vuln)
+            bots.CardPlayer(self.models.player_models, 0, lefty_hand_str,
+                            dummy_hand_str, contract, is_decl_vuln),
+            bots.CardPlayer(self.models.player_models, 1,
+                            dummy_hand_str, decl_hand_str, contract, is_decl_vuln),
+            bots.CardPlayer(self.models.player_models, 2, righty_hand_str,
+                            dummy_hand_str, contract, is_decl_vuln),
+            bots.CardPlayer(self.models.player_models, 3,
+                            decl_hand_str, dummy_hand_str, contract, is_decl_vuln)
         ]
 
         player_cards_played = [[] for _ in range(4)]
@@ -168,12 +176,13 @@ class TMClient:
             for player_i in map(lambda x: x % 4, range(leader_i, leader_i + 4)):
                 print('player {}'.format(player_i))
 
-                nesw_i = (decl_i + player_i + 1) % 4 # N=0, E=1, S=2, W=3
-                
+                nesw_i = (decl_i + player_i + 1) % 4  # N=0, E=1, S=2, W=3
+
                 if trick_i == 0 and player_i == 0:
                     print('skipping')
                     for i, card_player in enumerate(card_players):
-                        card_player.set_card_played(trick_i=trick_i, leader_i=leader_i, i=0, card=opening_lead)
+                        card_player.set_card_played(
+                            trick_i=trick_i, leader_i=leader_i, i=0, card=opening_lead)
 
                     continue
 
@@ -182,33 +191,38 @@ class TMClient:
                     # it's dummy's turn and this is the declarer
                     print('decls turn for dummy')
 
-                    rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits, current_trick, 100, auction, card_players[player_i].hand.reshape((-1, 32)), [self.vuln_ns, self.vuln_ew], self.models)
+                    rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits,
+                                                                current_trick, 100, auction, card_players[player_i].hand_32.reshape((-1, 32)), [self.vuln_ns, self.vuln_ew], self.models)
 
-                    card_resp = card_players[player_i].play_card(trick_i, leader_i, current_trick52, rollout_states)
+                    card_resp = card_players[player_i].play_card(
+                        trick_i, leader_i, current_trick52, rollout_states)
 
                     card52 = card_resp.card.code()
-                    
-                    await self.send_card_played(card_resp.card.symbol()) 
+
+                    await self.send_card_played(card_resp.card.symbol())
                 elif player_i == cardplayer_i and player_i != 1:
                     # we are on play
                     print(f'{player_i} turn')
 
-                    rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits, current_trick, 100, auction, card_players[player_i].hand.reshape((-1, 32)), [self.vuln_ns, self.vuln_ew], self.models)
+                    rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits,
+                                                                current_trick, 100, auction, card_players[player_i].hand_32.reshape((-1, 32)), [self.vuln_ns, self.vuln_ew], self.models)
 
-                    card_resp = card_players[player_i].play_card(trick_i, leader_i, current_trick52, rollout_states)
+                    card_resp = card_players[player_i].play_card(
+                        trick_i, leader_i, current_trick52, rollout_states)
 
                     card52 = card_resp.card.code()
-                    
-                    await self.send_card_played(card_resp.card.symbol()) 
+
+                    await self.send_card_played(card_resp.card.symbol())
                 else:
                     # another player is on play, we just have to wait for their card
                     card52_symbol = await self.receive_card_play_for(nesw_i, trick_i)
                     card52 = Card.from_symbol(card52_symbol).code()
-                
+
                 card = deck52.card52to32(card52)
-                
+
                 for card_player in card_players:
-                    card_player.set_card_played(trick_i=trick_i, leader_i=leader_i, i=player_i, card=card)
+                    card_player.set_card_played(
+                        trick_i=trick_i, leader_i=leader_i, i=player_i, card=card)
 
                 current_trick.append(card)
 
@@ -222,7 +236,8 @@ class TMClient:
                     card_players[1].set_public_card_played52(card52)
 
                 # update shown out state
-                if card // 8 != current_trick[0] // 8:  # card is different suit than lead card
+                # card is different suit than lead card
+                if card // 8 != current_trick[0] // 8:
                     shown_out_suits[player_i].add(current_trick[0] // 8)
 
             # sanity checks after trick completed
@@ -242,19 +257,23 @@ class TMClient:
             # initializing for the next trick
             # initialize hands
             for i, card in enumerate(current_trick):
-                card_players[(leader_i + i) % 4].x_play[:, trick_i + 1, 0:32] = card_players[(leader_i + i) % 4].x_play[:, trick_i, 0:32]
-                card_players[(leader_i + i) % 4].x_play[:, trick_i + 1, 0 + card] -= 1
+                card_players[(leader_i + i) % 4].x_play[:, trick_i + 1,
+                                                        0:32] = card_players[(leader_i + i) % 4].x_play[:, trick_i, 0:32]
+                card_players[(leader_i + i) % 4].x_play[:,
+                                                        trick_i + 1, 0 + card] -= 1
 
             # initialize public hands
             for i in (0, 2, 3):
-                card_players[i].x_play[:, trick_i + 1, 32:64] = card_players[1].x_play[:, trick_i + 1, 0:32]
-            card_players[1].x_play[:, trick_i + 1, 32:64] = card_players[3].x_play[:, trick_i + 1, 0:32]
+                card_players[i].x_play[:, trick_i + 1,
+                                       32:64] = card_players[1].x_play[:, trick_i + 1, 0:32]
+            card_players[1].x_play[:, trick_i + 1,
+                                   32:64] = card_players[3].x_play[:, trick_i + 1, 0:32]
 
             for card_player in card_players:
                 # initialize last trick
                 for i, card in enumerate(current_trick):
                     card_player.x_play[:, trick_i + 1, 64 + i * 32 + card] = 1
-                    
+
                 # initialize last trick leader
                 card_player.x_play[:, trick_i + 1, 288 + leader_i] = 1
 
@@ -268,12 +287,17 @@ class TMClient:
             for i in [cardplayer_i] + ([1] if cardplayer_i == 3 else []):
                 if cardplayer_i == 1:
                     break
-                assert np.min(card_players[i].x_play[:, trick_i + 1, 0:32]) == 0
-                assert np.min(card_players[i].x_play[:, trick_i + 1, 32:64]) == 0
-                assert np.sum(card_players[i].x_play[:, trick_i + 1, 0:32], axis=1) == 13 - trick_i - 1
-                assert np.sum(card_players[i].x_play[:, trick_i + 1, 32:64], axis=1) == 13 - trick_i - 1
+                assert np.min(
+                    card_players[i].x_play[:, trick_i + 1, 0:32]) == 0
+                assert np.min(
+                    card_players[i].x_play[:, trick_i + 1, 32:64]) == 0
+                assert np.sum(
+                    card_players[i].x_play[:, trick_i + 1, 0:32], axis=1) == 13 - trick_i - 1
+                assert np.sum(
+                    card_players[i].x_play[:, trick_i + 1, 32:64], axis=1) == 13 - trick_i - 1
 
-            trick_winner = (leader_i + deck52.get_trick_winner_i(current_trick52, (strain_i - 1) % 5)) % 4
+            trick_winner = (
+                leader_i + deck52.get_trick_winner_i(current_trick52, (strain_i - 1) % 5)) % 4
             trick_won_by.append(trick_winner)
 
             if trick_winner % 2 == 0:
@@ -283,14 +307,16 @@ class TMClient:
                 card_players[1].n_tricks_taken += 1
                 card_players[3].n_tricks_taken += 1
 
-            print('trick52 {} cards={}. won by {}'.format(trick_i, list(map(decode_card, current_trick52)), trick_winner))
+            print('trick52 {} cards={}. won by {}'.format(
+                trick_i, list(map(decode_card, current_trick52)), trick_winner))
 
-            print('trick52 {} cards={}. won by {}'.format(trick_i, list(map(decode_card, current_trick52)), trick_winner))
+            print('trick52 {} cards={}. won by {}'.format(
+                trick_i, list(map(decode_card, current_trick52)), trick_winner))
 
             # update cards shown
             for i, card in enumerate(current_trick):
                 player_cards_played[(leader_i + i) % 4].append(card)
-            
+
             leader_i = trick_winner
             current_trick = []
             current_trick52 = []
@@ -304,7 +330,7 @@ class TMClient:
 
         # play last trick
         for player_i in map(lambda x: x % 4, range(leader_i, leader_i + 4)):
-            nesw_i = (decl_i + player_i + 1) % 4 # N=0, E=1, S=2, W=3
+            nesw_i = (decl_i + player_i + 1) % 4  # N=0, E=1, S=2, W=3
             card52 = None
             if player_i == 1 and cardplayer_i == 3 or player_i == cardplayer_i and player_i != 1:
                 # we are on play
@@ -324,7 +350,8 @@ class TMClient:
         tricks.append(current_trick)
         tricks52.append(current_trick52)
 
-        trick_winner = (leader_i + deck52.get_trick_winner_i(current_trick52, (strain_i - 1) % 5)) % 4
+        trick_winner = (
+            leader_i + deck52.get_trick_winner_i(current_trick52, (strain_i - 1) % 5)) % 4
         trick_won_by.append(trick_winner)
 
         print('last trick')
@@ -349,7 +376,7 @@ class TMClient:
             msg_bid = f'{SEATS[self.player_i]} doubles.\n'
         elif bid == 'XX':
             msg_bid = f'{SEATS[self.player_i]} redoubles.\n'
-        
+
         await self.send_message(msg_bid)
 
     async def receive_card_play_for(self, player_i, trick_i):
@@ -366,7 +393,7 @@ class TMClient:
     async def receive_bid_for(self, player_i):
         msg_ready = f"{SEATS[self.player_i]} ready for {SEATS[player_i]}'s bid.\n"
         await self.send_message(msg_ready)
-        
+
         bid_resp = await self.receive_line()
         bid_resp_parts = bid_resp.strip().split()
 
@@ -418,10 +445,10 @@ class TMClient:
         vuln_ew = vuln_str == 'E/W' or vuln_str == 'Both'
 
         return dealer_i, vuln_ns, vuln_ew, hand_str
-    
+
     @staticmethod
     def parse_hand(s):
-        return s[s.index(':') + 1 : s.rindex('.')] \
+        return s[s.index(':') + 1: s.rindex('.')] \
             .replace(' ', '').replace('-', '').replace('S', '').replace('H', '').replace('D', '').replace('C', '')
 
     async def send_message(self, message: str):
@@ -446,8 +473,8 @@ async def main():
 
     client = TMClient(name, seat, Models.load('../models'))
     await client.connect(host, port)
-    
-    if is_continue:    
+
+    if is_continue:
         await client.receive_line()
 
     await client.send_ready()

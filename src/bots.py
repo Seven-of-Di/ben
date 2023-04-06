@@ -309,11 +309,11 @@ class BotLead:
                 expected_tricks=np.mean(tricks[:, i, 0]),
                 p_make_contract=np.mean(tricks[:, i, 1])
             ))
-            print(Card_.get_from_52(deck52.card32to52(card_i)))
-            print((tricks[:, i, 0]))
-            print(np.mean((tricks[:, i, 0])))
-            print(tricks[:, i, 1])
-            print(np.mean(tricks[:, i, 1]))
+            # print(Card_.get_from_52(deck52.card32to52(card_i)))
+            # print((tricks[:, i, 0]))
+            # print(np.mean((tricks[:, i, 0])))
+            # print(tricks[:, i, 1])
+            # print(np.mean(tricks[:, i, 1]))
             pass
         candidate_cards = sorted(
             candidate_cards, key=lambda c: c.p_make_contract)
@@ -531,8 +531,6 @@ class CardPlayer:
         samples_as_diag = [create_diag_from_32([players_states[j][i, trick_i, :32] for j in range(
             4)], low_hidden_cards) for i in range(n_samples)]
 
-
-        print(self.player_direction)
 
         if self.play_record.record is None:
             raise Exception("Play record should not be none")

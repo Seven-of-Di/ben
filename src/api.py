@@ -10,7 +10,7 @@ from alerting import find_alert
 
 import os
 import sentry_sdk
-from sentry_sdk.integrations.quart import QuartIntegration
+from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 
 from transform_play_card import get_ben_card_play_answer
@@ -23,13 +23,13 @@ import tensorflow.compat.v1 as tf  # type: ignore
 tf.disable_v2_behavior()
 
 sentry_sdk.init(
-    os.environ.get("SENTRY_DSN", ""),
-    integrations=[
-        QuartIntegration()
-    ]
+    dsn=os.environ.get("SENTRY_DSN", ""),
+    environment=os.environ.get("SENTRY_ENVIRONMENT", ""),
+    release=os.environ.get("SENTRY_RELEASE", ""),
 )
 
 app = Quart(__name__)
+app.asgi_app = SentryAsgiMiddleware(app.asgi_app)._run_asgi3
 
 health_checker = HealthChecker(app.logger)
 health_checker.start()

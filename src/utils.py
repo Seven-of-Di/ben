@@ -365,13 +365,17 @@ class PlayerHand():
         return PlayerHand.from_cards(cards)
 
     @staticmethod
-    def from_pbn(string: str) -> PlayerHand:
+    def from_pbn(string: str, pips : Dict[Suit,List[Rank]]={}) -> PlayerHand:
         """Create a hand from a string with the following syntax '752.Q864.84.AT62'"""
         tab_of_suit = string.split('.')
         cards = []
         for index, suit in enumerate(tab_of_suit):
             temp = suit.replace("10", "T").replace("X", "T")
             while temp.find('x') != -1:
+                if pips!= {} :
+                    temp = temp.replace('x', pips[Suit(index)].pop().abbreviation(), 1)
+                    continue
+
                 for rank in Rank:
                     if rank.abbreviation() in temp:
                         continue
@@ -419,8 +423,8 @@ class PlayerHand():
         return f"PlayerHand({repr_str})"
 
     def __str__(self) -> str:
-        suit_arrays = [[SPADES_SYMBOL], [HEARTS_SYMBOL],
-                       [DIAMONDS_SYMBOL], [CLUBS_SYMBOL]]
+        suit_arrays = [["♠"], ["♥"],
+                       ["♦"], ["♣"]]
         for card in sorted(self.cards, reverse=True):
             suit_arrays[card.suit.value].append(repr(card))
         repr_str = " ".join("".join(suit) for suit in suit_arrays)

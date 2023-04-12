@@ -21,6 +21,7 @@ NEW_BIDDING_TIME: List[float] = [0, 0]
 OLD_BIDDING_TIME: List[float] = [0, 0]
 NEW_CARD_TIME: List[float] = [0, 0]
 OLD_CARD_TIME: List[float] = [0, 0]
+boards_with_different_leads = []
 
 
 def from_lin_to_request(lin_str: str, card_to_remove_after: Card_ | None = None, bid_to_remove_after: str | None = None):
@@ -50,7 +51,6 @@ def from_lin_to_request(lin_str: str, card_to_remove_after: Card_ | None = None,
 
     bidding_str = lin_str.split("mb|")[1:-1]
     bidding_str = [bidding_el_to_pbn(el.strip("|")) for el in bidding_str]
-    print(bidding_str)
 
     play_str = lin_str.split("pc")[1:-1]
     play = [s.strip("|") for s in play_str]
@@ -106,7 +106,7 @@ def from_lin_to_request(lin_str: str, card_to_remove_after: Card_ | None = None,
         turn_to_play = leader
 
     return json.dumps({
-        "hand": diag.hands[turn_to_play].print_as_pbn() if turn_to_play != dealer.offset(2) else diag.hands[declarer].print_as_pbn(),
+        "hand": diag.hands[turn_to_play].print_as_pbn() if turn_to_play != declarer.offset(2) else diag.hands[declarer].print_as_pbn(),
         "dummy_hand": diag.hands[declarer.offset(2)].print_as_pbn(),
         "dealer": dealer.abbreviation(),
         "vuln": vul_str,
@@ -299,9 +299,11 @@ def play_full_deal(deal: Deal, force_same_sequence: bool, force_same_lead: bool,
         raise Exception("Leader shouldn't be None")
 
     if force_same_card_play and contract == other_play_record.sequence.calculate_final_contract(dealer=deal.dealer) and other_play_record is not None:
-        play_record = deepcopy(other_play_record)
-        play_record.sequence = sequence
-        return play_record
+        if lead == other_play_record.play_record.as_unordered_one_dimension_list()[0].suit_first_str():
+            play_record = deepcopy(other_play_record)
+            play_record.sequence = sequence
+            return play_record
+        boards_with_different_leads.append(deal.board_number)
 
     return full_card_play(deal, sequence, lead, open_room)
 
@@ -322,17 +324,6 @@ def run_deal_on_both_rooms(deal: Deal, force_same_sequence: bool = False, force_
 
     return "{}\n{}".format(open_room_board.print_as_pbn(open_room=True), closed_room_board.print_as_pbn(open_room=False))
 
-def count_average_hcp() :
-    with open("./test_data/10K_ranked_deals.pbn") as f:
-        boards = f.read().strip("\n").split("\n\n")
-        deals: List[Deal] = [Deal.from_pbn(board) for board in boards]
-    hcp_per_dir = {dir:0 for dir in Direction}
-    for deal in deals :
-        for dir in Direction :
-            hcp_per_dir[dir]+=deal.diag.hands[dir].hcp()
-    average_hcp_per_dir = {dir:total_hcp/len(deals) for dir,total_hcp in hcp_per_dir.items()}
-    print(len(boards))
-    print(average_hcp_per_dir)
 
 def count_average_hcp():
     with open("./test_data/10K_ranked_deals.pbn") as f:
@@ -361,6 +352,8 @@ def run_tm_btwn_ben_versions(force_same_sequence: bool = False, force_same_lead:
             NEW_BIDDING_TIME[0]/NEW_BIDDING_TIME[1], NEW_CARD_TIME[0]/NEW_CARD_TIME[1]))
         print("Old Ben times average : bidding : {},carding : {}".format(
             OLD_BIDDING_TIME[0]/OLD_BIDDING_TIME[1], OLD_CARD_TIME[0]/OLD_CARD_TIME[1]))
+        print("Boards with differents leads : {}".format(
+            boards_with_different_leads))
         with open("./test_data/{}.pbn".format("First test table"), "a") as f:
             f.write("\n{}".format(pbn))
 
@@ -396,13 +389,13 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    # run_tm_btwn_ben_versions(force_same_card_play=True,force_same_lead=True)
+    # run_tm_btwn_ben_versions(force_same_card_play=True,force_same_sequence=True)
     # tests = run_tests()
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))
     # load_test_pbn("c4f380988fc67c0fe6e5f4bc5502d67a3b45d2c0.pbn")
-    link = r"https://play.intobridge.com/hand?lin=pn%7CBen,Etha,Ben,Ben%7Cmd%7C3SAJ986HAK5D9764C8,SQ543H97642D5CT76,SKT2HQJTD82CAKQJ9,S7H83DAKQJT3C5432%7Cah%7CBoard%201%7Cmb%7C1N%7Cmb%7C2C%7Cmb%7C2H%7Cmb%7Cp%7Cmb%7C2S%7Cmb%7Cp%7Cmb%7C3D%7Cmb%7Cp%7Cmb%7C3S%7Cmb%7Cp%7Cmb%7C3N%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CC4%7Cpc%7CC8%7Cpc%7CCT%7Cpc%7CCQ%7Cpc%7CCA%7Cpc%7CC2%7Cpc%7CD4%7Cpc%7CC7%7Cpc%7CCK%7Cpc%7CC3%7Cpc%7CD6%7Cpc%7CC6%7Cpc%7CCJ%7Cpc%7CC5%7Cpc%7CD7%7Cpc%7CH2%7Cpc%7CC9%7Cpc%7CD3%7Cpc%7CD9%7Cpc%7CH4%7Cpc%7CHT%7Cpc%7CH3%7Cpc%7CH5%7Cpc%7CH6%7Cpc%7CHJ%7Cpc%7CH8%7Cpc%7CHK%7Cpc%7CH7%7Cpc%7CS9%7Cpc%7CS3%7Cpc%7CSK%7Cpc%7CS7%7Cpc%7CHQ%7Cpc%7CDT%7Cpc%7CHA%7Cpc%7CH9%7Cpc%7CSA%7Cpc%7CS4%7Cpc%7CS2%7Cpc%7CDJ%7Cpc%7CSJ%7Cpc%7CSQ%7Cpc%7CST%7Cpc%7CDK%7Cpc%7CD5%7Cpc%7CD2%7Cpc%7CDQ%7Cpc%7CS6%7Cpc%7CDA%7Cpc%7CS8%7Cpc%7CS5%7Cpc%7CD8%7Cmc%7C10%7C"
-    print(from_lin_to_request(link, Card_.from_str("CA")))
+    link = r"https://play.intobridge.com/hand?lin=pn|Ben,Ben,Ben,Ben|md|4SQ64HK73DKQJTCAT6,SK98753HQ8D54CK32,SJHA962D862CQJ984,SAT2HJT54DA973C75|ah|Board%2014|mb|p|mb|1N|mb|p|mb|2C|mb|p|mb|2D|mb|p|mb|2N|mb|p|mb|p|mb|p|pc|S7|pc|SJ|pc|SA|pc|S4|pc|ST|pc|S6|pc|S3|pc|C4|pc|S2|pc|SQ|pc|SK|pc|H2|pc|S9|pc|D2|pc|H4|pc|C6|pc|S8|pc|D6|pc|D3|pc|H7|pc|S5|pc|H6|pc|H5|pc|DT|pc|HQ|pc|H9|pc|HT|pc|HK|pc|DJ|pc|D5|pc|D8|pc|DA|pc|D9|pc|DQ|pc|D4|pc|C8|pc|DK|pc|C2|pc|C9|pc|D7|pc|H3|pc|H8|pc|HA|pc|HJ|pc|CQ|pc|C7|pc|CT|pc|CK|pc|C3|pc|CJ|pc|C5|pc|CA|mc|5|"
+    print(from_lin_to_request(link, Card_.from_str("H2")))
 
     # print(from_lin_to_request(link, None))
     # count_average_hcp()

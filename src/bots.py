@@ -22,6 +22,7 @@ from util import hand_to_str, expected_tricks, p_make_contract
 from utils import Card_, multiple_list_comparaison, Direction, PlayerHand, BiddingSuit, Rank, Suit, TOTAL_DECK, Diag
 from human_carding import play_real_card
 from PlayRecord import PlayRecord
+from Sequence import Sequence
 
 DDS = ddsolver.DDSolver()
 
@@ -297,49 +298,54 @@ class BotLead:
         self.sd_model = models.sd_model
 
     def lead(self, auction):
+        contract = bidding.get_contract(auction)
+        if contract is None :
+            raise Exception("Contract should not be None if asking for a lead")
+
+        level = int(contract[0])
+        tricks_to_defeat_contract = 13-(6+level)+1
+        strain = bidding.get_strain_i(contract)
+        
         lead_card_indexes, lead_softmax = self.get_lead_candidates(auction)
-        accepted_samples, tricks = self.simulate_outcomes(
+        accepted_samples = self.get_accepted_samples(
             4096, auction, lead_card_indexes)
 
-        candidate_cards = []
+        samples = []
+
+        base_diag = Diag({d:PlayerHand({s:[] for s in Suit}) for d in Direction})
+        base_diag.hands[Direction.WEST] = PlayerHand.from_pbn(self.hand_str)
+        samples = [deepcopy(base_diag) for i in range(min(100, accepted_samples.shape[0]))]
+        pips = {s:[] for s in Suit}
+        for card in TOTAL_DECK :
+            if card not in base_diag.hands[Direction.WEST].cards and card.rank<=Rank.SEVEN :
+                pips[card.suit].append(card.rank)
+        for i in range(min(100, accepted_samples.shape[0])):
+            temp_pips = deepcopy(pips)
+            samples[i].hands[Direction.NORTH] = PlayerHand.from_pbn(hand_to_str(accepted_samples[i, 0, :]),temp_pips)
+            samples[i].hands[Direction.EAST] = PlayerHand.from_pbn(hand_to_str(accepted_samples[i, 1, :]),temp_pips)
+            samples[i].hands[Direction.SOUTH] = PlayerHand.from_pbn(hand_to_str(accepted_samples[i, 2, :]),temp_pips)
+
+        dd_solved = DDS.solve(strain, 0, [], [diag.print_as_pbn(first_direction=Direction.WEST) for diag in samples])
+        dd_solved = {Card_.get_from_52(k):v for k,v in dd_solved.items()}
+
+        candidate_cards : List[CandidateCard] = []
         for i, card_i in enumerate(lead_card_indexes):
+            x_card = str(Card.from_code(card_i, xcards=True))
+            card = Card_.from_str(x_card) if x_card[1]!="x" else Card_(Suit.from_str(x_card[0]),min(base_diag.hands[Direction.WEST].suits[Suit.from_str(x_card[0])]))
             candidate_cards.append(CandidateCard(
                 card=Card.from_code(card_i, xcards=True),
                 insta_score=lead_softmax[0, card_i],
-                expected_tricks=np.mean(tricks[:, i, 0]),
-                p_make_contract=np.mean(tricks[:, i, 1])
+                p_make_contract=1-sum([1 if v>=tricks_to_defeat_contract else 0 for v in dd_solved[card]])/len(dd_solved[card]),
+                expected_tricks=sum((dd_solved[card]))/len(dd_solved[card])
             ))
-            print(Card_.get_from_52(deck52.card32to52(card_i)))
-            print((tricks[:, i, 0]))
-            print(np.mean((tricks[:, i, 0])))
-            print(tricks[:, i, 1])
-            print(np.mean(tricks[:, i, 1]))
-            pass
         candidate_cards = sorted(
-            candidate_cards, key=lambda c: c.p_make_contract)
+            candidate_cards, key=lambda c: c.p_make_contract if c.p_make_contract!=None else 1)
 
-        opening_lead = candidate_cards[0].card.code()
-
-        if opening_lead % 8 == 7:
-            # it's a pip ~> choose a random one
-            pips_mask = np.array([0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
-            lefty_led_pips = self.hand52.reshape(
-                (4, 13))[opening_lead // 8] * pips_mask
-            opening_lead52 = (opening_lead // 8) * 13 + \
-                random.choice(np.nonzero(lefty_led_pips)[0])
-        else:
-            opening_lead52 = deck52.card32to52(opening_lead)
-
-        samples = []
-        for i in range(min(100, accepted_samples.shape[0])):
-            samples.append('%s %s %s' % (
-                hand_to_str(accepted_samples[i, 0, :]),
-                hand_to_str(accepted_samples[i, 1, :]),
-                hand_to_str(accepted_samples[i, 2, :]),
-            ))
+        # for c in candidate_cards :
+        #     print(c.card,c.p_make_contract)
 
         return CardResp(
-            card=Card.from_code(opening_lead52),
+            card=candidate_cards[0].card,
             candidates=candidate_cards,
             samples=samples
         )
@@ -363,7 +369,7 @@ class BotLead:
 
         return candidates, lead_softmax
 
-    def simulate_outcomes(self, n_samples, auction, lead_card_indexes):
+    def get_accepted_samples(self, n_samples, auction, lead_card_indexes):
         contract = bidding.get_contract(auction)
 
         decl_i = bidding.get_decl_i(contract)
@@ -393,19 +399,7 @@ class BotLead:
         X_sd[:, (32 + 5 + 3*32):] = accepted_samples[:,
                                                      2, :].reshape((n_accepted, 32))
 
-        tricks = np.zeros((n_accepted, len(lead_card_indexes), 2))
-
-        for j, lead_card_i in enumerate(lead_card_indexes):
-            X_sd[:, :32] = 0
-            X_sd[:, lead_card_i] = 1
-
-            tricks_softmax = self.sd_model.model(X_sd)
-
-            tricks[:, j, 0:1] = expected_tricks(tricks_softmax.copy())
-            tricks[:, j, 1:2] = p_make_contract(
-                contract, tricks_softmax.copy())
-
-        return accepted_samples, tricks
+        return accepted_samples
 
 
 class CardPlayer:
@@ -485,7 +479,7 @@ class CardPlayer:
 
     def get_cards_dd_evaluation(self, trick_i, leader_i, current_trick52, players_states, probabilities_list):
 
-        def create_diag_from_32(array_of_array_32: List[np.ndarray], pips: List[Card_]):
+        def create_diag_from_32(base_diag : Diag,array_of_array_32: List[np.ndarray], pips: List[Card_]):
             diag = deepcopy(base_diag)
             pips_as_dict = {
                 s: [card.rank for card in pips if card.suit == s] for s in Suit}
@@ -528,7 +522,7 @@ class CardPlayer:
         low_hidden_cards = [
             c for c in self.hidden_cards if c.rank <= Rank.SEVEN]
         n_samples = players_states[0].shape[0]
-        samples_as_diag = [create_diag_from_32([players_states[j][i, trick_i, :32] for j in range(
+        samples_as_diag = [create_diag_from_32(base_diag,[players_states[j][i, trick_i, :32] for j in range(
             4)], low_hidden_cards) for i in range(n_samples)]
 
 

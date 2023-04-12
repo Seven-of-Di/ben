@@ -125,12 +125,13 @@ def generate_usual_alert_from_dict(dic: Dict, ascending: bool) -> int:
 
 
 def generete_hcp_alert(bid_explanation: BidExplanations) -> str:
+    strict_maximum_hcp = bid_explanation.max_hcp
     usual_minimum_hcp = generate_usual_alert_from_dict(
         bid_explanation.hcp_distribution, ascending=True)
     usual_maximum_hcp = generate_usual_alert_from_dict(
         bid_explanation.hcp_distribution, ascending=False)
     minimum_text = str(usual_minimum_hcp)
-    maximum_text = str(usual_maximum_hcp)
+    maximum_text = str(strict_maximum_hcp)
     return "{}-{}hcp".format(minimum_text, maximum_text)
 
 
@@ -216,7 +217,7 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
     return "{}".format(suits_text)
 
 
-def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str|None:
+def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str | None:
     if bid_explanation.n_samples >= 5:
         # print("Number of samples : {}".format(bid_explanation.n_samples))
         hcp_text = generete_hcp_alert(bid_explanation=bid_explanation)
@@ -228,15 +229,15 @@ def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str
     return None
 
 
-def request_from_pickle_file(str_sequence: List[str]):
+def request_from_pickle_file(str_sequence: List[str]) -> BidExplanations:
     with open('C:/Users/lucbe/OneDrive/Documents/Bridge/alerts.pickle', 'rb') as f:
         dict_of_alerts: Dict[BidPosition, BidExplanations] = pickle.load(f)
 
     position = BidPosition(str_sequence, [False, False])
-    print(dict_of_alerts[position])
+    return (dict_of_alerts[position])
 
 
 if __name__ == "__main__":
     generate_alerts(1000)
-    # request_from_pickle_file(["2N","PASS","3S"])
+    # print(request_from_pickle_file(["2N"]).hcp_distribution)
     # print(manual_alert(["PASS", "PASS", "1S"]))

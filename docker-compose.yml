@@ -8,8 +8,8 @@ services:
   app:
     build: .
     user: root
-    # command: python api.py
-    command: python create_alerts_database.py
+    command: python api.py
+    # command: python create_alerts_database.py
     ports:
       - 8081:8081
     volumes:
@@ -23,5 +23,15 @@ services:
       - PORT=5001
       - DEBUG=true
       - USE_RELOADER=true
+      - OTEL_EXPORTER_OTLP_SPAN_ENDPOINT=otel:4317
+      - OTEL_SERVICE_NAME=robot
+    networks:
+      - ben
+
+  otel:
+    image: jaegertracing/opentelemetry-all-in-one:latest
+    ports:
+      - "4317"
+      - "16686:16686"
     networks:
       - ben

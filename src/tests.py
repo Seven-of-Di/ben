@@ -148,8 +148,10 @@ def run_tests():
 
 
 def send_request(type_of_action: str, data: Dict, direction: Direction, open_room: bool):
-    new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (
-        not open_room and direction in [Direction.EAST, Direction.WEST])
+    # new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (
+    #     not open_room and direction in [Direction.EAST, Direction.WEST])
+    new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH] ) or (
+        not open_room and direction in [Direction.EAST, Direction.WEST]) or type_of_action!="make_lead"
     port = "http://localhost:{}".format("8081" if new_ben_called else "8082")
     start = time.time()
     res = requests.post('{}/{}'.format(port, type_of_action), json=data)
@@ -350,8 +352,8 @@ def run_tm_btwn_ben_versions(force_same_sequence: bool = False, force_same_lead:
             deal, force_same_sequence, force_same_lead, force_same_card_play)
         print("New Ben times average : bidding : {},carding : {}".format(
             NEW_BIDDING_TIME[0]/NEW_BIDDING_TIME[1], NEW_CARD_TIME[0]/NEW_CARD_TIME[1]))
-        print("Old Ben times average : bidding : {},carding : {}".format(
-            OLD_BIDDING_TIME[0]/OLD_BIDDING_TIME[1], OLD_CARD_TIME[0]/OLD_CARD_TIME[1]))
+        # print("Old Ben times average : bidding : {},carding : {}".format(
+        #     OLD_BIDDING_TIME[0]/OLD_BIDDING_TIME[1], OLD_CARD_TIME[0]/OLD_CARD_TIME[1]))
         print("Boards with differents leads : {}".format(
             boards_with_different_leads))
         with open("./test_data/{}.pbn".format("First test table"), "a") as f:
@@ -389,13 +391,13 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    # run_tm_btwn_ben_versions(force_same_card_play=True,force_same_sequence=True)
+    run_tm_btwn_ben_versions(force_same_card_play=True,force_same_sequence=True)
     # tests = run_tests()
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))
     # load_test_pbn("c4f380988fc67c0fe6e5f4bc5502d67a3b45d2c0.pbn")
-    link = r"https://play.intobridge.com/hand?lin=pn|Ben,Ben,Ben,Ben|md|4SQ64HK73DKQJTCAT6,SK98753HQ8D54CK32,SJHA962D862CQJ984,SAT2HJT54DA973C75|ah|Board%2014|mb|p|mb|1N|mb|p|mb|2C|mb|p|mb|2D|mb|p|mb|2N|mb|p|mb|p|mb|p|pc|S7|pc|SJ|pc|SA|pc|S4|pc|ST|pc|S6|pc|S3|pc|C4|pc|S2|pc|SQ|pc|SK|pc|H2|pc|S9|pc|D2|pc|H4|pc|C6|pc|S8|pc|D6|pc|D3|pc|H7|pc|S5|pc|H6|pc|H5|pc|DT|pc|HQ|pc|H9|pc|HT|pc|HK|pc|DJ|pc|D5|pc|D8|pc|DA|pc|D9|pc|DQ|pc|D4|pc|C8|pc|DK|pc|C2|pc|C9|pc|D7|pc|H3|pc|H8|pc|HA|pc|HJ|pc|CQ|pc|C7|pc|CT|pc|CK|pc|C3|pc|CJ|pc|C5|pc|CA|mc|5|"
-    print(from_lin_to_request(link, Card_.from_str("H2")))
+    link = r"https://play.intobridge.com/hand?lin=pn%7CBourricot,Ben,Ben,Ben%7Cmd%7C1SA9654HT2DQJ87CK2,SKJT7H9DKT643C875,S3HAJ754DA52CAQ94,SQ82HKQ863D9CJT63%7Cah%7CBoard%203%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7C1H%7Cmb%7Cp%7Cmb%7C1S%7Cmb%7Cp%7Cmb%7C2C%7Cmb%7Cp%7Cmb%7C2H%7Cmb%7Cp%7Cmb%7C3H%7Cmb%7Cp%7Cmb%7C3N%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CSJ%7Cpc%7CS3%7Cpc%7CS2%7Cpc%7CS4%7Cmc%7C0%7Csv%7Ce%7C"
+    print(from_lin_to_request(link, Card_.from_str("S4")))
 
     # print(from_lin_to_request(link, None))
     # count_average_hcp()

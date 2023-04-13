@@ -12,15 +12,39 @@ def send_request(data,type_of_action):
     return res.json()
 
 json_data = [{
-    "hand": "Q8754.2.KT8.QT92",
-    "dummy_hand": ".T87543.QJ53.76",
-    "dealer": "N",
-    "vuln": "None",
-    "auction": ["1H", "PASS", "1N", "PASS", "PASS", "PASS"],
-    "contract": "1N",
-    "contract_direction": "S",
-    "next_player": "E",
-    "tricks": [["SA", "SK"]]
+  "hand": "KT7.9.KT643.875",
+  "dummy_hand": ".AJ754.A52.AQ94",
+  "dealer": "S",
+  "vuln": "E-W",
+  "contract": "3NS",
+  "contract_direction": "S",
+  "auction": [
+    "PASS",
+    "PASS",
+    "1H",
+    "PASS",
+    "1S",
+    "PASS",
+    "2C",
+    "PASS",
+    "2H",
+    "PASS",
+    "3H",
+    "PASS",
+    "3N",
+    "PASS",
+    "PASS",
+    "PASS"
+  ],
+  "next_player": "W",
+  "tricks": [
+    [
+      "SJ",
+      "S3",
+      "S2",
+      "S4"
+    ]
+  ]
 },{
     "hand": "QJ3.542.KJT7.AQ2",
     "dealer": "N",
@@ -37,8 +61,8 @@ json_data = [{
 
 type_of_action_tab = ["play_card","place_bid","make_lead"]
 
-with ThreadPoolExecutor(max_workers=30) as executor:
-    future_to_url = {executor.submit(send_request, json_data[i%3],type_of_action_tab[i%3]) for i in range(30)}
+with ThreadPoolExecutor(max_workers=20) as executor:
+    future_to_url = {executor.submit(send_request, json_data[i%len(type_of_action_tab)],type_of_action_tab[i%len(type_of_action_tab)]) for i in range(20)}
     for future in concurrent.futures.as_completed(future_to_url):
         try:
             data = future.result()

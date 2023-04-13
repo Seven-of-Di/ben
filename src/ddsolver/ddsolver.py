@@ -3,7 +3,6 @@ from typing import Dict
 
 from ddsolver import dds
 
-dds.SetMaxThreads(0)
 
 
 class DDSolver:

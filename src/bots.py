@@ -64,7 +64,7 @@ class BotBid:
         start = time.time()
         auction = [element for element in auction if element != "PAD_START"]
         self.getting_doubled = len(auction)>=3 and ((auction[-3:]==['X',"PASS","PASS"] )  or auction[-2:]==['XX',"PASS"])
-        self.min_candidate_score = 0.01 if self.getting_doubled else self.min_candidate_score 
+        self.min_candidate_score = 0.01 if self.getting_doubled else self.min_candidate_score
 
         position_minus_1 = len(auction) % 4
 
@@ -306,7 +306,7 @@ class BotLead:
         level = int(contract[0])
         tricks_to_defeat_contract = 13-(6+level)+1
         strain = bidding.get_strain_i(contract)
-        
+
         lead_card_indexes, lead_softmax = self.get_lead_candidates(auction)
         accepted_samples = self.get_accepted_samples(
             4096, auction, lead_card_indexes)
@@ -339,6 +339,12 @@ class BotLead:
                 p_make_contract=1-sum([1 if v>=tricks_to_defeat_contract else 0 for v in dd_solved[card]])/len(dd_solved[card]),
                 expected_tricks=sum((dd_solved[card]))/len(dd_solved[card])
             ))
+            # print(Card_.get_from_52(deck52.card32to52(card_i)))
+            # print((tricks[:, i, 0]))
+            # print(np.mean((tricks[:, i, 0])))
+            # print(tricks[:, i, 1])
+            # print(np.mean(tricks[:, i, 1]))
+            pass
         candidate_cards = sorted(
             candidate_cards, key=lambda c: c.p_make_contract if c.p_make_contract!=None else 1)
 
@@ -557,7 +563,7 @@ class CardPlayer:
             print("   {}".format([i for i in range(len(samples_as_diag))]))
             for key, value in (dd_solved.items()):
                 print(Card_.get_from_52(key), value)
-            
+
 
         return card_result
 

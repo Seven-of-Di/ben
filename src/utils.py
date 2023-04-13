@@ -423,8 +423,8 @@ class PlayerHand():
         return f"PlayerHand({repr_str})"
 
     def __str__(self) -> str:
-        suit_arrays = [["♠"], ["♥"],
-                       ["♦"], ["♣"]]
+        suit_arrays = [[SPADES_SYMBOL], [HEARTS_SYMBOL],
+                       [DIAMONDS_SYMBOL], [CLUBS_SYMBOL]]
         for card in sorted(self.cards, reverse=True):
             suit_arrays[card.suit.value].append(repr(card))
         repr_str = " ".join("".join(suit) for suit in suit_arrays)

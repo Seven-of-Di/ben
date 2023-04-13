@@ -2,6 +2,7 @@ from __future__ import annotations
 from copy import deepcopy
 import random
 from typing import Dict, List
+from tracing import tracer
 import numpy as np
 from datetime import datetime
 
@@ -29,6 +30,7 @@ def get_play_status(hand: PlayerHand, current_trick: List[Card_]):
         return "Follow"
 
 
+@tracer.start_as_current_span("get_ben_card_play_answer")
 async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, auction, contract, declarer_str, next_player_str, tricks_str, MODELS) -> Dict:
     n_samples = 100
     claim_res = False

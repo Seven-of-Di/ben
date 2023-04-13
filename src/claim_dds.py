@@ -1,6 +1,7 @@
 from __future__ import annotations
 from copy import deepcopy
 import random
+from tracing import tracer
 from typing import Dict, List, Set, Tuple
 from utils import Diag, Direction, Card_, BiddingSuit, Suit, Rank, PlayerHand, TOTAL_DECK
 from PlayRecord import PlayRecord, Trick
@@ -179,6 +180,7 @@ def check_claim(diag: Diag, claim: int, claim_direction: Direction, trump: Biddi
     return dds_check(diags[:5], trump, trick_leader, current_trick, claim, claim_direction, declarer) and dds_check(diags[5:], trump, trick_leader, current_trick, claim, claim_direction, declarer)
 
 
+@tracer.start_as_current_span("check_claim_from_api")
 async def check_claim_from_api(claiming_hand_str: str, dummy_hand_str: str, claiming_direction_str: str, declarer_str: str, contract_str: str, tricks_as_str: List[List[str]], absolute_claim: int, n_samples=200) -> bool:
     claiming_direction = Direction.from_str(claiming_direction_str)
     declarer = Direction.from_str(declarer_str)

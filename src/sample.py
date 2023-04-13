@@ -8,6 +8,7 @@ import binary
 from bidding import bidding
 from utils import convert_to_probability
 from util import get_all_hidden_cards, view_samples
+from tracing import tracer
 from nn.bidder import Bidder
 
 
@@ -413,6 +414,7 @@ def player_to_nesw_i(player_i, contract):
     return (decl_i + player_i + 1) % 4
 
 
+@tracer.start_as_current_span("init_rollout_states")
 def init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits, current_trick, n_samples, auction, hand, vuln, models):
     leader_i = (player_i - len(current_trick)) % 4
 

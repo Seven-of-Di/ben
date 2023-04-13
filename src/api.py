@@ -1,6 +1,7 @@
 from copy import deepcopy
 from typing import Dict, List
 from quart import Quart, request
+from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
 
 from nn.models import MODELS
 from game import AsyncBotBid, AsyncBotLead
@@ -10,8 +11,8 @@ from alerting import find_alert
 
 import os
 import sentry_sdk
-from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
+from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 from transform_play_card import get_ben_card_play_answer
 from human_carding import lead_real_card
@@ -30,6 +31,7 @@ sentry_sdk.init(
 
 app = Quart(__name__)
 app.asgi_app = SentryAsgiMiddleware(app.asgi_app)._run_asgi3
+app.asgi_app = OpenTelemetryMiddleware(app.asgi_app)
 
 health_checker = HealthChecker(app.logger)
 health_checker.start()
@@ -116,7 +118,6 @@ class PlayFullBoard:
 }
 '''
 
-
 @app.post('/play_card')
 async def play_card():
     data = await request.get_json()
@@ -135,6 +136,7 @@ async def play_card():
         req.tricks,
         MODELS
     )
+
     """
     dict_result = {
         "card": "H4",

@@ -23,8 +23,9 @@ from utils import Card_, multiple_list_comparaison, Direction, PlayerHand, Biddi
 from human_carding import play_real_card
 from PlayRecord import PlayRecord
 from Sequence import Sequence
-
 DDS = ddsolver.DDSolver()
+
+
 
 class BotBid:
 
@@ -494,6 +495,7 @@ class CardPlayer:
         def create_suit_from_8(array_8, pip: List[Rank], suit: Suit, dir: Direction):
             current_trick_card = None if dir not in self.current_trick_as_dict else self.current_trick_as_dict[
                 dir]
+            random.shuffle(pip)
             high_ranks = [Rank.from_integer(int(i))
                           for i in np.nonzero(array_8[:-1])[0] if current_trick_card is None or Card_(suit, Rank.from_integer(int(i))) != current_trick_card]
             try:
@@ -524,9 +526,6 @@ class CardPlayer:
         n_samples = players_states[0].shape[0]
         samples_as_diag = [create_diag_from_32(base_diag,[players_states[j][i, trick_i, :32] for j in range(
             4)], low_hidden_cards) for i in range(n_samples)]
-
-
-        print(self.player_direction)
 
         if self.play_record.record is None:
             raise Exception("Play record should not be none")

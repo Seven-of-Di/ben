@@ -5,3 +5,8 @@
 ```sh
 $ poetry install
 ```
+
+2. Help
+```sh
+$ python loadtest/command.py --help
+```

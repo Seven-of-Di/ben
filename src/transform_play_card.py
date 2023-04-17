@@ -122,7 +122,7 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, a
                     n_samples = 50
                 rollout_states, probabilities_list = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits,
                                                                                 current_trick, n_samples, padded_auction, card_players[player_i].hand_32.reshape((-1, 32)), vuls, MODELS)
-                # card = card_players[player_i].debug=True
+                card = card_players[player_i].debug=True
                 card = card_players[player_i].play_card(
                     trick_i, leader_i, current_trick52, rollout_states, probabilities_list)
                 if card_players[player_i].check_claim and next_player in [declarer, dummy]:

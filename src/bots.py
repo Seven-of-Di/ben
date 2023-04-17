@@ -545,7 +545,7 @@ class CardPlayer:
             self.check_claim = True
 
         card_tricks = ddsolver.expected_tricks(dd_solved, probabilities_list)
-        card_ev = self.get_card_ev(dd_solved)
+        card_ev = self.get_card_ev(dd_solved,probabilities_list)
 
         card_result = {}
         for key in dd_solved.keys():
@@ -567,18 +567,18 @@ class CardPlayer:
 
         return card_result
 
-    def get_card_ev(self, dd_solved):
+    def get_card_ev(self, dd_solved,probabilities_list):
         card_ev = {}
         sign = 1 if self.player_i % 2 == 1 else -1
         for card, future_tricks in dd_solved.items():
             ev_sum = 0
-            for ft in future_tricks:
+            for ft,proba in zip(future_tricks,probabilities_list):
                 if ft < 0:
                     continue
                 tot_tricks = self.n_tricks_taken + ft
                 tot_decl_tricks = tot_tricks if self.player_i % 2 == 1 else 13 - tot_tricks
-                ev_sum += sign * self.score_by_tricks_taken[tot_decl_tricks]
-            card_ev[card] = ev_sum / len(future_tricks)
+                ev_sum += sign * self.score_by_tricks_taken[tot_decl_tricks] * proba
+            card_ev[card] = ev_sum
 
         return card_ev
 

@@ -217,7 +217,7 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
     return "{}".format(suits_text)
 
 
-def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str|None:
+def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str | None:
     if bid_explanation.n_samples >= 5:
         # print("Number of samples : {}".format(bid_explanation.n_samples))
         hcp_text = generete_hcp_alert(bid_explanation=bid_explanation)
@@ -238,6 +238,6 @@ def request_from_pickle_file(str_sequence: List[str]) -> BidExplanations:
 
 
 if __name__ == "__main__":
-    generate_alerts(1000)
-    # request_from_pickle_file(["2N","PASS","3S"])
+    # generate_alerts(1000)
+    print(request_from_pickle_file(["1N", "X", "2D"]))
     # print(manual_alert(["PASS", "PASS", "1S"]))

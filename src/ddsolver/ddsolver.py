@@ -1,5 +1,5 @@
 import ctypes
-from typing import Dict
+from typing import Dict, List
 
 from ddsolver import dds
 
@@ -83,7 +83,7 @@ class DDSolver:
         return card_results
 
 
-def expected_tricks(card_results, probabilities_list):
+def expected_tricks(card_results, probabilities_list : List[float]):
     return {card: sum([p*res for p, res in zip(probabilities_list, result_list)]) for card, result_list in card_results.items()}
 
 

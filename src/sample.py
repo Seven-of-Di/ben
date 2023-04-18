@@ -611,14 +611,28 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
 
     probability_of_occurence = convert_to_probability(probability_of_occurence)
 
-    arr1inds = probability_of_occurence.argsort()
-    probability_of_occurence_ordered = probability_of_occurence[arr1inds[::-1]]
-    probability_of_occurence_ordered = probability_of_occurence_ordered[:n_samples]
-    new_state = np.empty_like(states)
+    start = time.time()
 
-    for i, state in enumerate(states):
-        new_state[i] = state[arr1inds[::-1]]
+    n = min(n_samples,len(probability_of_occurence))
 
-    max_coherent_sample = next((p_index for p_index,p in enumerate(probability_of_occurence_ordered) if p*1000 <= probability_of_occurence_ordered[0] and trick_i<=6),len(probability_of_occurence_ordered))
-    # print("Number of samples",len(probability_of_occurence_ordered),"coherent_samples",max_coherent_sample)
-    return [state[:min(max_coherent_sample,n_samples)] for state in new_state], probability_of_occurence_ordered[:min(max_coherent_sample,n_samples)]
+    # Get the indices of the n highest probabilities using argpartition
+    highest_indices = np.argpartition(probability_of_occurence, -n)[-n:]
+
+    # Get the indices that would sort the probabilities in descending order
+    sorted_indices = highest_indices[np.argsort(probability_of_occurence[highest_indices])[::-1]]
+
+    top_probs = probability_of_occurence[sorted_indices][:n]
+    mask = top_probs >= 0.0001
+    top_indices = sorted_indices[mask]
+
+    # Get the n highest probabilities
+    highest_probs = probability_of_occurence[top_indices]
+
+    # Get the objects associated with the n highest probabilities
+    highest_states = [obj[top_indices] for obj in states]
+    
+    
+    print(time.time()-start)
+
+    final_result = highest_states, highest_probs
+    return final_result

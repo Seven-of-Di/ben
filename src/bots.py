@@ -489,6 +489,7 @@ class CardPlayer:
     @tracer.start_as_current_span("get_cards_dd_evaluation")
     def get_cards_dd_evaluation(self, trick_i, leader_i, current_trick52, players_states, probabilities_list):
 
+        @tracer.start_as_current_span("get_diag_from_32")
         def create_diag_from_32(base_diag : Diag,array_of_array_32: List[np.ndarray], pips: List[Card_]):
             diag = deepcopy(base_diag)
             pips_as_dict = {
@@ -514,6 +515,7 @@ class CardPlayer:
                 raise Exception("Pop from empty ?")
             return high_ranks+low_ranks
 
+        @tracer.start_as_current_span("get_base_diag")
         def get_base_diag() -> Diag:
 
             base_diag = Diag({dir: PlayerHand({s: [] for s in Suit})

@@ -2,6 +2,7 @@ import ctypes
 from typing import Dict, List
 
 from ddsolver import dds
+from tracing import tracer
 
 
 
@@ -12,6 +13,8 @@ class DDSolver:
         self.bo = dds.boardsPBN()
         self.solved = dds.solvedBoards()
 
+
+    @tracer.start_as_current_span("get_diag_from_32")
     def solve(self, strain_i, leader_i, current_trick, hands_pbn):
         results = self.solve_helper(
             strain_i, leader_i, current_trick, hands_pbn[:dds.MAXNOOFBOARDS])

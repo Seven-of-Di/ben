@@ -15,7 +15,6 @@ class PlayCardTest:
 
         with ThreadPoolExecutor(max_workers=self.threads) as executor:
           futures = [executor.submit(send_request, self.url, json_data) for i in range(self.count)]
-          print(len(futures))
 
           for future in concurrent.futures.as_completed(futures):
             data = future.result()

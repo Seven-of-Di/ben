@@ -442,7 +442,6 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
     h_1_nesw = player_to_nesw_i(hidden_1_i, contract)
     h_2_nesw = player_to_nesw_i(hidden_2_i, contract)
 
-    t_start = time.time()
     h1_h2 = shuffle_cards_bidding_info(
         40*n_samples,
         models.binfo,
@@ -462,28 +461,28 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
 
     hidden_hand1, hidden_hand2 = h1_h2[:, 0], h1_h2[:, 1]
 
-    states = [np.zeros((hidden_hand1.shape[0], 13, 298)) for _ in range(4)]
+    samples_as_np_array = [np.zeros((hidden_hand1.shape[0], 13, 298)) for _ in range(4)]
 
     # we can reuse the x_play array from card_players except the player's hand
     for k in range(4):
         for i in range(trick_i + 1):
-            states[k][:, i, 32:] = card_players[k].x_play[0, i, 32:]
+            samples_as_np_array[k][:, i, 32:] = card_players[k].x_play[0, i, 32:]
 
     # for player_i we can use the hand from card_players x_play (because the cards are known)
     for i in range(trick_i + 1):
-        states[player_i][:, i, :32] = card_players[player_i].x_play[0, i, :32]
+        samples_as_np_array[player_i][:, i, :32] = card_players[player_i].x_play[0, i, :32]
 
     # all players know dummy's cards
     if player_i in (0, 2, 3):
         for i in range(trick_i + 1):
-            states[player_i][:, i, 32:64] = card_players[1].x_play[0, i, :32]
-            states[1][:, i, :32] = card_players[1].x_play[0, i, :32]
+            samples_as_np_array[player_i][:, i, 32:64] = card_players[1].x_play[0, i, :32]
+            samples_as_np_array[1][:, i, :32] = card_players[1].x_play[0, i, :32]
 
     # dummy knows declarer's cards
     if player_i == 1:
         for i in range(trick_i + 1):
-            states[player_i][:, i, 32:64] = card_players[3].x_play[0, i, :32]
-            states[3][:, i, :32] = card_players[3].x_play[0, i, :32]
+            samples_as_np_array[player_i][:, i, 32:64] = card_players[3].x_play[0, i, :32]
+            samples_as_np_array[3][:, i, :32] = card_players[3].x_play[0, i, :32]
 
     # add the current trick cards to the hidden hands
     if len(current_trick) > 0:
@@ -494,12 +493,12 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
                 hidden_hand2[:, card] += 1
 
     for k in range(trick_i + 1):
-        states[hidden_1_i][:, k, :32] = hidden_hand1
-        states[hidden_2_i][:, k, :32] = hidden_hand2
+        samples_as_np_array[hidden_1_i][:, k, :32] = hidden_hand1
+        samples_as_np_array[hidden_2_i][:, k, :32] = hidden_hand2
         for card in player_cards_played[hidden_1_i][k:]:
-            states[hidden_1_i][:, k, card] += 1
+            samples_as_np_array[hidden_1_i][:, k, card] += 1
         for card in player_cards_played[hidden_2_i][k:]:
-            states[hidden_2_i][:, k, card] += 1
+            samples_as_np_array[hidden_2_i][:, k, card] += 1
 
     # re-apply constraints
     n_steps = 1 + len(auction) // 4
@@ -519,20 +518,20 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
     c_hcp = p_hcp.copy()
     c_shp = p_shp.copy()
 
-    accept_hcp = np.ones(states[0].shape[0]).astype(bool)
+    accept_hcp = np.ones(samples_as_np_array[0].shape[0]).astype(bool)
 
     for i in range(2):
         if np.round(c_hcp[i]) >= 11:
             accept_hcp &= binary.get_hcp(
-                states[[hidden_1_i, hidden_2_i][i]][:, 0, :32]) >= np.round(c_hcp[i]) - 5
+                samples_as_np_array[[hidden_1_i, hidden_2_i][i]][:, 0, :32]) >= np.round(c_hcp[i]) - 5
     
-    accept_shp = np.ones(states[0].shape[0]).astype(bool)
+    accept_shp = np.ones(samples_as_np_array[0].shape[0]).astype(bool)
 
     for i in range(2):
         for j in range(4):
             if np.round(c_shp[i, j] >= 5):
                 accept_shp &= np.sum(
-                    states[[hidden_1_i, hidden_2_i][i]][:, 0, (j*8):((j+1)*8)], axis=1) >= np.round(c_shp[i, j]) - 1
+                    samples_as_np_array[[hidden_1_i, hidden_2_i][i]][:, 0, (j*8):((j+1)*8)], axis=1) >= np.round(c_shp[i, j]) - 1
 
     accept = accept_hcp & accept_shp
 
@@ -540,33 +539,28 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
         accept = np.ones_like(accept).astype(bool)
     # end of re-applyconstraints
 
-    states = [state[accept] for state in states]
-    probability_of_occurence = np.ones(len(states[0]))
+    samples_as_np_array = [state[accept] for state in samples_as_np_array]
+    probability_of_occurence = np.ones(len(samples_as_np_array[0]))
 
     # reject samples inconsistent with the opening lead
     lead_scores = np.ones(hidden_hand1.shape[0])
     if hidden_1_i == 0 or hidden_2_i == 0:
         opening_lead = current_trick[0] if trick_i == 0 else player_cards_played[0][0]
         lead_scores = get_opening_lead_scores(
-            auction, vuln, models.binfo, models.lead, states[0][:, 0, :32], opening_lead)
+            auction, vuln, models.binfo, models.lead, samples_as_np_array[0][:, 0, :32], opening_lead)
 
-        # lead_accept_threshold = 0.1
-        # while np.sum(lead_scores > lead_accept_threshold) < n_samples:
-        #     lead_accept_threshold -= 0.01
-
-        # states = [state[lead_scores > lead_accept_threshold] for state in states]
         probability_of_occurence = np.multiply(
             probability_of_occurence, lead_scores)
 
     # reject samples inconsistent with the bidding
-    min_bid_scores = np.ones(states[0].shape[0])
+    min_bid_scores = np.ones(samples_as_np_array[0].shape[0])
 
     for h_i in [hidden_1_i, hidden_2_i]:
         h_i_nesw = player_to_nesw_i(h_i, contract)
-        if h_i_nesw >= states[h_i].shape[0]:
+        if h_i_nesw >= samples_as_np_array[h_i].shape[0]:
             continue
         bid_scores = get_bid_scores(
-            h_i_nesw, auction, vuln, states[h_i][:, 0, :32], models.bidder_model)
+            h_i_nesw, auction, vuln, samples_as_np_array[h_i][:, 0, :32], models.bidder_model)
 
         min_bid_scores = np.multiply(min_bid_scores, bid_scores)
     min_bid_scores = convert_to_probability(min_bid_scores)
@@ -575,7 +569,7 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
     probability_of_occurence = convert_to_probability(probability_of_occurence)
 
     # reject samples inconsistent with the play
-    min_scores = np.ones(states[0].shape[0])
+    min_scores = np.ones(samples_as_np_array[0].shape[0])
 
     for p_i in [hidden_1_i, hidden_2_i]:
 
@@ -599,7 +593,7 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
 
         with tracer.start_as_current_span("card_play_coherence"):
             p_cards = models.player_models[p_i].model(
-                states[p_i][:, :n_tricks_pred, :])
+                samples_as_np_array[p_i][:, :n_tricks_pred, :])
 
         card_scores = p_cards[:, np.arange(
             len(cards_played)), cards_played]
@@ -611,17 +605,15 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
 
     probability_of_occurence = convert_to_probability(probability_of_occurence)
 
-    start = time.time()
+    n_diag_to_keep = min(n_samples,len(probability_of_occurence))
 
-    n = min(n_samples,len(probability_of_occurence))
-
-    # Get the indices of the n highest probabilities using argpartition
-    highest_indices = np.argpartition(probability_of_occurence, -n)[-n:]
+    # Get the indices of the n highest probabilities 
+    highest_indices = np.argpartition(probability_of_occurence, -n_diag_to_keep)[-n_diag_to_keep:]
 
     # Get the indices that would sort the probabilities in descending order
     sorted_indices = highest_indices[np.argsort(probability_of_occurence[highest_indices])[::-1]]
 
-    top_probs = probability_of_occurence[sorted_indices][:n]
+    top_probs = probability_of_occurence[sorted_indices][:n_diag_to_keep]
     mask = top_probs >= 0.0001
     top_indices = sorted_indices[mask]
 
@@ -629,10 +621,10 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
     highest_probs = probability_of_occurence[top_indices]
 
     # Get the objects associated with the n highest probabilities
-    highest_states = [obj[top_indices] for obj in states]
+    highest_states = [obj[top_indices] for obj in samples_as_np_array]
     
     
-    print(time.time()-start)
+    # print(time.time()-start)
 
     final_result = highest_states, highest_probs
     return final_result

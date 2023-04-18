@@ -6,6 +6,7 @@ from typing import Dict, List
 
 import numpy as np
 
+from tracing import tracer
 from ddsolver import ddsolver
 import binary
 import nn.player as player
@@ -475,6 +476,7 @@ class CardPlayer:
     def set_public_card_played52(self, card52):
         self.public52[card52] -= 1
 
+    @tracer.start_as_current_span("play_card")
     def play_card(self, trick_i, leader_i, current_trick52, players_states, probabilities_list):
         current_trick = [deck52.card52to32(c) for c in current_trick52]
         card52_dd = self.get_cards_dd_evaluation(
@@ -484,6 +486,7 @@ class CardPlayer:
 
         return card_resp
 
+    @tracer.start_as_current_span("get_cards_dd_evaluation")
     def get_cards_dd_evaluation(self, trick_i, leader_i, current_trick52, players_states, probabilities_list):
 
         def create_diag_from_32(base_diag : Diag,array_of_array_32: List[np.ndarray], pips: List[Card_]):

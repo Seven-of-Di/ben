@@ -7,6 +7,7 @@ import json
 from random import shuffle
 from typing import Dict, Iterable, List, Optional
 import numpy as np
+from tracing import tracer
 from bidding import bidding
 
 """
@@ -673,7 +674,6 @@ def remove_same_indexes(dict_to_clear, dict_to_take_values_from):
 # dict_to_take_values_from = {1: [1, 2, 3, 4], 2: [1, 6, 3, 8]}
 # new_dict = remove_same_indexes(dict_to_clear,dict_to_take_values_from)
 # print(new_dict)
-
 def convert_to_probability(x):
     """Compute softmax values for each sets of scores in x."""
     sum_of_proba = np.sum(x, axis=0)

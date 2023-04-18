@@ -233,6 +233,7 @@ def sample_cards_auction(n_samples, n_steps, auction, nesw_i, hand, vuln, bidder
     return accepted_samples
 
 
+@tracer.start_as_current_span("shuffle_cards_bidding_info")
 def shuffle_cards_bidding_info(n_samples, binfo, auction, hand, vuln, known_nesw, h_1_nesw, h_2_nesw, visible_cards, hidden_cards, cards_played, shown_out_suits):
     n_cards_to_receive = np.array(
         [len(hidden_cards) // 2, len(hidden_cards) - len(hidden_cards) // 2])
@@ -345,6 +346,7 @@ def shuffle_cards_bidding_info(n_samples, binfo, auction, hand, vuln, known_nesw
     return h1_h2
 
 
+@tracer.start_as_current_span("get_opening_lead_scores")
 def get_opening_lead_scores(auction, vuln, binfo_model, lead_model, hand, opening_lead_card):
     contract = bidding.get_contract(auction)
 
@@ -383,7 +385,7 @@ def get_opening_lead_scores(auction, vuln, binfo_model, lead_model, hand, openin
     lead_softmax = lead_model.model(x, b)
     return convert_to_probability(lead_softmax[:, opening_lead_card])
 
-
+@tracer.start_as_current_span("get_bid_scores")
 def get_bid_scores(nesw_i, auction, vuln, hand, bidder_model: Bidder):
     n_steps = 1 + len(auction) // 4
 
@@ -413,6 +415,9 @@ def player_to_nesw_i(player_i, contract):
     decl_i = bidding.get_decl_i(contract)
     return (decl_i + player_i + 1) % 4
 
+
+def f_trans_hcp(x): return 4 * x + 10
+def f_trans_shp(x): return 1.75 * x + 3.25
 
 @tracer.start_as_current_span("init_rollout_states")
 def init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits, current_trick, n_samples, auction, hand, vuln, models):
@@ -506,9 +511,6 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
     p_hcp = p_hcp.reshape((-1, n_steps, 3))[:, -1, :]
     p_shp = p_shp.reshape((-1, n_steps, 12))[:, -1, :]
 
-    def f_trans_hcp(x): return 4 * x + 10
-    def f_trans_shp(x): return 1.75 * x + 3.25
-
     p_hcp = f_trans_hcp(
         p_hcp[0, [(h_1_nesw - known_nesw) % 4 - 1, (h_2_nesw - known_nesw) % 4 - 1]])
     p_shp = f_trans_shp(p_shp[0].reshape(
@@ -523,7 +525,7 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
         if np.round(c_hcp[i]) >= 11:
             accept_hcp &= binary.get_hcp(
                 states[[hidden_1_i, hidden_2_i][i]][:, 0, :32]) >= np.round(c_hcp[i]) - 5
-
+    
     accept_shp = np.ones(states[0].shape[0]).astype(bool)
 
     for i in range(2):
@@ -542,7 +544,6 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
     probability_of_occurence = np.ones(len(states[0]))
 
     # reject samples inconsistent with the opening lead
-    t_start = time.time()
     lead_scores = np.ones(hidden_hand1.shape[0])
     if hidden_1_i == 0 or hidden_2_i == 0:
         opening_lead = current_trick[0] if trick_i == 0 else player_cards_played[0][0]
@@ -595,8 +596,10 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
             continue
 
         n_tricks_pred = max(10, trick_i + len(card_played_current_trick))
-        p_cards = models.player_models[p_i].model(
-            states[p_i][:, :n_tricks_pred, :])
+
+        with tracer.start_as_current_span("card_play_coherence"):
+            p_cards = models.player_models[p_i].model(
+                states[p_i][:, :n_tricks_pred, :])
 
         card_scores = p_cards[:, np.arange(
             len(cards_played)), cards_played]
@@ -605,14 +608,17 @@ def init_rollout_states(trick_i, player_i, card_players, player_cards_played, sh
 
     probability_of_occurence = np.multiply(
         probability_of_occurence, min_scores)
+
     probability_of_occurence = convert_to_probability(probability_of_occurence)
 
     arr1inds = probability_of_occurence.argsort()
     probability_of_occurence_ordered = probability_of_occurence[arr1inds[::-1]]
     probability_of_occurence_ordered = probability_of_occurence_ordered[:n_samples]
     new_state = np.empty_like(states)
+
     for i, state in enumerate(states):
         new_state[i] = state[arr1inds[::-1]]
+
     max_coherent_sample = next((p_index for p_index,p in enumerate(probability_of_occurence_ordered) if p*1000 <= probability_of_occurence_ordered[0] and trick_i<=6),len(probability_of_occurence_ordered))
     # print("Number of samples",len(probability_of_occurence_ordered),"coherent_samples",max_coherent_sample)
     return [state[:min(max_coherent_sample,n_samples)] for state in new_state], probability_of_occurence_ordered[:min(max_coherent_sample,n_samples)]

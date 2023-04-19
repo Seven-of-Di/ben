@@ -18,6 +18,8 @@ import sample
 from game import AsyncCardPlayer
 from claim_dds import check_claim_from_api
 
+import os
+
 
 def get_play_status(hand: PlayerHand, current_trick: List[Card_]):
     if current_trick == [] or len(current_trick) == 4:
@@ -32,7 +34,7 @@ def get_play_status(hand: PlayerHand, current_trick: List[Card_]):
 
 @tracer.start_as_current_span("get_ben_card_play_answer")
 async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, auction, contract, declarer_str, next_player_str, tricks_str, MODELS) -> Dict:
-    n_samples = 100
+    n_samples = int(os.environ.get("LEADING_SAMPLES_COUNT", 50))
     claim_res = False
 
     padded_auction = ["PAD_START"] * \

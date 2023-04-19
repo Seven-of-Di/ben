@@ -14,7 +14,7 @@ class DDSolver:
         self.solved = dds.solvedBoards()
 
 
-    @tracer.start_as_current_span("get_diag_from_32")
+    @tracer.start_as_current_span("dds_solver")
     def solve(self, strain_i, leader_i, current_trick, hands_pbn):
         results = self.solve_helper(
             strain_i, leader_i, current_trick, hands_pbn[:dds.MAXNOOFBOARDS])

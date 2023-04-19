@@ -82,7 +82,6 @@ class BotBid:
         # print(auction)
         hand_to_alert_index = len(auction) % 4
         position_minus_1 = len(auction) % 4
-        pass
         for i in range(len(auction)//4):
             self.get_bid_candidates(auction[:i*4+position_minus_1])
 
@@ -132,6 +131,9 @@ class BotBid:
                     hands_np, auctions_np)
                 ev = self.expected_score(len(auction) %
                                          4, contracts, decl_tricks_softmax)
+                if candidate.bid=="XX" :
+                    #Please stop redoubling if you are not 100% sure
+                    ev-=300 
                 ev_c = candidate.with_expected_score(np.mean(ev))
                 ev_candidates.append(ev_c)
             candidates = sorted(
@@ -142,7 +144,7 @@ class BotBid:
         return BidResp(bid=candidates[0].bid, candidates=candidates, samples=samples)
 
     @staticmethod
-    def do_rollout(auction, candidates):
+    def do_rollout(auction, candidates : List[CandidateBid]):
         if len(candidates) == 1:
             return False
 
@@ -157,7 +159,7 @@ class BotBid:
 
         return False
 
-    def get_bid_candidates(self, auction):
+    def get_bid_candidates(self, auction) -> List[CandidateBid]:
         bid_softmax = self.next_bid_np(auction)[0]
 
         candidates = []
@@ -282,9 +284,10 @@ class BotBid:
             if (turn_to_bid + decl_i) % 2 == 1:
                 # the other side is playing the contract
                 scores_by_trick[i, :] *= -1
-
-        return np.sum(decl_tricks_softmax * scores_by_trick, axis=1)
-
+        
+        res = np.sum(decl_tricks_softmax * scores_by_trick, axis=1)
+        average = sum(res)/len(res)
+        return res
 
 class BotLead:
 
@@ -489,7 +492,6 @@ class CardPlayer:
     @tracer.start_as_current_span("get_cards_dd_evaluation")
     def get_cards_dd_evaluation(self, trick_i, leader_i, current_trick52, players_states, probabilities_list):
 
-        @tracer.start_as_current_span("get_diag_from_32")
         def create_diag_from_32(base_diag : Diag,array_of_array_32: List[np.ndarray], pips: List[Card_]):
             diag = deepcopy(base_diag)
             pips_as_dict = {
@@ -515,7 +517,6 @@ class CardPlayer:
                 raise Exception("Pop from empty ?")
             return high_ranks+low_ranks
 
-        @tracer.start_as_current_span("get_base_diag")
         def get_base_diag() -> Diag:
 
             base_diag = Diag({dir: PlayerHand({s: [] for s in Suit})
@@ -535,8 +536,9 @@ class CardPlayer:
         low_hidden_cards = [
             c for c in self.hidden_cards if c.rank <= Rank.SEVEN]
         n_samples = players_states[0].shape[0]
-        samples_as_diag = [create_diag_from_32(base_diag,[players_states[j][i, trick_i, :32] for j in range(
-            4)], low_hidden_cards) for i in range(n_samples)]
+        with tracer.start_as_current_span("get diags_from_np_arrays") as _ :
+            samples_as_diag = [create_diag_from_32(base_diag,[players_states[j][i, trick_i, :32] for j in range(
+                4)], low_hidden_cards) for i in range(n_samples)]
 
         if self.play_record.record is None:
             raise Exception("Play record should not be none")

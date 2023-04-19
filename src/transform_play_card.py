@@ -78,13 +78,13 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, a
 
     card_players = [
         bots.CardPlayer(MODELS.player_models, 0, lefty_hand,
-                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str),dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
+                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str), dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
         bots.CardPlayer(MODELS.player_models, 1, dummy_hand,
-                        decl_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str),dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
+                        decl_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str), dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
         bots.CardPlayer(MODELS.player_models, 2, righty_hand,
-                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str),dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
+                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str), dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
         bots.CardPlayer(MODELS.player_models, 3, decl_hand,
-                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str),dummy_hand=PlayerHand.from_pbn(dummy_hand_str))
+                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str), dummy_hand=PlayerHand.from_pbn(dummy_hand_str))
     ]
 
     player_cards_played = [[] for _ in range(4)]

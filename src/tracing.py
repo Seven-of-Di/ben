@@ -6,6 +6,8 @@ from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
 )
 
+import os
+
 provider = TracerProvider()
 processor = BatchSpanProcessor(OTLPSpanExporter())
 
@@ -14,3 +16,5 @@ provider.add_span_processor(processor)
 trace.set_tracer_provider(provider)
 
 tracer = trace.get_tracer_provider().get_tracer(__name__)
+
+tracing_enabled = os.environ.get("OTEL_SERVICE_NAME") != None

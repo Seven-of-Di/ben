@@ -9,6 +9,10 @@ from FullBoardPlayer import AsyncFullBoardPlayer
 from health_checker import HealthChecker
 from alerting import find_alert
 
+from opentelemetry import trace
+from tracing import tracing_enabled
+import numpy as np
+
 import os
 import sentry_sdk
 
@@ -118,11 +122,23 @@ class PlayFullBoard:
 }
 '''
 
+
 @app.post('/play_card')
 async def play_card():
     data = await request.get_json()
     # app.logger.warn(data)
     req = PlayCard(data)
+
+    if tracing_enabled:
+        current_span = trace.get_current_span()
+        current_span.set_attributes({
+            "game.next_player": req.next_player,
+            "game.hand": req.hand,
+            "game.dummy_hand": req.dummy_hand,
+            "game.contract": req.contract,
+            "game.contract_direction": req.contract_direction,
+            "game.tricks": ",".join(np.array(req.tricks).flatten().tolist()),
+        })
 
     dict_result = await get_ben_card_play_answer(
         req.hand,

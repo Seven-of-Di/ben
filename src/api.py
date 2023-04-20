@@ -145,7 +145,7 @@ async def play_card():
             "game.tricks": ",".join(np.array(req.tricks).flatten().tolist()),
         })
 
-    dict_result = await get_ben_card_play_answer(
+    dict_result = await play_a_card(
         req.hand,
         req.dummy_hand,
         req.dealer,
@@ -155,7 +155,8 @@ async def play_card():
         req.contract_direction,
         req.next_player,
         req.tricks,
-        MODELS
+        models,
+        req.cheating_diag_pbn
     )
 
     """

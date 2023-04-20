@@ -137,7 +137,7 @@ async def play_card():
             "game.dummy_hand": req.dummy_hand,
             "game.contract": req.contract,
             "game.contract_direction": req.contract_direction,
-            "game.tricks": ",".join(np.array(req.tricks).flatten().tolist()),
+            "game.tricks": ",".join(np.concatenate(req.tricks).tolist()),
         })
 
     dict_result = await play_a_card(

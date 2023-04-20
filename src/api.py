@@ -1,10 +1,12 @@
 from copy import deepcopy
+import time
 from typing import Dict, List
 from quart import Quart, request
 from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
 
-from nn.models import MODELS
+from nn.models import models
 from game import AsyncBotBid, AsyncBotLead
+from play_card_pre_process import play_a_card
 from FullBoardPlayer import AsyncFullBoardPlayer
 from health_checker import HealthChecker
 from alerting import find_alert
@@ -14,7 +16,6 @@ import sentry_sdk
 
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
-from transform_play_card import get_ben_card_play_answer
 from human_carding import lead_real_card
 from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit, Diag, Direction
 from claim_dds import check_claim_from_api
@@ -65,6 +66,7 @@ class PlayCard:
         self.contract_direction = play_card_request['contract_direction']
         self.next_player = play_card_request['next_player']
         self.tricks = play_card_request['tricks']
+        self.cheating_diag_pbn = play_card_request["cheating_diag_pbn"] if "cheating_diag_pbn" in play_card_request else None
 
 
 class MakeLead:
@@ -90,15 +92,9 @@ class CheckClaim:
 
 '''
 {
-    "hand": "Q8754.2.KT8.QT92",
-    "dummy_hand": ".T87543.QJ53.76",
     "dealer": "N",
     "vuln": "None",
-    "auction": ["1H", "PASS", "1N", "PASS", "PASS", "PASS"],
-    "contract": "1N",
-    "contract_direction": "S",
-    "next_player": "E",
-    "tricks": [["SA", "SK"]]
+    "hands : "N:.J8.A9653.A98752 K9J236.2.28.64JK 85.AT754.KJ74.3Q AQT74.KQ963.QT.T"
 }
 '''
 
@@ -110,31 +106,41 @@ class PlayFullBoard:
         self.hands = Diag.init_from_pbn(play_full_board_request['hands'])
 
 
+
 '''
 {
+    "hand": "Q8754.2.KT8.QT92",
+    "dummy_hand": ".T87543.QJ53.76",
     "dealer": "N",
     "vuln": "None",
-    "hands : "N:.J8.A9653.A98752 K9J236.2.28.64JK 85.AT754.KJ74.3Q AQT74.KQ963.QT.T"
+    "auction": ["1H", "PASS", "1N", "PASS", "PASS", "PASS"],
+    "contract": "1N",
+    "contract_direction": "S",
+    "next_player": "E",
+    "tricks": [["SA", "SK"]],
+    "cheating_diag_pbn" : "N:.AJ754.A52.AQ94 Q28.68KQ.9.J3T6 A965.T2.QJ87.K2 KT7.9.KT643.875"
 }
 '''
 
 @app.post('/play_card')
 async def play_card():
+    # start = time.time()
     data = await request.get_json()
     # app.logger.warn(data)
     req = PlayCard(data)
 
-    dict_result = await get_ben_card_play_answer(
-        req.hand,
-        req.dummy_hand,
-        req.dealer,
-        req.vuln,
-        req.auction,
-        req.contract,
-        req.contract_direction,
-        req.next_player,
-        req.tricks,
-        MODELS
+    dict_result = await play_a_card(
+        hand_str=req.hand,
+        dummy_hand_str=req.dummy_hand,
+        dealer_str=req.dealer,
+        vuls=req.vuln,
+        auction=req.auction,
+        contract_str=req.contract,
+        declarer_str=req.contract_direction,
+        next_player_str=req.next_player,
+        tricks_str=req.tricks,
+        cheating_diag_pbn=req.cheating_diag_pbn,
+        models=models
     )
 
     """
@@ -143,7 +149,7 @@ async def play_card():
         "claim_the_rest": false
     }
     """
-
+    # print("Total time : {}".format(time.time()-start))
     return dict_result
 
 
@@ -167,7 +173,7 @@ async def place_bid():
         bot = AsyncBotBid(
             req.vuln,
             req.hand,
-            MODELS
+            models
         )
 
         bid_resp = await bot.async_bid(req.auction)
@@ -181,7 +187,7 @@ async def place_bid():
             bot = AsyncBotBid(
                 req.vuln,
                 req.hand,
-                MODELS,
+                models,
                 human_model=True
             )
             bid_resp = await bot.async_bid(req.auction)
@@ -206,7 +212,7 @@ async def make_lead():
     data = await request.get_json()
     req = MakeLead(data)
 
-    bot = AsyncBotLead(req.vuln, req.hand, MODELS)
+    bot = AsyncBotLead(req.vuln, req.hand, models)
 
     lead = bot.lead(req.auction)
     card_str = lead.to_dict()['candidates'][0]['card']
@@ -262,7 +268,7 @@ async def play_full_board() -> Dict:
         req.hands,
         req.vuln,
         req.dealer,
-        MODELS
+        models
     )
     board_data = await bot.async_full_board()
 

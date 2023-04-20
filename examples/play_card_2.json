@@ -1,0 +1,31 @@
+{
+  "hand": "Q82.KQ863.9.JT63",
+  "dummy_hand": "65.AJ75.AQ.AQ94",
+  "dealer": "S",
+  "vuln": "E-W",
+  "contract": "3N",
+  "contract_direction": "S",
+  "auction": [
+    "PASS",
+    "PASS",
+    "1H",
+    "PASS",
+    "1S",
+    "PASS",
+    "2C",
+    "PASS",
+    "2N",
+    "PASS",
+    "3N",
+    "PASS",
+    "PASS",
+    "PASS"
+  ],
+  "next_player": "E",
+  "tricks": [
+    [
+      "SJ",
+      "C2"
+    ]
+  ]
+}

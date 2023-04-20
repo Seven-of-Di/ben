@@ -2,6 +2,7 @@ from __future__ import annotations
 from copy import deepcopy
 import random
 from typing import Dict, List
+from tracing import tracer
 import numpy as np
 from datetime import datetime
 
@@ -17,6 +18,8 @@ import sample
 from game import AsyncCardPlayer
 from claim_dds import check_claim_from_api
 
+import os
+
 
 def get_play_status(hand: PlayerHand, current_trick: List[Card_]):
     if current_trick == [] or len(current_trick) == 4:
@@ -29,8 +32,9 @@ def get_play_status(hand: PlayerHand, current_trick: List[Card_]):
         return "Follow"
 
 
+@tracer.start_as_current_span("get_ben_card_play_answer")
 async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, auction, contract, declarer_str, next_player_str, tricks_str, MODELS) -> Dict:
-    n_samples = 100
+    n_samples = int(os.environ.get("LEADING_SAMPLES_COUNT", 100))
     claim_res = False
 
     padded_auction = ["PAD_START"] * \
@@ -74,13 +78,13 @@ async def get_ben_card_play_answer(hand_str, dummy_hand_str, dealer_str, vuls, a
 
     card_players = [
         bots.CardPlayer(MODELS.player_models, 0, lefty_hand,
-                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str),dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
+                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str), dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
         bots.CardPlayer(MODELS.player_models, 1, dummy_hand,
-                        decl_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str),dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
+                        decl_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str), dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
         bots.CardPlayer(MODELS.player_models, 2, righty_hand,
-                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str),dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
+                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str), dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
         bots.CardPlayer(MODELS.player_models, 3, decl_hand,
-                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str),dummy_hand=PlayerHand.from_pbn(dummy_hand_str))
+                        dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str), dummy_hand=PlayerHand.from_pbn(dummy_hand_str))
     ]
 
     player_cards_played = [[] for _ in range(4)]

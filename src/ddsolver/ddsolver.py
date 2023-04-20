@@ -1,9 +1,9 @@
 import ctypes
-from typing import Dict
+from typing import Dict, List
 
 from ddsolver import dds
+from tracing import tracer
 
-dds.SetMaxThreads(0)
 
 
 class DDSolver:
@@ -13,6 +13,8 @@ class DDSolver:
         self.bo = dds.boardsPBN()
         self.solved = dds.solvedBoards()
 
+
+    @tracer.start_as_current_span("dds_solver")
     def solve(self, strain_i, leader_i, current_trick, hands_pbn):
         results = self.solve_helper(
             strain_i, leader_i, current_trick, hands_pbn[:dds.MAXNOOFBOARDS])
@@ -84,7 +86,7 @@ class DDSolver:
         return card_results
 
 
-def expected_tricks(card_results, probabilities_list):
+def expected_tricks(card_results, probabilities_list : List[float]):
     return {card: sum([p*res for p, res in zip(probabilities_list, result_list)]) for card, result_list in card_results.items()}
 
 

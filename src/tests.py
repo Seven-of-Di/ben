@@ -38,6 +38,7 @@ def from_lin_to_request(lin_str: str, card_to_remove_after: Card_ | None = None,
     dealer: Direction = lin_dealer_to_direction[lin_str[0]]
     diag_lin = lin_str[1:].split("|")[0]
     diag = Diag.init_from_lin(diag_lin)
+    print(diag.print_as_pbn())
     lin_str = lin_str[2:].split("|", maxsplit=1)[1]
     lin_str = "".join([substr for substr in lin_str.split("7C")])
 
@@ -114,12 +115,13 @@ def from_lin_to_request(lin_str: str, card_to_remove_after: Card_ | None = None,
         "contract_direction": declarer.abbreviation(),
         "auction": bidding_str,
         "next_player": turn_to_play.abbreviation(),
-        "tricks": play_as_list_of_list
+        "tricks": play_as_list_of_list,
+        "cheating_diag_pbn" : diag.print_as_pbn()
     })
 
 
 def run_tests():
-    from nn.models import MODELS
+    from nn.models import models
     with open("./test_data/test_data.pbn") as f:
         boards = f.read().split("\n\n")
         deal_records: List[Deal] = [
@@ -128,7 +130,7 @@ def run_tests():
     def play_full_deal(deal: Deal):
         print(deal.board_number)
         full_play = asyncio.run(AsyncFullBoardPlayer(diag=deepcopy(deal.diag), vuls=[
-            deal.ns_vulnerable, deal.ew_vulnerable], dealer=deal.dealer, models=MODELS).async_full_board())
+            deal.ns_vulnerable, deal.ew_vulnerable], dealer=deal.dealer, models=models).async_full_board())
         sequence = Sequence.from_str_list(full_play["auction"])
         contract = sequence.calculate_final_contract(dealer=deal.dealer)
         if contract is None or contract.bid is None or contract.declarer is None:
@@ -246,7 +248,8 @@ def full_card_play(deal: Deal, sequence: Sequence, lead: str, open_room: bool) -
                 "contract": str(contract),
                 "contract_direction": contract.declarer.abbreviation(),
                 "next_player": current_player.abbreviation(),
-                "tricks": tricks
+                "tricks": tricks,
+                "cheating_diag_pbn": deal.diag.print_as_pbn()
             }
             res = send_request(type_of_action="play_card",
                                data=data, direction=current_player, open_room=open_room)
@@ -352,8 +355,8 @@ def run_tm_btwn_ben_versions(force_same_sequence: bool = False, force_same_lead:
             deal, force_same_sequence, force_same_lead, force_same_card_play)
         print("New Ben times average : bidding : {},carding : {}".format(
             NEW_BIDDING_TIME[0]/NEW_BIDDING_TIME[1], NEW_CARD_TIME[0]/NEW_CARD_TIME[1]))
-        # print("Old Ben times average : bidding : {},carding : {}".format(
-        #     OLD_BIDDING_TIME[0]/OLD_BIDDING_TIME[1], OLD_CARD_TIME[0]/OLD_CARD_TIME[1]))
+        print("Old Ben times average : bidding : {},carding : {}".format(
+            OLD_BIDDING_TIME[0]/OLD_BIDDING_TIME[1], OLD_CARD_TIME[0]/OLD_CARD_TIME[1]))
         print("Boards with differents leads : {}".format(
             boards_with_different_leads))
         with open("./test_data/{}.pbn".format("First test table"), "a") as f:
@@ -391,7 +394,7 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    # run_tm_btwn_ben_versions(force_same_sequence=True,force_same_lead=True)
+    run_tm_btwn_ben_versions(force_same_sequence=True,force_same_lead=True)
     # tests = run_tests()
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))

@@ -33,7 +33,7 @@ def get_play_status(hand: PlayerHand, current_trick: List[Card_]):
 
 
 @tracer.start_as_current_span("get_ben_card_play_answer")
-async def play_a_card(hand_str: str, dummy_hand_str: str, dealer_str: str, vuls: List[bool], auction: List[str], contract_str: str, declarer_str: str, next_player_str: str, tricks_str: List[List[str]],models, cheating_diag_pbn :None|str = None) -> Dict:
+async def play_a_card(hand_str, dummy_hand_str, dealer_str, vuls, auction, contract, declarer_str, next_player_str, tricks_str, MODELS) -> Dict:
     n_samples = int(os.environ.get("LEADING_SAMPLES_COUNT", 100))
     claim_res = False
 
@@ -77,13 +77,13 @@ async def play_a_card(hand_str: str, dummy_hand_str: str, dealer_str: str, vuls:
     decl_hand = random_diag.hands[declarer].to_pbn()
 
     card_players = [
-        bots.CardPlayer(models.player_models, 0, lefty_hand,
+        bots.CardPlayer(MODELS.player_models, 0, lefty_hand,
                         dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str), dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
-        bots.CardPlayer(models.player_models, 1, dummy_hand,
+        bots.CardPlayer(MODELS.player_models, 1, dummy_hand,
                         decl_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str), dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
-        bots.CardPlayer(models.player_models, 2, righty_hand,
+        bots.CardPlayer(MODELS.player_models, 2, righty_hand,
                         dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str), dummy_hand=PlayerHand.from_pbn(dummy_hand_str)),
-        bots.CardPlayer(models.player_models, 3, decl_hand,
+        bots.CardPlayer(MODELS.player_models, 3, decl_hand,
                         dummy_hand, contract, is_decl_vuln, play_record, declarer=declarer, player_direction=next_player, player_hand=PlayerHand.from_pbn(hand_str), dummy_hand=PlayerHand.from_pbn(dummy_hand_str))
     ]
 
@@ -123,10 +123,10 @@ async def play_a_card(hand_str: str, dummy_hand_str: str, dealer_str: str, vuls:
                 if play_status == "Discard":
                     n_samples = 50
                 rollout_states, probabilities_list = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits,
-                                                                                current_trick, n_samples, padded_auction, card_players[player_i].hand_32.reshape((-1, 32)), vuls, models)
+                                                                                current_trick, n_samples, padded_auction, card_players[player_i].hand_32.reshape((-1, 32)), vuls, MODELS)
                 # card = card_players[player_i].debug=True
                 card = card_players[player_i].play_card(
-                    trick_i, leader_i, current_trick52, rollout_states, probabilities_list,cheating_diag_pbn)
+                    trick_i, leader_i, current_trick52, rollout_states, probabilities_list)
                 if card_players[player_i].check_claim and next_player in [declarer, dummy]:
                     claim_res = await check_claim_from_api(hand_str, dummy_hand_str, declarer.abbreviation(), declarer_str, contract, tricks_str, 13-trick_i+card_players[player_i].n_tricks_taken)
                 return {

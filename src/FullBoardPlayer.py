@@ -3,7 +3,7 @@ import bots
 from utils import Direction, BiddingSuit, Card_, Diag
 from PlayRecord import Trick
 from bidding import bidding
-from play_card_pre_process import play_a_card
+from transform_play_card import play_a_card
 from human_carding import lead_real_card
 
 
@@ -49,7 +49,7 @@ class FullBoardPlayer():
 
         # 12 first tricks
         for _ in range(47):
-            dict_result = await play_a_card(hand_str=self.diag.hands[current_player if current_player != dummy else declarer].to_pbn(), dummy_hand_str=self.diag.hands[dummy].to_pbn(), dealer_str=self.dealer.abbreviation(), vuls=self.vuls, auction=auction, contract_str=contract, declarer_str=declarer.abbreviation(), next_player_str=current_player.abbreviation(), tricks_str=tricks, models=self.models)
+            dict_result = await play_a_card(hand_str=self.diag.hands[current_player if current_player != dummy else declarer].to_pbn(), dummy_hand_str=self.diag.hands[dummy].to_pbn(), dealer_str=self.dealer.abbreviation(), vuls=self.vuls, auction=auction, contract=contract, declarer_str=declarer.abbreviation(), next_player_str=current_player.abbreviation(), tricks_str=tricks, MODELS=self.models)
             # print(dict_result)
             tricks[-1].append(str(dict_result["card"]))
             self.diag.hands[current_player].remove(

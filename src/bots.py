@@ -1,5 +1,4 @@
 from copy import deepcopy
-from math import ceil
 import time
 import random
 import pprint
@@ -21,7 +20,7 @@ from bidding import bidding
 from bidding.binary import parse_hand_f
 
 from util import hand_to_str, expected_tricks, p_make_contract
-from utils import Card_, multiple_list_comparaison, Direction, PlayerHand, BiddingSuit, Rank, Suit, TOTAL_DECK, Diag,convert_to_probability
+from utils import Card_, multiple_list_comparaison, Direction, PlayerHand, BiddingSuit, Rank, Suit, TOTAL_DECK, Diag
 from human_carding import play_real_card
 from PlayRecord import PlayRecord
 from Sequence import Sequence
@@ -481,17 +480,17 @@ class CardPlayer:
         self.public52[card52] -= 1
 
     @tracer.start_as_current_span("play_card")
-    def play_card(self, trick_i, leader_i, current_trick52, players_states, probabilities_list,cheating_diag_pbn : str|None):
+    def play_card(self, trick_i, leader_i, current_trick52, players_states, probabilities_list):
         current_trick = [deck52.card52to32(c) for c in current_trick52]
         card52_dd = self.get_cards_dd_evaluation(
-            trick_i, leader_i, current_trick52, players_states, probabilities_list,cheating_diag_pbn)
-        card_resp = self.pick_card_after_dd_eval(
+            trick_i, leader_i, current_trick52, players_states, probabilities_list)
+        card_resp = self.next_card(
             trick_i, leader_i, current_trick, players_states, card52_dd)
 
         return card_resp
 
     @tracer.start_as_current_span("get_cards_dd_evaluation")
-    def get_cards_dd_evaluation(self, trick_i, leader_i, current_trick52, players_states, probabilities_list,cheating_diag_pbn : str|None):
+    def get_cards_dd_evaluation(self, trick_i, leader_i, current_trick52, players_states, probabilities_list):
 
         def create_diag_from_32(base_diag : Diag,array_of_array_32: List[np.ndarray], pips: List[Card_]):
             diag = deepcopy(base_diag)
@@ -541,24 +540,13 @@ class CardPlayer:
             samples_as_diag = [create_diag_from_32(base_diag,[players_states[j][i, trick_i, :32] for j in range(
                 4)], low_hidden_cards) for i in range(n_samples)]
 
-        # and self.player_direction not in [self.declarer,self.declarer.partner()]
-        if cheating_diag_pbn is not None :
-            reduced_samples = 10
-            step = ceil(len(samples_as_diag)/reduced_samples)
-            samples_as_diag = samples_as_diag[::step]
-            probabilities_list = probabilities_list[::step]
-            samples_as_diag.append(Diag.init_from_pbn(cheating_diag_pbn))
-            probabilities_list = np.append(probabilities_list,(np.sum(probabilities_list)*0.25))
-            probabilities_list=convert_to_probability(probabilities_list)    
-
         if self.play_record.record is None:
             raise Exception("Play record should not be none")
 
         leader_i = (leader_i + self.declarer.offset(2).value) % 4
-        start = time.time()
         dd_solved = DDS.solve(
             self.strain_i, leader_i, current_trick52, [diag.print_as_pbn(first_direction=Direction.WEST) for diag in samples_as_diag])
-
+        # dd_solved = self.reverse_dds_results(unoriented_dd_solved) if reverse_results else unoriented_dd_solved
 
         if any([all([trick == self.tricks_left for trick in card_res]) for card_res in dd_solved.values()]):
             self.check_claim = True
@@ -612,7 +600,7 @@ class CardPlayer:
                 self.x_play[:, trick_i, :]).get_this_trick_lead_suit(),
         ).reshape(-1)
 
-    def pick_card_after_dd_eval(self, trick_i, leader_i, current_trick, players_states, card_dd) -> str:
+    def next_card(self, trick_i, leader_i, current_trick, players_states, card_dd) -> str:
         t_start = time.time()
         card_softmax = self.next_card_softmax(trick_i)
 

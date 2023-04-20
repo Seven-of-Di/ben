@@ -11,6 +11,10 @@ from FullBoardPlayer import AsyncFullBoardPlayer
 from health_checker import HealthChecker
 from alerting import find_alert
 
+from opentelemetry import trace
+from tracing import tracing_enabled
+import numpy as np
+
 import os
 import sentry_sdk
 
@@ -122,6 +126,7 @@ class PlayFullBoard:
 }
 '''
 
+
 @app.post('/play_card')
 async def play_card():
     # start = time.time()
@@ -129,18 +134,28 @@ async def play_card():
     # app.logger.warn(data)
     req = PlayCard(data)
 
-    dict_result = await play_a_card(
-        hand_str=req.hand,
-        dummy_hand_str=req.dummy_hand,
-        dealer_str=req.dealer,
-        vuls=req.vuln,
-        auction=req.auction,
-        contract_str=req.contract,
-        declarer_str=req.contract_direction,
-        next_player_str=req.next_player,
-        tricks_str=req.tricks,
-        cheating_diag_pbn=req.cheating_diag_pbn,
-        models=models
+    if tracing_enabled:
+        current_span = trace.get_current_span()
+        current_span.set_attributes({
+            "game.next_player": req.next_player,
+            "game.hand": req.hand,
+            "game.dummy_hand": req.dummy_hand,
+            "game.contract": req.contract,
+            "game.contract_direction": req.contract_direction,
+            "game.tricks": ",".join(np.array(req.tricks).flatten().tolist()),
+        })
+
+    dict_result = await get_ben_card_play_answer(
+        req.hand,
+        req.dummy_hand,
+        req.dealer,
+        req.vuln,
+        req.auction,
+        req.contract,
+        req.contract_direction,
+        req.next_player,
+        req.tricks,
+        MODELS
     )
 
     """

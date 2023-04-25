@@ -70,7 +70,8 @@ class PlayCard:
         self.contract_direction = play_card_request['contract_direction']
         self.next_player = play_card_request['next_player']
         self.tricks = play_card_request['tricks']
-        self.cheating_diag_pbn = play_card_request["cheating_diag_pbn"] if "cheating_diag_pbn" in play_card_request else None
+        self.cheating_diag_pbn = play_card_request[
+            "cheating_diag_pbn"] if "cheating_diag_pbn" in play_card_request else None
 
 
 class MakeLead:
@@ -108,7 +109,6 @@ class PlayFullBoard:
         self.vuln = VULNERABILITIES[play_full_board_request['vuln']]
         self.dealer = Direction.from_str(play_full_board_request['dealer'])
         self.hands = Diag.init_from_pbn(play_full_board_request['hands'])
-
 
 
 '''

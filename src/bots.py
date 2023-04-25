@@ -3,7 +3,7 @@ from math import ceil
 import time
 import random
 import pprint
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -21,23 +21,21 @@ from bidding import bidding
 from bidding.binary import parse_hand_f
 
 from util import hand_to_str, expected_tricks, p_make_contract
-from utils import Card_, multiple_list_comparaison, Direction, PlayerHand, BiddingSuit, Rank, Suit, TOTAL_DECK, Diag,convert_to_probability
+from utils import Card_, multiple_list_comparaison, Direction, PlayerHand, BiddingSuit, Rank, Suit, TOTAL_DECK, Diag, convert_to_probability
 from human_carding import play_real_card
 from PlayRecord import PlayRecord
 from Sequence import Sequence
 DDS = ddsolver.DDSolver()
 
 
-
 class BotBid:
 
-    def __init__(self, vuln, hand_str, models : nn.models.Models, human_model : bool = False):
+    def __init__(self, vuln, hand_str, models: nn.models.Models, human_model: bool = False):
         self.vuln = vuln
         self.hand_str = hand_str
         self.hand = binary.parse_hand_f(32)(hand_str)
         self.min_candidate_score = 0.15
         self.getting_doubled = False
-
 
         self.model = models.bidder_model if not human_model else models.wide_bidder_model
         self.state = models.bidder_model.zero_state if not human_model else models.wide_bidder_model.zero_state
@@ -65,7 +63,8 @@ class BotBid:
     def restful_bid(self, auction) -> BidResp:
         start = time.time()
         auction = [element for element in auction if element != "PAD_START"]
-        self.getting_doubled = len(auction)>=3 and ((auction[-3:]==['X',"PASS","PASS"] )  or auction[-2:]==['XX',"PASS"])
+        self.getting_doubled = len(auction) >= 3 and (
+            (auction[-3:] == ['X', "PASS", "PASS"]) or auction[-2:] == ['XX', "PASS"])
         self.min_candidate_score = 0.01 if self.getting_doubled else self.min_candidate_score
 
         position_minus_1 = len(auction) % 4
@@ -132,9 +131,9 @@ class BotBid:
                     hands_np, auctions_np)
                 ev = self.expected_score(len(auction) %
                                          4, contracts, decl_tricks_softmax)
-                if candidate.bid=="XX" :
-                    #Please stop redoubling if you are not 100% sure
-                    ev-=300 
+                if candidate.bid == "XX":
+                    # Please stop redoubling if you are not 100% sure
+                    ev -= 300
                 ev_c = candidate.with_expected_score(np.mean(ev))
                 ev_candidates.append(ev_c)
             candidates = sorted(
@@ -145,7 +144,7 @@ class BotBid:
         return BidResp(bid=candidates[0].bid, candidates=candidates, samples=samples)
 
     @staticmethod
-    def do_rollout(auction, candidates : List[CandidateBid]):
+    def do_rollout(auction, candidates: List[CandidateBid]):
         if len(candidates) == 1:
             return False
 
@@ -285,10 +284,11 @@ class BotBid:
             if (turn_to_bid + decl_i) % 2 == 1:
                 # the other side is playing the contract
                 scores_by_trick[i, :] *= -1
-        
+
         res = np.sum(decl_tricks_softmax * scores_by_trick, axis=1)
         average = sum(res)/len(res)
         return res
+
 
 class BotLead:
 
@@ -305,7 +305,7 @@ class BotLead:
 
     def lead(self, auction):
         contract = bidding.get_contract(auction)
-        if contract is None :
+        if contract is None:
             raise Exception("Contract should not be None if asking for a lead")
 
         level = int(contract[0])
@@ -318,30 +318,39 @@ class BotLead:
 
         samples = []
 
-        base_diag = Diag({d:PlayerHand({s:[] for s in Suit}) for d in Direction})
+        base_diag = Diag({d: PlayerHand({s: [] for s in Suit})
+                         for d in Direction})
         base_diag.hands[Direction.WEST] = PlayerHand.from_pbn(self.hand_str)
-        samples = [deepcopy(base_diag) for i in range(min(100, accepted_samples.shape[0]))]
-        pips = {s:[] for s in Suit}
-        for card in TOTAL_DECK :
-            if card not in base_diag.hands[Direction.WEST].cards and card.rank<=Rank.SEVEN :
+        samples = [deepcopy(base_diag)
+                   for i in range(min(100, accepted_samples.shape[0]))]
+        pips = {s: [] for s in Suit}
+        for card in TOTAL_DECK:
+            if card not in base_diag.hands[Direction.WEST].cards and card.rank <= Rank.SEVEN:
                 pips[card.suit].append(card.rank)
         for i in range(min(100, accepted_samples.shape[0])):
             temp_pips = deepcopy(pips)
-            samples[i].hands[Direction.NORTH] = PlayerHand.from_pbn(hand_to_str(accepted_samples[i, 0, :]),temp_pips)
-            samples[i].hands[Direction.EAST] = PlayerHand.from_pbn(hand_to_str(accepted_samples[i, 1, :]),temp_pips)
-            samples[i].hands[Direction.SOUTH] = PlayerHand.from_pbn(hand_to_str(accepted_samples[i, 2, :]),temp_pips)
+            samples[i].hands[Direction.NORTH] = PlayerHand.from_pbn(
+                hand_to_str(accepted_samples[i, 0, :]), temp_pips)
+            samples[i].hands[Direction.EAST] = PlayerHand.from_pbn(
+                hand_to_str(accepted_samples[i, 1, :]), temp_pips)
+            samples[i].hands[Direction.SOUTH] = PlayerHand.from_pbn(
+                hand_to_str(accepted_samples[i, 2, :]), temp_pips)
 
-        dd_solved = DDS.solve(strain, 0, [], [diag.print_as_pbn(first_direction=Direction.WEST) for diag in samples])
-        dd_solved = {Card_.get_from_52(k):v for k,v in dd_solved.items()}
+        dd_solved = DDS.solve(strain, 0, [], [diag.print_as_pbn(
+            first_direction=Direction.WEST) for diag in samples])
+        dd_solved = {Card_.get_from_52(k): v for k, v in dd_solved.items()}
 
-        candidate_cards : List[CandidateCard] = []
+        candidate_cards: List[CandidateCard] = []
         for i, card_i in enumerate(lead_card_indexes):
             x_card = str(Card.from_code(card_i, xcards=True))
-            card = Card_.from_str(x_card) if x_card[1]!="x" else Card_(Suit.from_str(x_card[0]),min(base_diag.hands[Direction.WEST].suits[Suit.from_str(x_card[0])]))
+            card = Card_.from_str(x_card) if x_card[1] != "x" else Card_(Suit.from_str(
+                x_card[0]), min(base_diag.hands[Direction.WEST].suits[Suit.from_str(x_card[0])]))
             candidate_cards.append(CandidateCard(
                 card=Card.from_code(card_i, xcards=True),
                 insta_score=lead_softmax[0, card_i],
-                p_make_contract=1-sum([1 if v>=tricks_to_defeat_contract else 0 for v in dd_solved[card]])/len(dd_solved[card]),
+                p_make_contract=1 -
+                sum([1 if v >= tricks_to_defeat_contract else 0 for v in dd_solved[card]]
+                    )/len(dd_solved[card]),
                 expected_tricks=sum((dd_solved[card]))/len(dd_solved[card])
             ))
             # print(Card_.get_from_52(deck52.card32to52(card_i)))
@@ -351,7 +360,7 @@ class BotLead:
             # print(np.mean(tricks[:, i, 1]))
             pass
         candidate_cards = sorted(
-            candidate_cards, key=lambda c: c.p_make_contract if c.p_make_contract!=None else 1)
+            candidate_cards, key=lambda c: c.p_make_contract if c.p_make_contract != None else 1)
 
         # for c in candidate_cards :
         #     print(c.card,c.p_make_contract)
@@ -416,7 +425,7 @@ class BotLead:
 
 class CardPlayer:
 
-    def __init__(self, player_models, player_i, hand_str, public_hand_str, contract, is_decl_vuln, play_record: PlayRecord, declarer: Direction, player_direction: Direction, dummy_hand: PlayerHand, player_hand: PlayerHand, debug:bool = False):
+    def __init__(self, player_models, player_i, hand_str, public_hand_str, contract, is_decl_vuln, play_record: PlayRecord, declarer: Direction, player_direction: Direction, dummy_hand: PlayerHand, player_hand: PlayerHand, debug: bool = False):
         self.player_models = player_models
         self.model = player_models[player_i]
         self.player_i = player_i
@@ -481,19 +490,19 @@ class CardPlayer:
         self.public52[card52] -= 1
 
     @tracer.start_as_current_span("play_card")
-    def play_card(self, trick_i, leader_i, current_trick52, players_states, probabilities_list,cheating_diag_pbn : str|None):
+    def play_card(self, trick_i, leader_i, current_trick52, players_states, probabilities_list, cheating_diag_pbn: Optional[str]):
         current_trick = [deck52.card52to32(c) for c in current_trick52]
         card52_dd = self.get_cards_dd_evaluation(
-            trick_i, leader_i, current_trick52, players_states, probabilities_list,cheating_diag_pbn)
+            trick_i, leader_i, current_trick52, players_states, probabilities_list, cheating_diag_pbn)
         card_resp = self.pick_card_after_dd_eval(
             trick_i, leader_i, current_trick, players_states, card52_dd)
 
         return card_resp
 
     @tracer.start_as_current_span("get_cards_dd_evaluation")
-    def get_cards_dd_evaluation(self, trick_i, leader_i, current_trick52, players_states, probabilities_list,cheating_diag_pbn : str|None):
+    def get_cards_dd_evaluation(self, trick_i, leader_i, current_trick52, players_states, probabilities_list, cheating_diag_pbn: Optional[str]):
 
-        def create_diag_from_32(base_diag : Diag,array_of_array_32: List[np.ndarray], pips: List[Card_]):
+        def create_diag_from_32(base_diag: Diag, array_of_array_32: List[np.ndarray], pips: List[Card_]):
             diag = deepcopy(base_diag)
             pips_as_dict = {
                 s: [card.rank for card in pips if card.suit == s] for s in Suit}
@@ -537,19 +546,20 @@ class CardPlayer:
         low_hidden_cards = [
             c for c in self.hidden_cards if c.rank <= Rank.SEVEN]
         n_samples = players_states[0].shape[0]
-        with tracer.start_as_current_span("get diags_from_np_arrays") as _ :
-            samples_as_diag = [create_diag_from_32(base_diag,[players_states[j][i, trick_i, :32] for j in range(
+        with tracer.start_as_current_span("get diags_from_np_arrays") as _:
+            samples_as_diag = [create_diag_from_32(base_diag, [players_states[j][i, trick_i, :32] for j in range(
                 4)], low_hidden_cards) for i in range(n_samples)]
 
         # and self.player_direction not in [self.declarer,self.declarer.partner()]
-        if cheating_diag_pbn is not None :
+        if cheating_diag_pbn is not None:
             reduced_samples = 10
             step = ceil(len(samples_as_diag)/reduced_samples)
             samples_as_diag = samples_as_diag[::step]
             probabilities_list = probabilities_list[::step]
             samples_as_diag.append(Diag.init_from_pbn(cheating_diag_pbn))
-            probabilities_list = np.append(probabilities_list,(np.sum(probabilities_list)*0.25))
-            probabilities_list=convert_to_probability(probabilities_list)    
+            probabilities_list = np.append(
+                probabilities_list, (np.sum(probabilities_list)*0.25))
+            probabilities_list = convert_to_probability(probabilities_list)
 
         if self.play_record.record is None:
             raise Exception("Play record should not be none")
@@ -559,44 +569,43 @@ class CardPlayer:
         dd_solved = DDS.solve(
             self.strain_i, leader_i, current_trick52, [diag.print_as_pbn(first_direction=Direction.WEST) for diag in samples_as_diag])
 
-
         if any([all([trick == self.tricks_left for trick in card_res]) for card_res in dd_solved.values()]):
             self.check_claim = True
 
         card_tricks = ddsolver.expected_tricks(dd_solved, probabilities_list)
-        card_ev = self.get_card_ev(dd_solved,probabilities_list)
+        card_ev = self.get_card_ev(dd_solved, probabilities_list)
 
         card_result = {}
         for key in dd_solved.keys():
             card_result[key] = (card_tricks[key], card_ev[key])
 
-        if self.debug :
-            for i,(diag, p), in enumerate(zip(samples_as_diag, probabilities_list)):
+        if self.debug:
+            for i, (diag, p), in enumerate(zip(samples_as_diag, probabilities_list)):
                 string = ""
-                for card,res in dd_solved.items() :
-                    string += "{}:{},".format(Card_.get_from_52(card),res[i])
+                for card, res in dd_solved.items():
+                    string += "{}:{},".format(Card_.get_from_52(card), res[i])
                 print(round(p, 5), ":", diag.print_as_pbn(
-                    first_direction=Direction.WEST),string)
+                    first_direction=Direction.WEST), string)
             for key, value in (card_result.items()):
                 print(Card_.get_from_52(key), value)
             print("   {}".format([i for i in range(len(samples_as_diag))]))
             for key, value in (dd_solved.items()):
                 print(Card_.get_from_52(key), value)
 
-
         return card_result
 
-    def get_card_ev(self, dd_solved,probabilities_list):
+    def get_card_ev(self, dd_solved, probabilities_list):
         card_ev = {}
         sign = 1 if self.player_i % 2 == 1 else -1
         for card, future_tricks in dd_solved.items():
             ev_sum = 0
-            for ft,proba in zip(future_tricks,probabilities_list):
+            for ft, proba in zip(future_tricks, probabilities_list):
                 if ft < 0:
                     continue
                 tot_tricks = self.n_tricks_taken + ft
                 tot_decl_tricks = tot_tricks if self.player_i % 2 == 1 else 13 - tot_tricks
-                ev_sum += sign * self.score_by_tricks_taken[tot_decl_tricks] * proba
+                ev_sum += sign * \
+                    self.score_by_tricks_taken[tot_decl_tricks] * proba
             card_ev[card] = ev_sum
 
         return card_ev

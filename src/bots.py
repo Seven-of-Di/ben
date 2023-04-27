@@ -1,4 +1,5 @@
 from copy import deepcopy
+from math import ceil
 import time
 import random
 import pprint
@@ -617,7 +618,7 @@ class CardPlayer:
                 self.x_play[:, trick_i, :]).get_this_trick_lead_suit(),
         ).reshape(-1)
 
-    def next_card(self, trick_i, leader_i, current_trick, players_states, card_dd) -> str:
+    def pick_card_after_dd_eval(self, trick_i, leader_i, current_trick, players_states, card_dd) -> str:
         t_start = time.time()
         card_softmax = self.next_card_softmax(trick_i)
 

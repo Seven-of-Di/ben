@@ -498,6 +498,9 @@ class PlayerHand():
         if self.ordered_pattern()[2] == 4:
             return True
         return False
+    
+    def opening_values(self) -> bool:
+        return self.hcp() >= 12 or self.hcp()==11 and self.ordered_pattern()[0]>=5
 
 
 TOTAL_DECK: List[Card_] = []

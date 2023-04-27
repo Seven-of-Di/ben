@@ -18,7 +18,7 @@ import sentry_sdk
 
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
-from transform_play_card import play_a_card
+from play_card_pre_process import play_a_card
 from human_carding import lead_real_card
 from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit, Diag, Direction
 from claim_dds import check_claim_from_api
@@ -152,7 +152,8 @@ async def play_card():
         req.contract_direction,
         req.next_player,
         req.tricks,
-        MODELS
+        MODELS,
+        req.cheating_diag_pbn
     )
 
     """

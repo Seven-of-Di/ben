@@ -1,7 +1,7 @@
 from __future__ import annotations
 from copy import deepcopy
 import random
-from typing import Dict, List
+from typing import Dict, List, Optional
 from tracing import tracer
 import numpy as np
 from datetime import datetime
@@ -33,7 +33,7 @@ def get_play_status(hand: PlayerHand, current_trick: List[Card_]):
 
 
 @tracer.start_as_current_span("get_ben_card_play_answer")
-async def play_a_card(hand_str, dummy_hand_str, dealer_str, vuls, auction, contract, declarer_str, next_player_str, tricks_str, MODELS) -> Dict:
+async def play_a_card(hand_str, dummy_hand_str, dealer_str, vuls, auction, contract, declarer_str, next_player_str, tricks_str, MODELS,cheating_diag_pbn : Optional[str]) -> Dict:
     n_samples = int(os.environ.get("LEADING_SAMPLES_COUNT", 100))
     claim_res = False
 
@@ -126,7 +126,7 @@ async def play_a_card(hand_str, dummy_hand_str, dealer_str, vuls, auction, contr
                                                                                 current_trick, n_samples, padded_auction, card_players[player_i].hand_32.reshape((-1, 32)), vuls, MODELS)
                 # card = card_players[player_i].debug=True
                 card = card_players[player_i].play_card(
-                    trick_i, leader_i, current_trick52, rollout_states, probabilities_list)
+                    trick_i, leader_i, current_trick52, rollout_states, probabilities_list,cheating_diag_pbn)
                 if card_players[player_i].check_claim and next_player in [declarer, dummy]:
                     claim_res = await check_claim_from_api(hand_str, dummy_hand_str, declarer.abbreviation(), declarer_str, contract, tricks_str, 13-trick_i+card_players[player_i].n_tricks_taken)
                 return {

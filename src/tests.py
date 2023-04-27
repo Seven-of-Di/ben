@@ -1,5 +1,6 @@
 import asyncio
 from copy import deepcopy
+import datetime
 import time
 from typing import Dict, List
 
@@ -21,7 +22,10 @@ NEW_BIDDING_TIME: List[float] = [0, 0]
 OLD_BIDDING_TIME: List[float] = [0, 0]
 NEW_CARD_TIME: List[float] = [0, 0]
 OLD_CARD_TIME: List[float] = [0, 0]
+RECEIVING_BOT_NAME = "Ben"
+RECEIVED_BOT_NAME = "Lia"
 boards_with_different_leads = []
+time_stamp = datetime.datetime.now().strftime("%H-%M")
 
 
 def from_lin_to_request(lin_str: str, card_to_remove_after: Card_ | None = None, bid_to_remove_after: str | None = None):
@@ -148,10 +152,10 @@ def run_tests():
 
 
 def send_request(type_of_action: str, data: Dict, direction: Direction, open_room: bool):
-    new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (
-        not open_room and direction in [Direction.EAST, Direction.WEST])
     # new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (
-    #     not open_room and direction in [Direction.EAST, Direction.WEST]) or type_of_action != "make_lead"
+    #     not open_room and direction in [Direction.EAST, Direction.WEST])
+    new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (
+        not open_room and direction in [Direction.EAST, Direction.WEST]) or type_of_action != "place_bid"
     port = "http://localhost:{}".format("8081" if new_ben_called else "8082")
     start = time.time()
     res = requests.post('{}/{}'.format(port, type_of_action), json=data)
@@ -170,7 +174,6 @@ def send_request(type_of_action: str, data: Dict, direction: Direction, open_roo
         else:
             OLD_BIDDING_TIME[0] += request_time
             OLD_BIDDING_TIME[1] += 1
-
     print(res.json())
     return res.json()
 
@@ -188,7 +191,8 @@ def bid_deal(deal: Deal, open_room: bool):
             "vuln": VULS_REVERSE[(deal.ns_vulnerable, deal.ew_vulnerable)],
             "auction": sequence.get_as_ben_request()
         }
-        res = send_request("place_bid", data, current_player, open_room)
+        res = send_request("place_bid", data, current_player, open_room) if current_player in [
+            Direction.NORTH, Direction.SOUTH] else {"bid": "P"}
         if not sequence.append_with_check(SequenceAtom.from_str(res["bid"])):
             raise Exception(res["bid"]+"is not valid ?")
         current_player = current_player.offset(1)
@@ -314,13 +318,13 @@ def run_deal_on_both_rooms(deal: Deal, force_same_sequence: bool = False, force_
 
     open_room_record = play_full_deal(
         deepcopy(deal), False, False, False, None, open_room=True)
-    open_room_record.names = {Direction.SOUTH: "New Ben", Direction.NORTH: "New Ben",
-                              Direction.EAST: "Old Ben", Direction.WEST: "Old Ben"}
+    open_room_record.names = {Direction.SOUTH: RECEIVING_BOT_NAME, Direction.NORTH: RECEIVING_BOT_NAME,
+                              Direction.EAST: RECEIVED_BOT_NAME, Direction.WEST: RECEIVED_BOT_NAME}
 
     closed_room_record = play_full_deal(deepcopy(deal), force_same_sequence=force_same_sequence, force_same_lead=force_same_lead,
                                         force_same_card_play=force_same_card_play, other_play_record=open_room_record, open_room=False)
-    closed_room_record.names = {Direction.EAST: "New Ben", Direction.WEST: "New Ben",
-                                Direction.NORTH: "Old Ben", Direction.SOUTH: "Old Ben"}
+    closed_room_record.names = {Direction.EAST: RECEIVING_BOT_NAME, Direction.WEST: RECEIVING_BOT_NAME,
+                                Direction.NORTH: RECEIVED_BOT_NAME, Direction.SOUTH: RECEIVED_BOT_NAME}
     open_room_board = Board(deal, open_room_record)
     closed_room_board = Board(deal, closed_room_record)
 
@@ -344,19 +348,24 @@ def count_average_hcp():
 def run_tm_btwn_ben_versions(force_same_sequence: bool = False, force_same_lead: bool = False, force_same_card_play: bool = False):
     with open("./test_data/test_data.pbn") as f:
         boards = f.read().strip("\n").split("\n\n")
-        deals: List[Deal] = [Deal.from_pbn(board) for board in boards]
+        deals: List[Deal] = [Deal.from_pbn(board) for board in boards][:50]
 
     for deal in deals:
         deal.diag = Diag.generate_random()
+        while not deal.diag.hands[Direction.NORTH].opening_values() or deal.diag.hands[Direction.SOUTH].opening_values():
+            deal.diag = Diag.generate_random()
         pbn = run_deal_on_both_rooms(
             deal, force_same_sequence, force_same_lead, force_same_card_play)
-        print("New Ben times average : bidding : {},carding : {}".format(
+        print("Ben times average : bidding : {},carding : {}".format(
             NEW_BIDDING_TIME[0]/NEW_BIDDING_TIME[1], NEW_CARD_TIME[0]/NEW_CARD_TIME[1]))
-        # print("Old Ben times average : bidding : {},carding : {}".format(
+        # print("Lia times average : bidding : {},carding : {}".format(
         #     OLD_BIDDING_TIME[0]/OLD_BIDDING_TIME[1], OLD_CARD_TIME[0]/OLD_CARD_TIME[1]))
         print("Boards with differents leads : {}".format(
             boards_with_different_leads))
-        with open("./test_data/{}.pbn".format("First test table"), "a") as f:
+        name_of_the_match = "{} vs {}".format(
+            RECEIVING_BOT_NAME, RECEIVED_BOT_NAME)
+        date = datetime.datetime.today().strftime('%m_%d_%Y')
+        with open("./test_data/{} - {} - {}.pbn".format(name_of_the_match, date, time_stamp), "a+") as f:
             f.write("\n{}".format(pbn))
 
 
@@ -391,13 +400,13 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    # run_tm_btwn_ben_versions(force_same_sequence=True,force_same_lead=True)
+    run_tm_btwn_ben_versions(force_same_lead=True,force_same_card_play=True)
     # tests = run_tests()
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))
     # load_test_pbn("c4f380988fc67c0fe6e5f4bc5502d67a3b45d2c0.pbn")
-    link = r"https://play.intobridge.com/hand?lin=pn%7CBourricot,Ben,Ben,Ben%7Cmd%7C1SA9654HT2DQJ87CK2,SKJT7H9DKT643C875,S3HAJ754DA52CAQ94,SQ82HKQ863D9CJT63%7Cah%7CBoard%203%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7C1H%7Cmb%7Cp%7Cmb%7C1S%7Cmb%7Cp%7Cmb%7C2C%7Cmb%7Cp%7Cmb%7C2H%7Cmb%7Cp%7Cmb%7C3H%7Cmb%7Cp%7Cmb%7C3N%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CSJ%7Cpc%7CS3%7Cpc%7CS2%7Cpc%7CS4%7Cmc%7C0%7Csv%7Ce%7C"
-    print(from_lin_to_request(link, Card_.from_str("S4")))
+    link = r"https://play.intobridge.com/hand?lin=pn|mgabor,Ben,Ben,Ben|md|3SA8HKQ7643D53CQ96,SK6532HDA9762CT75,SQJT97HJ9DJT4CK32,S4HAT852DKQ8CAJ84|ah|boardname|mb|1H|mb|1S|mb|p|mb|2C|mb|p|mb|2S|mb|d|mb|2N|mb|p|mb|3C|mb|p|mb|p|mb|p|pc|D5|pc|D2|pc|DT|pc|DK|mc|2|sv|b|"
+    print(from_lin_to_request(link, Card_.from_str("DK")))
     # print(from_lin_to_request(link, bid_to_remove_after="X"))
 
     # print(from_lin_to_request(link, None))

@@ -1,12 +1,10 @@
 from copy import deepcopy
-import time
 from typing import Dict, List
 from quart import Quart, request
 from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
 
-from nn.models import models
+from nn.models import MODELS
 from game import AsyncBotBid, AsyncBotLead
-from play_card_pre_process import play_a_card
 from FullBoardPlayer import AsyncFullBoardPlayer
 from health_checker import HealthChecker
 from alerting import find_alert
@@ -20,6 +18,7 @@ import sentry_sdk
 
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
+from transform_play_card import play_a_card
 from human_carding import lead_real_card
 from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit, Diag, Direction
 from claim_dds import check_claim_from_api
@@ -97,9 +96,15 @@ class CheckClaim:
 
 '''
 {
+    "hand": "Q8754.2.KT8.QT92",
+    "dummy_hand": ".T87543.QJ53.76",
     "dealer": "N",
     "vuln": "None",
-    "hands : "N:.J8.A9653.A98752 K9J236.2.28.64JK 85.AT754.KJ74.3Q AQT74.KQ963.QT.T"
+    "auction": ["1H", "PASS", "1N", "PASS", "PASS", "PASS"],
+    "contract": "1N",
+    "contract_direction": "S",
+    "next_player": "E",
+    "tricks": [["SA", "SK"]]
 }
 '''
 
@@ -113,23 +118,15 @@ class PlayFullBoard:
 
 '''
 {
-    "hand": "Q8754.2.KT8.QT92",
-    "dummy_hand": ".T87543.QJ53.76",
     "dealer": "N",
     "vuln": "None",
-    "auction": ["1H", "PASS", "1N", "PASS", "PASS", "PASS"],
-    "contract": "1N",
-    "contract_direction": "S",
-    "next_player": "E",
-    "tricks": [["SA", "SK"]],
-    "cheating_diag_pbn" : "N:.AJ754.A52.AQ94 Q28.68KQ.9.J3T6 A965.T2.QJ87.K2 KT7.9.KT643.875"
+    "hands : "N:.J8.A9653.A98752 K9J236.2.28.64JK 85.AT754.KJ74.3Q AQT74.KQ963.QT.T"
 }
 '''
 
 
 @app.post('/play_card')
 async def play_card():
-    # start = time.time()
     data = await request.get_json()
     # app.logger.warn(data)
     req = PlayCard(data)
@@ -142,7 +139,7 @@ async def play_card():
             "game.dummy_hand": req.dummy_hand,
             "game.contract": req.contract,
             "game.contract_direction": req.contract_direction,
-            "game.tricks": ",".join(np.array(req.tricks).flatten().tolist()),
+            "game.tricks": ",".join(np.concatenate(req.tricks).tolist()),
         })
 
     dict_result = await play_a_card(
@@ -155,8 +152,7 @@ async def play_card():
         req.contract_direction,
         req.next_player,
         req.tricks,
-        models,
-        req.cheating_diag_pbn
+        MODELS
     )
 
     """
@@ -165,7 +161,7 @@ async def play_card():
         "claim_the_rest": false
     }
     """
-    # print("Total time : {}".format(time.time()-start))
+
     return dict_result
 
 
@@ -189,7 +185,7 @@ async def place_bid():
         bot = AsyncBotBid(
             req.vuln,
             req.hand,
-            models
+            MODELS
         )
 
         bid_resp = await bot.async_bid(req.auction)
@@ -203,7 +199,7 @@ async def place_bid():
             bot = AsyncBotBid(
                 req.vuln,
                 req.hand,
-                models,
+                MODELS,
                 human_model=True
             )
             bid_resp = await bot.async_bid(req.auction)
@@ -228,7 +224,7 @@ async def make_lead():
     data = await request.get_json()
     req = MakeLead(data)
 
-    bot = AsyncBotLead(req.vuln, req.hand, models)
+    bot = AsyncBotLead(req.vuln, req.hand, MODELS)
 
     lead = bot.lead(req.auction)
     card_str = lead.to_dict()['candidates'][0]['card']
@@ -284,7 +280,7 @@ async def play_full_board() -> Dict:
         req.hands,
         req.vuln,
         req.dealer,
-        models
+        MODELS
     )
     board_data = await bot.async_full_board()
 

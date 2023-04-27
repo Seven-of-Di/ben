@@ -1,5 +1,4 @@
 from copy import deepcopy
-from math import ceil
 import time
 import random
 import pprint
@@ -61,7 +60,6 @@ class BotBid:
         return X[:, -1, :]
 
     def restful_bid(self, auction) -> BidResp:
-        start = time.time()
         auction = [element for element in auction if element != "PAD_START"]
         self.getting_doubled = len(auction) >= 3 and (
             (auction[-3:] == ['X', "PASS", "PASS"]) or auction[-2:] == ['XX', "PASS"])
@@ -71,16 +69,15 @@ class BotBid:
 
         for i in range(len(auction)//4):
             self.get_bid_candidates(auction[:i*4+position_minus_1])
-        end_wo_samples = time.time()
+
         bid = self.bid(auction)
-        end_w_samples = time.time()
-        # print(end_w_samples-start,end_wo_samples-start, (end_wo_samples-start)/(end_w_samples-start))
+
         return bid
 
     def get_samples_from_auction(self, auction) -> List[PlayerHand]:
         auction = [element for element in auction if element != "PAD_START"]
         # print(auction)
-        hand_to_alert_index = len(auction) % 4
+
         position_minus_1 = len(auction) % 4
         for i in range(len(auction)//4):
             self.get_bid_candidates(auction[:i*4+position_minus_1])
@@ -565,7 +562,6 @@ class CardPlayer:
             raise Exception("Play record should not be none")
 
         leader_i = (leader_i + self.declarer.offset(2).value) % 4
-        start = time.time()
         dd_solved = DDS.solve(
             self.strain_i, leader_i, current_trick52, [diag.print_as_pbn(first_direction=Direction.WEST) for diag in samples_as_diag])
 
@@ -621,7 +617,7 @@ class CardPlayer:
                 self.x_play[:, trick_i, :]).get_this_trick_lead_suit(),
         ).reshape(-1)
 
-    def pick_card_after_dd_eval(self, trick_i, leader_i, current_trick, players_states, card_dd) -> str:
+    def next_card(self, trick_i, leader_i, current_trick, players_states, card_dd) -> str:
         t_start = time.time()
         card_softmax = self.next_card_softmax(trick_i)
 

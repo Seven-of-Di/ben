@@ -25,7 +25,9 @@ OLD_CARD_TIME: List[float] = [0, 0]
 RECEIVING_BOT_NAME = "Ben"
 RECEIVED_BOT_NAME = "Lia"
 boards_with_different_leads = []
-time_stamp = datetime.datetime.now().strftime("%H-%M")
+TIME_STAMP = datetime.datetime.now().strftime("%H-%M")
+DATE = datetime.datetime.today().strftime('%m_%d_%Y')
+
 
 
 def from_lin_to_request(lin_str: str, card_to_remove_after: Card_ | None = None, bid_to_remove_after: str | None = None):
@@ -118,7 +120,8 @@ def from_lin_to_request(lin_str: str, card_to_remove_after: Card_ | None = None,
         "contract_direction": declarer.abbreviation(),
         "auction": bidding_str,
         "next_player": turn_to_play.abbreviation(),
-        "tricks": play_as_list_of_list
+        "tricks": play_as_list_of_list,
+        "cheating_diag_pbn" : diag.print_as_pbn()
     })
 
 
@@ -154,8 +157,8 @@ def run_tests():
 def send_request(type_of_action: str, data: Dict, direction: Direction, open_room: bool):
     # new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (
     #     not open_room and direction in [Direction.EAST, Direction.WEST])
-    new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (
-        not open_room and direction in [Direction.EAST, Direction.WEST]) or type_of_action != "place_bid"
+    new_ben_called = ((open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (
+        not open_room and direction in [Direction.EAST, Direction.WEST]) or type_of_action != "place_bid") and type_of_action!="make_lead"
     port = "http://localhost:{}".format("8081" if new_ben_called else "8082")
     start = time.time()
     res = requests.post('{}/{}'.format(port, type_of_action), json=data)
@@ -352,7 +355,9 @@ def run_tm_btwn_ben_versions(force_same_sequence: bool = False, force_same_lead:
 
     for deal in deals:
         deal.diag = Diag.generate_random()
-        while not deal.diag.hands[Direction.NORTH].opening_values() or deal.diag.hands[Direction.SOUTH].opening_values():
+        # while not deal.diag.hands[Direction.NORTH].opening_values() or deal.diag.hands[Direction.SOUTH].opening_values():
+        #     deal.diag = Diag.generate_random()
+        while not deal.diag.hands[Direction.NORTH].hcp() + deal.diag.hands[Direction.SOUTH].hcp()>=26:
             deal.diag = Diag.generate_random()
         pbn = run_deal_on_both_rooms(
             deal, force_same_sequence, force_same_lead, force_same_card_play)
@@ -364,8 +369,7 @@ def run_tm_btwn_ben_versions(force_same_sequence: bool = False, force_same_lead:
             boards_with_different_leads))
         name_of_the_match = "{} vs {}".format(
             RECEIVING_BOT_NAME, RECEIVED_BOT_NAME)
-        date = datetime.datetime.today().strftime('%m_%d_%Y')
-        with open("./test_data/{} - {} - {}.pbn".format(name_of_the_match, date, time_stamp), "a+") as f:
+        with open("./test_data/{} - {} - {}.pbn".format(name_of_the_match, DATE, TIME_STAMP), "a+") as f:
             f.write("\n{}".format(pbn))
 
 
@@ -405,8 +409,8 @@ if __name__ == "__main__":
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))
     # load_test_pbn("c4f380988fc67c0fe6e5f4bc5502d67a3b45d2c0.pbn")
-    link = r"https://play.intobridge.com/hand?lin=pn|mgabor,Ben,Ben,Ben|md|3SA8HKQ7643D53CQ96,SK6532HDA9762CT75,SQJT97HJ9DJT4CK32,S4HAT852DKQ8CAJ84|ah|boardname|mb|1H|mb|1S|mb|p|mb|2C|mb|p|mb|2S|mb|d|mb|2N|mb|p|mb|3C|mb|p|mb|p|mb|p|pc|D5|pc|D2|pc|DT|pc|DK|mc|2|sv|b|"
-    print(from_lin_to_request(link, Card_.from_str("DK")))
+    link = r"https://dev.intobridge.com/hand?lin=pn|Bourricot,Ben,Ben,Ben|md|3SJT7HA63DK742C765,SA983HKQDAT96CJ94,SQ542HJT7DQJ5CAQ2,SK6H98542D83CKT83|ah|Board%205|mb|1C|mb|p|mb|1N|mb|p|mb|p|mb|p|pc|HK|pc|H7|pc|H2|pc|HA|pc|ST|pc|SA|pc|S2|pc|S6|pc|HQ|pc|HT|pc|H4|pc|H3|pc|C9|pc|CA|pc|C8|pc|C5|pc|S4|pc|SK|pc|S7|pc|S3|pc|H9|pc|H6|pc|D6|pc|HJ|pc|S5|pc|D3|pc|SJ|pc|S8|pc|D2|pc|DA|pc|D5|pc|D8|pc|DT|pc|DQ|pc|C3|pc|D4|pc|SQ|pc|H5|pc|C6|pc|S9|pc|DJ|pc|CT|pc|D7|pc|D9|pc|C2|pc|CK|pc|C7|pc|C4|pc|H8|pc|DK|pc|CJ|pc|CQ|mc|7|sv|n|"
+    print(from_lin_to_request(link, Card_.from_str("D8")))
     # print(from_lin_to_request(link, bid_to_remove_after="X"))
 
     # print(from_lin_to_request(link, None))

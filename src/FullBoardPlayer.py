@@ -1,11 +1,19 @@
+import json
 from typing import Dict, List
 import bots
-from utils import Direction, BiddingSuit, Card_, Diag
+from utils import Direction, BiddingSuit, Card_, Diag,VULNERABILITIES
 from PlayRecord import Trick
 from bidding import bidding
 from play_card_pre_process import play_a_card
 from human_carding import lead_real_card
+from nn.models import MODELS
+import boto3
 
+class PlayFullBoard:
+    def __init__(self, play_full_board_request) -> None:
+        self.vuln = VULNERABILITIES[play_full_board_request['vuln']]
+        self.dealer = Direction.from_str(play_full_board_request['dealer'])
+        self.hands = Diag.init_from_pbn(play_full_board_request['hands'])
 
 class FullBoardPlayer():
     def __init__(self, diag: Diag, vuls: List[bool], dealer: Direction, models) -> None:
@@ -49,7 +57,7 @@ class FullBoardPlayer():
 
         # 12 first tricks
         for _ in range(47):
-            dict_result = await play_a_card(hand_str=self.diag.hands[current_player if current_player != dummy else declarer].to_pbn(), dummy_hand_str=self.diag.hands[dummy].to_pbn(), dealer_str=self.dealer.abbreviation(), vuls=self.vuls, auction=auction, contract=contract, declarer_str=declarer.abbreviation(), next_player_str=current_player.abbreviation(), tricks_str=tricks, MODELS=self.models,cheating_diag_pbn=self.diag.print_as_pbn())
+            dict_result = await play_a_card(hand_str=self.diag.hands[current_player if current_player != dummy else declarer].to_pbn(), dummy_hand_str=self.diag.hands[dummy].to_pbn(), dealer_str=self.dealer.abbreviation(), vuls=self.vuls, auction=auction, contract=contract, declarer_str=declarer.abbreviation(), next_player_str=current_player.abbreviation(), tricks_str=tricks, MODELS=self.models, cheating_diag_pbn=self.diag.print_as_pbn())
             # print(dict_result)
             tricks[-1].append(str(dict_result["card"]))
             self.diag.hands[current_player].remove(
@@ -79,3 +87,28 @@ class AsyncFullBoardPlayer(FullBoardPlayer):
             return {'auction': auction, "play": []}
         play = await self.get_card_play(auction)
         return {'auction': auction, "play": play}
+
+
+def run():
+    sqs = boto3.resource('sqs')
+    queue = sqs.get_queue_by_name(QueueName='full_play_board_queue')
+
+    while True:
+        for message in queue.receive_messages(WaitTimeSeconds=20):
+            req = PlayFullBoard(json.loads(message.body))
+            bot = FullBoardPlayer(
+            req.hands,
+            req.vuln,
+            req.dealer,
+            MODELS
+        )
+            print(f"Message from queue {message.body}")
+            auction = bot.get_auction()
+            if auction == ["PASS"]*4:
+                queue.send_message(MessageBody={'auction': auction, "play": []})
+            else :
+                play = bot.get_card_play(auction)
+                queue.send_message(MessageBody={'auction': auction, "play": play})
+
+if __name__ == '__main__':
+    run()

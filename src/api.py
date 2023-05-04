@@ -5,7 +5,7 @@ from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
 
 from nn.models import MODELS
 from game import AsyncBotBid, AsyncBotLead
-from FullBoardPlayer import AsyncFullBoardPlayer
+from FullBoardPlayer import AsyncFullBoardPlayer,PlayFullBoard
 from health_checker import HealthChecker
 from alerting import find_alert
 
@@ -109,11 +109,6 @@ class CheckClaim:
 '''
 
 
-class PlayFullBoard:
-    def __init__(self, play_full_board_request) -> None:
-        self.vuln = VULNERABILITIES[play_full_board_request['vuln']]
-        self.dealer = Direction.from_str(play_full_board_request['dealer'])
-        self.hands = Diag.init_from_pbn(play_full_board_request['hands'])
 
 
 '''

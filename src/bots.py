@@ -556,7 +556,7 @@ class CardPlayer:
             probabilities_list = probabilities_list[::step]
             samples_as_diag.append(Diag.init_from_pbn(cheating_diag_pbn))
             probabilities_list = np.append(
-                probabilities_list, (np.sum(probabilities_list)*0.25))
+                probabilities_list, (np.sum(probabilities_list)*0.4))
             probabilities_list = convert_to_probability(probabilities_list)
 
         if self.play_record.record is None:

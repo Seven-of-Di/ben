@@ -98,21 +98,24 @@ class AsyncFullBoardPlayer(FullBoardPlayer):
 
 
 async def start():
-    sqs = boto3.resource("sqs",
-                         endpoint_url=os.environ.get('AWS_ENDPOINT'),
-                         region_name=os.environ.get('AWS_DEFAULT_REGION'),
-                         aws_access_key_id=os.environ.get('AWS_ACCESS_KEY'),
-                         aws_secret_access_key=os.environ.get('AWS_SECRET_KEY'))
+    sqs_client = boto3.client(
+        "sqs", endpoint_url=os.environ.get('AWS_ENDPOINT', None))
 
-    request_queue = sqs.get_queue_by_name(
-        QueueName=os.environ.get('ROBOT_PLAYFULLBOARD_QUEUE_NAME'))
-    response_queue = sqs.get_queue_by_name(
-        QueueName=os.environ.get('ROBOT_FULLBOARDPLAYED_QUEUE_NAME'))
+    request_queue_url = os.environ.get('ROBOT_PLAYFULLBOARD_QUEUE_URL')
+    response_queue_url = os.environ.get('ROBOT_FULLBOARDPLAYED_QUEUE_URL')
 
     while True:
-        for message in request_queue.receive_messages(MessageAttributeNames=['BoardID'],
-                                                      WaitTimeSeconds=10):
-            req = PlayFullBoard(json.loads(message.body))
+        resp = sqs_client.receive_message(
+            QueueUrl=request_queue_url,
+            MessageAttributeNames=['BoardID'],
+            WaitTimeSeconds=10)
+
+        # If nothing is returned the key Messages not exists
+        if not 'Messages' in resp:
+            continue
+
+        for message in resp['Messages']:
+            req = PlayFullBoard(json.loads(message['Body']))
             bot = FullBoardPlayer(
                 req.hands,
                 req.vuln,
@@ -124,18 +127,23 @@ async def start():
 
             message_body: dict
 
-            if auction == ["PASS"]*4:
+            if auction == ['PASS']*4:
                 message_body = {'auction': auction, "play": []}
             else:
                 play = await bot.get_card_play(auction)
                 message_body = {'auction': auction, "play": play}
 
-            response_queue.send_message(
-                MessageAttributes={'BoardID': message.message_attributes["BoardID"]},
+            sqs_client.send_message(
+                QueueUrl=response_queue_url,
+                MessageAttributes={
+                    'BoardID': message['MessageAttributes']['BoardID']},
                 MessageBody=json.dumps(message_body))
 
             # Mark the message as processed via deleating
-            message.delete()
+            sqs_client.delete_message(
+                QueueUrl=request_queue_url,
+                ReceiptHandle=message['ReceiptHandle'],
+            )
 
 
 if __name__ == '__main__':

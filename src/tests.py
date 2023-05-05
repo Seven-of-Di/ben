@@ -195,9 +195,10 @@ def bid_deal(deal: Deal, open_room: bool):
             "auction": sequence.get_as_ben_request()
         }
         res = send_request("place_bid", data, current_player, open_room) if current_player in [
-            Direction.NORTH, Direction.SOUTH] else {"bid": "P"}
+    Direction.NORTH, Direction.SOUTH] else {"bid": "P","alert":""}
         if not sequence.append_with_check(SequenceAtom.from_str(res["bid"])):
             raise Exception(res["bid"]+"is not valid ?")
+        sequence.sequence[-1].alert = res["alert"] if res["alert"] else None
         current_player = current_player.offset(1)
 
     return sequence

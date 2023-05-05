@@ -154,6 +154,8 @@ def generate_suit_length_alert_as_dict(bid_explanation: BidExplanations, suit: S
 
 def print_suit_max_length(usual_max_length: int, usual_min_length: int,  suit: Suit) -> str:
     usual_min_length = 0 if usual_min_length == 1 else usual_min_length
+    if usual_min_length==usual_max_length :
+        return "{}{}|".format(usual_min_length, suit.symbol())
     return "{}-{}{}|".format(usual_min_length, usual_max_length, suit.symbol())
 
 
@@ -189,6 +191,8 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
     two_suiter_proba = two_suiter_mask.count(True)/len(two_suiter_mask)
 
     if two_suiter_proba > 0.95:
+        if len(long_suits) == 3:
+            return "{}".format(suits_text)
         if len(long_suits) == 2:
             return "{}".format(suits_text)
         if len(long_suits) == 1 and len(short_suits) == 1 and suits_length_alert_as_dict[short_suits[0]]["usual_max_length"] <= 1:
@@ -234,10 +238,11 @@ def request_from_pickle_file(str_sequence: List[str]) -> BidExplanations:
         dict_of_alerts: Dict[BidPosition, BidExplanations] = pickle.load(f)
 
     position = BidPosition(str_sequence, [False, False])
+    print(generate_alert_from_bid_explanation(dict_of_alerts[position]))
     return (dict_of_alerts[position])
 
 
 if __name__ == "__main__":
     # generate_alerts(1000)
-    print(request_from_pickle_file(["1N", "X", "2D"]))
+    print(request_from_pickle_file(["1C", "PASS", "1S","PASS","1N","PASS","2D","PASS","2S"]))
     # print(manual_alert(["PASS", "PASS", "1S"]))

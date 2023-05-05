@@ -103,12 +103,14 @@ def run():
             MODELS
         )
             print(f"Message from queue {message.body}")
+            print("Board ID : {}".format(message["MessageAttributes"]["BoardID"]))
+            board_id = message["MessageAttributes"]["BoardID"]
             auction = bot.get_auction()
             if auction == ["PASS"]*4:
-                queue.send_message(MessageBody={'auction': auction, "play": []})
+                queue.send_message(MessageBody={'auction': auction, "play": []},MessageAttributes={board_id})
             else :
                 play = bot.get_card_play(auction)
-                queue.send_message(MessageBody={'auction': auction, "play": play})
+                queue.send_message(MessageBody={'auction': auction, "play": play},MessageAttributes={board_id})
 
 if __name__ == '__main__':
     run()

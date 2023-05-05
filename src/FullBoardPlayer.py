@@ -2,7 +2,7 @@ import json
 import os
 from typing import Dict, List
 import bots
-from utils import Direction, BiddingSuit, Card_, Diag,VULNERABILITIES
+from utils import Direction, BiddingSuit, Card_, Diag, VULNERABILITIES
 from PlayRecord import Trick
 from bidding import bidding
 from play_card_pre_process import play_a_card
@@ -10,11 +10,17 @@ from human_carding import lead_real_card
 from nn.models import MODELS
 import boto3
 
+import tensorflow.compat.v1 as tf  # type: ignore
+
+tf.disable_v2_behavior()
+
+
 class PlayFullBoard:
     def __init__(self, play_full_board_request) -> None:
         self.vuln = VULNERABILITIES[play_full_board_request['vuln']]
         self.dealer = Direction.from_str(play_full_board_request['dealer'])
         self.hands = Diag.init_from_pbn(play_full_board_request['hands'])
+
 
 class FullBoardPlayer():
     def __init__(self, diag: Diag, vuls: List[bool], dealer: Direction, models) -> None:
@@ -91,39 +97,45 @@ class AsyncFullBoardPlayer(FullBoardPlayer):
 
 
 def run():
-    sqs = boto3.resource('sqs')
+    sqs = boto3.client("sqs",
+                       endpoint_url=os.environ.get('AWS_ENDPOINT'),
+                       region_name=os.environ.get('AWS_DEFAULT_REGION'),
+                       aws_access_key_id=os.environ.get('AWS_ACCESS_KEY'),
+                       aws_secret_access_key=os.environ.get('AWS_SECRET_KEY'))
 
-    request_queue_name = os.environ.get('ROBOT_PLAYFULLBOARD_QUEUE_URL')
-    response_queue_name = os.environ.get('ROBOT_FULLBOARDPLAYED_QUEUE_URL')
-
-    request_queue = sqs.get_queue_by_name(QueueName=request_queue_name)
-    response_queue = sqs.get_queue_by_name(QueueName=response_queue_name)
+    request_queue_url = os.environ.get('ROBOT_PLAYFULLBOARD_QUEUE_URL')
+    response_queue_url = os.environ.get('ROBOT_FULLBOARDPLAYED_QUEUE_URL')
 
     while True:
-        for message in request_queue.receive_messages(WaitTimeSeconds=10):
+        for message in sqs.receive_message(QueueUrl=request_queue_url, WaitTimeSeconds=10):
             req = PlayFullBoard(json.loads(message.body))
             bot = FullBoardPlayer(
-            req.hands,
-            req.vuln,
-            req.dealer,
-            MODELS
-        )
+                req.hands,
+                req.vuln,
+                req.dealer,
+                MODELS
+            )
             print(f"Message from queue {message.body}")
-            print("Board ID : {}".format(message["MessageAttributes"]["BoardID"]))
+            print("Board ID : {}".format(
+                message["MessageAttributes"]["BoardID"]))
             board_id = message["MessageAttributes"]["BoardID"]
             auction = bot.get_auction()
+
             if auction == ["PASS"]*4:
-                response_queue.send_message(
+                sqs.send_message(
+                    QueueUrl=response_queue_url,
                     MessageAttributes={'BoardID': board_id},
                     MessageBody={'auction': auction, "play": []})
-            else :
+            else:
                 play = bot.get_card_play(auction)
-                response_queue.send_message(
+                sqs.send_message(
+                    QueueUrl=response_queue_url,
                     MessageAttributes={'BoardID': board_id},
                     MessageBody={'auction': auction, "play": play})
-            
+
             # Mark the message as processed via deleating
             message.delete()
+
 
 if __name__ == '__main__':
     run()

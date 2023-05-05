@@ -1,0 +1,67 @@
+name: Update AlertsDB for environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: "Environment to deploy"
+        required: true
+        options:
+          - dev
+          - stage
+          - prod
+
+      # alerts_pickle_link:
+      #   type: string
+      #   description: "Link to the pickle file"
+      #   required: true
+
+env:
+  AWS_ACCOUNT_ID: "004345335763"
+  AWS_REGION: "eu-central-1"
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  ALETS_PICKLE_LINK: https://ben-the-fan.s3.eu-central-1.amazonaws.com/alerts.pickle
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build-push-and-deploy:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+
+      - name: Download the pickle file
+        run: |
+          cd ./build/alerts_prep
+          wget ${ALETS_PICKLE_LINK}
+
+      - name: Install pip dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Generate alerts strings
+        id: gen_alerts_strings
+        run: |
+          python ./src/create_alerts_database.py
+    
+      - name: Install litestream
+        env:
+          LITESTREAM_VERSION: litestream-v0.3.9
+        run: |
+          cd /tmp
+          wget https://github.com/benbjohnson/litestream/releases/download/${LITESTREAM_VERSION}/litestream-${LITESTREAM_VERSION}-linux-amd64.deb
+          sudo dpkg -i litestream-${LITESTREAM_VERSION}-linux-amd64.deb
+
+      - name: Update the remote database
+        run: |
+          cd ./build/alerts_db
+          litestream replicate alert_database_1.sqlite s3://${{ github.event.inputs.environment }}-intobridge-robot/alerts_database_1.sqlite
+

@@ -1,4 +1,5 @@
 import json
+import os
 from typing import Dict, List
 import bots
 from utils import Direction, BiddingSuit, Card_, Diag,VULNERABILITIES
@@ -91,10 +92,15 @@ class AsyncFullBoardPlayer(FullBoardPlayer):
 
 def run():
     sqs = boto3.resource('sqs')
-    queue = sqs.get_queue_by_name(QueueName='full_play_board_queue')
+
+    request_queue_name = os.environ.get('ROBOT_PLAYFULLBOARD_QUEUE_URL')
+    response_queue_name = os.environ.get('ROBOT_FULLBOARDPLAYED_QUEUE_URL')
+
+    request_queue = sqs.get_queue_by_name(QueueName=request_queue_name)
+    response_queue = sqs.get_queue_by_name(QueueName=response_queue_name)
 
     while True:
-        for message in queue.receive_messages(WaitTimeSeconds=20):
+        for message in request_queue.receive_messages(WaitTimeSeconds=10):
             req = PlayFullBoard(json.loads(message.body))
             bot = FullBoardPlayer(
             req.hands,
@@ -107,10 +113,17 @@ def run():
             board_id = message["MessageAttributes"]["BoardID"]
             auction = bot.get_auction()
             if auction == ["PASS"]*4:
-                queue.send_message(MessageBody={'auction': auction, "play": []},MessageAttributes={board_id})
+                response_queue.send_message(
+                    MessageAttributes={'BoardID': board_id},
+                    MessageBody={'auction': auction, "play": []})
             else :
                 play = bot.get_card_play(auction)
-                queue.send_message(MessageBody={'auction': auction, "play": play},MessageAttributes={board_id})
+                response_queue.send_message(
+                    MessageAttributes={'BoardID': board_id},
+                    MessageBody={'auction': auction, "play": play})
+            
+            # Mark the message as processed via deleating
+            message.delete()
 
 if __name__ == '__main__':
     run()

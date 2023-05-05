@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from typing import Dict, List
@@ -96,18 +97,21 @@ class AsyncFullBoardPlayer(FullBoardPlayer):
         return {'auction': auction, "play": play}
 
 
-def run():
-    sqs = boto3.client("sqs",
-                       endpoint_url=os.environ.get('AWS_ENDPOINT'),
-                       region_name=os.environ.get('AWS_DEFAULT_REGION'),
-                       aws_access_key_id=os.environ.get('AWS_ACCESS_KEY'),
-                       aws_secret_access_key=os.environ.get('AWS_SECRET_KEY'))
+async def start():
+    sqs = boto3.resource("sqs",
+                         endpoint_url=os.environ.get('AWS_ENDPOINT'),
+                         region_name=os.environ.get('AWS_DEFAULT_REGION'),
+                         aws_access_key_id=os.environ.get('AWS_ACCESS_KEY'),
+                         aws_secret_access_key=os.environ.get('AWS_SECRET_KEY'))
 
-    request_queue_url = os.environ.get('ROBOT_PLAYFULLBOARD_QUEUE_URL')
-    response_queue_url = os.environ.get('ROBOT_FULLBOARDPLAYED_QUEUE_URL')
+    request_queue = sqs.get_queue_by_name(
+        QueueName=os.environ.get('ROBOT_PLAYFULLBOARD_QUEUE_NAME'))
+    response_queue = sqs.get_queue_by_name(
+        QueueName=os.environ.get('ROBOT_FULLBOARDPLAYED_QUEUE_NAME'))
 
     while True:
-        for message in sqs.receive_message(QueueUrl=request_queue_url, WaitTimeSeconds=10):
+        for message in request_queue.receive_messages(MessageAttributeNames=['BoardID'],
+                                                      WaitTimeSeconds=10):
             req = PlayFullBoard(json.loads(message.body))
             bot = FullBoardPlayer(
                 req.hands,
@@ -115,27 +119,24 @@ def run():
                 req.dealer,
                 MODELS
             )
-            print(f"Message from queue {message.body}")
-            print("Board ID : {}".format(
-                message["MessageAttributes"]["BoardID"]))
-            board_id = message["MessageAttributes"]["BoardID"]
+
             auction = bot.get_auction()
 
+            message_body: dict
+
             if auction == ["PASS"]*4:
-                sqs.send_message(
-                    QueueUrl=response_queue_url,
-                    MessageAttributes={'BoardID': board_id},
-                    MessageBody={'auction': auction, "play": []})
+                message_body = {'auction': auction, "play": []}
             else:
-                play = bot.get_card_play(auction)
-                sqs.send_message(
-                    QueueUrl=response_queue_url,
-                    MessageAttributes={'BoardID': board_id},
-                    MessageBody={'auction': auction, "play": play})
+                play = await bot.get_card_play(auction)
+                message_body = {'auction': auction, "play": play}
+
+            response_queue.send_message(
+                MessageAttributes={'BoardID': message.message_attributes["BoardID"]},
+                MessageBody=json.dumps(message_body))
 
             # Mark the message as processed via deleating
             message.delete()
 
 
 if __name__ == '__main__':
-    run()
+    asyncio.run(start())

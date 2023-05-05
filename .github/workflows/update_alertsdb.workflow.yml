@@ -34,9 +34,34 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Update the submodule
+        run: git submodule update --remote --init --recursive
+
       - uses: actions/setup-python@v4
         with:
           python-version: '3.8'
+
+      - name: Compile libdds
+        run: |
+          sudo apt-get update
+
+          sudo apt-get install -y --no-install-recommends \
+            ca-certificates \
+            cmake \
+            git \
+            g++ \
+            ninja-build
+
+          cd libdds
+
+          rm -rf ./.build && mkdir -p ./.build
+          cd ./build
+
+          cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=/usr -G Ninja .. && \
+            ninja && \
+            env DESTDIR=install cmake -DCMAKE_INSTALL_COMPONENT=Runtime -P cmake_install.cmake
+
+          cp ./build/install/usr/lib/* /usr/lib
 
       - name: Download the pickle file
         run: |

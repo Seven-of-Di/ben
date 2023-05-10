@@ -31,7 +31,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \
   # (Required step because it can modify RUNPATH)
   env DESTDIR=install cmake -DCMAKE_INSTALL_COMPONENT=Runtime -P cmake_install.cmake
 
-FROM python:3.7.16-buster
+FROM python:3.7.16-slim
 
 # Copy installed runtime files to real image
 COPY --from=dds-builder /app/.build/install/usr/lib /usr/lib

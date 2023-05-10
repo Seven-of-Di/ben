@@ -10,7 +10,7 @@ services:
     user: root
     # command: python api.py
     # command: python create_alerts_database.py
-    command: hypercorn --bind 0.0.0.0:5001 --workers 4 api:app
+    command: python -m hypercorn --bind 0.0.0.0:5001 --workers 4 api:app
     ports:
       - 5001:5001
     volumes:

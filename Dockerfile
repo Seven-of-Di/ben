@@ -31,7 +31,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \
   # (Required step because it can modify RUNPATH)
   env DESTDIR=install cmake -DCMAKE_INSTALL_COMPONENT=Runtime -P cmake_install.cmake
 
-FROM continuumio/miniconda3:4.12.0
+FROM python:3.7.16-buster
 
 # Copy installed runtime files to real image
 COPY --from=dds-builder /app/.build/install/usr/lib /usr/lib
@@ -40,23 +40,13 @@ RUN mkdir -p /app
 
 WORKDIR /app
 
-COPY environment.yml .
-
-RUN conda env create -f ./environment.yml
-
-RUN echo "conda activate ben" >> ~/.bashrc
-SHELL ["/bin/bash", "--login", "-c"]
-
 COPY requirements.txt .
 
 RUN apt-get update \
   && apt-get install -y build-essential
-RUN pip install -r requirements.txt
 
-COPY ./docker/entrypoint.sh /entrypoint.sh
+RUN pip install -r requirements.txt
 
 COPY . .
 
 WORKDIR /app/src
-
-ENTRYPOINT [ "/entrypoint.sh"]

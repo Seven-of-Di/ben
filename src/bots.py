@@ -551,12 +551,13 @@ class CardPlayer:
         # and self.player_direction not in [self.declarer,self.declarer.partner()]
         if cheating_diag_pbn is not None:
             reduced_samples = 10
+            cheating_factor = 0.9 if self.player_direction not in [self.declarer,self.declarer.partner()] and self.tricks_left<=6 else 0.4
             step = ceil(len(samples_as_diag)/reduced_samples)
-            samples_as_diag = samples_as_diag[::step]
-            probabilities_list = probabilities_list[::step]
+            samples_as_diag = samples_as_diag[:reduced_samples] + samples_as_diag[reduced_samples::step]
+            probabilities_list = list(probabilities_list[:reduced_samples]) + list(probabilities_list[reduced_samples::step])
             samples_as_diag.append(Diag.init_from_pbn(cheating_diag_pbn))
             probabilities_list = np.append(
-                probabilities_list, (np.sum(probabilities_list)*0.4))
+                probabilities_list, (np.sum(probabilities_list)*cheating_factor))
             probabilities_list = convert_to_probability(probabilities_list)
 
         if self.play_record.record is None:
@@ -570,7 +571,8 @@ class CardPlayer:
             self.check_claim = True
 
         card_tricks = ddsolver.expected_tricks(dd_solved, probabilities_list)
-        card_ev = self.get_card_ev(dd_solved, probabilities_list)
+        # card_ev = self.get_card_ev(dd_solved, probabilities_list)
+        card_ev = self.get_card_ev_mp(dd_solved, probabilities_list)
 
         card_result = {}
         for key in dd_solved.keys():
@@ -603,6 +605,18 @@ class CardPlayer:
                 tot_decl_tricks = tot_tricks if self.player_i % 2 == 1 else 13 - tot_tricks
                 ev_sum += sign * \
                     self.score_by_tricks_taken[tot_decl_tricks] * proba
+            card_ev[card] = ev_sum
+
+        return card_ev
+    
+    def get_card_ev_mp(self, dd_solved : Dict, probabilities_list):
+        card_ev = {}
+        for card, future_tricks in dd_solved.items():
+            ev_sum = 0
+            for ft, proba in zip(future_tricks, probabilities_list):
+                if ft < 0:
+                    continue
+                ev_sum += ft * proba
             card_ev[card] = ev_sum
 
         return card_ev

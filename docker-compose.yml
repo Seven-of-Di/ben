@@ -9,9 +9,10 @@ services:
     build: .
     user: root
     # command: python api.py
-    command: python create_alerts_database.py
+    # command: python create_alerts_database.py
+    command: python -m hypercorn --bind 0.0.0.0:5001 --workers 4 api:app
     ports:
-      - 8081:8081
+      - 5001:5001
     volumes:
       - ./src:/app/src
       - ./build/alerts_db:/var/lib/alerts_db
@@ -23,5 +24,16 @@ services:
       - PORT=5001
       - DEBUG=true
       - USE_RELOADER=true
+      - OTEL_EXPORTER_OTLP_TRACES_INSECURE=True
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=otel:4317
+      - OTEL_SERVICE_NAME=robot
+    networks:
+      - ben
+
+  otel:
+    image: jaegertracing/opentelemetry-all-in-one:latest
+    ports:
+      - "4317"
+      - "16686:16686"
     networks:
       - ben

@@ -125,12 +125,13 @@ def generate_usual_alert_from_dict(dic: Dict, ascending: bool) -> int:
 
 
 def generete_hcp_alert(bid_explanation: BidExplanations) -> str:
+    strict_maximum_hcp = bid_explanation.max_hcp
     usual_minimum_hcp = generate_usual_alert_from_dict(
         bid_explanation.hcp_distribution, ascending=True)
     usual_maximum_hcp = generate_usual_alert_from_dict(
         bid_explanation.hcp_distribution, ascending=False)
     minimum_text = str(usual_minimum_hcp)
-    maximum_text = str(usual_maximum_hcp)
+    maximum_text = str(strict_maximum_hcp)
     return "{}-{}hcp".format(minimum_text, maximum_text)
 
 
@@ -153,6 +154,8 @@ def generate_suit_length_alert_as_dict(bid_explanation: BidExplanations, suit: S
 
 def print_suit_max_length(usual_max_length: int, usual_min_length: int,  suit: Suit) -> str:
     usual_min_length = 0 if usual_min_length == 1 else usual_min_length
+    if usual_min_length==usual_max_length :
+        return "{}{}|".format(usual_min_length, suit.symbol())
     return "{}-{}{}|".format(usual_min_length, usual_max_length, suit.symbol())
 
 
@@ -188,12 +191,14 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
     two_suiter_proba = two_suiter_mask.count(True)/len(two_suiter_mask)
 
     if two_suiter_proba > 0.95:
+        if len(long_suits) == 3:
+            return "{}".format(suits_text)
         if len(long_suits) == 2:
             return "{}".format(suits_text)
         if len(long_suits) == 1 and len(short_suits) == 1 and suits_length_alert_as_dict[short_suits[0]]["usual_max_length"] <= 1:
             return "Splinter : {}".format(suits_text)
         if len(long_suits) == 1:
-            return "Two suiter : {} and another".format(suits_text)
+            return "{} and 4+ other".format(suits_text)
         else:
             return "Unknown two suiter".format()
 
@@ -216,7 +221,7 @@ def generate_suits_length_alert(bid_explanation: BidExplanations) -> str:
     return "{}".format(suits_text)
 
 
-def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str|None:
+def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str | None:
     if bid_explanation.n_samples >= 5:
         # print("Number of samples : {}".format(bid_explanation.n_samples))
         hcp_text = generete_hcp_alert(bid_explanation=bid_explanation)
@@ -228,15 +233,16 @@ def generate_alert_from_bid_explanation(bid_explanation: BidExplanations) -> str
     return None
 
 
-def request_from_pickle_file(str_sequence: List[str]):
+def request_from_pickle_file(str_sequence: List[str]) -> BidExplanations:
     with open('C:/Users/lucbe/OneDrive/Documents/Bridge/alerts.pickle', 'rb') as f:
         dict_of_alerts: Dict[BidPosition, BidExplanations] = pickle.load(f)
 
     position = BidPosition(str_sequence, [False, False])
-    print(dict_of_alerts[position])
+    print(generate_alert_from_bid_explanation(dict_of_alerts[position]))
+    return (dict_of_alerts[position])
 
 
 if __name__ == "__main__":
-    generate_alerts(1000)
-    # request_from_pickle_file(["2N","PASS","3S"])
+    # generate_alerts(1000)
+    print(request_from_pickle_file(["1C", "PASS", "1S","PASS","1N","PASS","2D","PASS","2S"]))
     # print(manual_alert(["PASS", "PASS", "1S"]))

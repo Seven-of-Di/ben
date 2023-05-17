@@ -1,19 +1,24 @@
 from copy import deepcopy
 from typing import Dict, List
 from quart import Quart, request
+from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
 
 from nn.models import MODELS
 from game import AsyncBotBid, AsyncBotLead
-from FullBoardPlayer import AsyncFullBoardPlayer
+from FullBoardPlayer import AsyncFullBoardPlayer,PlayFullBoard
 from health_checker import HealthChecker
 from alerting import find_alert
 
+from opentelemetry import trace
+from tracing import tracing_enabled
+import numpy as np
+
 import os
 import sentry_sdk
+
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
-
-from transform_play_card import get_ben_card_play_answer
+from play_card_pre_process import play_a_card
 from human_carding import lead_real_card
 from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit, Diag, Direction
 from claim_dds import check_claim_from_api
@@ -30,6 +35,7 @@ sentry_sdk.init(
 
 app = Quart(__name__)
 app.asgi_app = SentryAsgiMiddleware(app.asgi_app)._run_asgi3
+app.asgi_app = OpenTelemetryMiddleware(app.asgi_app)
 
 health_checker = HealthChecker(app.logger)
 health_checker.start()
@@ -63,6 +69,8 @@ class PlayCard:
         self.contract_direction = play_card_request['contract_direction']
         self.next_player = play_card_request['next_player']
         self.tricks = play_card_request['tricks']
+        self.cheating_diag_pbn = play_card_request[
+            "cheating_diag_pbn"] if "cheating_diag_pbn" in play_card_request else None
 
 
 class MakeLead:
@@ -101,11 +109,6 @@ class CheckClaim:
 '''
 
 
-class PlayFullBoard:
-    def __init__(self, play_full_board_request) -> None:
-        self.vuln = VULNERABILITIES[play_full_board_request['vuln']]
-        self.dealer = Direction.from_str(play_full_board_request['dealer'])
-        self.hands = Diag.init_from_pbn(play_full_board_request['hands'])
 
 
 '''
@@ -123,7 +126,18 @@ async def play_card():
     # app.logger.warn(data)
     req = PlayCard(data)
 
-    dict_result = await get_ben_card_play_answer(
+    if tracing_enabled:
+        current_span = trace.get_current_span()
+        current_span.set_attributes({
+            "game.next_player": req.next_player,
+            "game.hand": req.hand,
+            "game.dummy_hand": req.dummy_hand,
+            "game.contract": req.contract,
+            "game.contract_direction": req.contract_direction,
+            "game.tricks": ",".join(np.concatenate(req.tricks).tolist()),
+        })
+
+    dict_result = await play_a_card(
         req.hand,
         req.dummy_hand,
         req.dealer,
@@ -133,8 +147,10 @@ async def play_card():
         req.contract_direction,
         req.next_player,
         req.tricks,
-        MODELS
+        MODELS,
+        req.cheating_diag_pbn
     )
+
     """
     dict_result = {
         "card": "H4",

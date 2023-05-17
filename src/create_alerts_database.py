@@ -4,8 +4,8 @@ import hashlib
 from typing import Dict
 from alert_utils import BidPosition, BidExplanations
 from generate_alerts import generate_alert_from_bid_explanation,manual_alert
-import pickle5 as pickle
-# import pickle
+# import pickle5 as pickle
+import pickle
 import numpy as np
 import json
 from itertools import islice

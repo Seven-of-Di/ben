@@ -1,6 +1,5 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from functools import cache
 import logging
 
 from utils import Direction, BiddingSuit
@@ -238,7 +237,7 @@ class Sequence:
         string = ""
         #string += '{0:10}{1:10}{2:10}{3:10}\n'.format('N','E','S','W')
         for i in range(0, len(self.sequence)):
-            string += '{0:10}'.format(self.sequence[i].__str__())
+            string += '{0:10}'.format(str(self.sequence[i]))
             if i % 4 == 3:
                 string += "\n"
         return string

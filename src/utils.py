@@ -7,6 +7,7 @@ import json
 from random import shuffle
 from typing import Dict, Iterable, List, Optional
 import numpy as np
+from tracing import tracer
 from bidding import bidding
 
 """
@@ -365,13 +366,17 @@ class PlayerHand():
         return PlayerHand.from_cards(cards)
 
     @staticmethod
-    def from_pbn(string: str) -> PlayerHand:
+    def from_pbn(string: str, pips : Dict[Suit,List[Rank]]={}) -> PlayerHand:
         """Create a hand from a string with the following syntax '752.Q864.84.AT62'"""
         tab_of_suit = string.split('.')
         cards = []
         for index, suit in enumerate(tab_of_suit):
             temp = suit.replace("10", "T").replace("X", "T")
             while temp.find('x') != -1:
+                if pips!= {} :
+                    temp = temp.replace('x', pips[Suit(index)].pop().abbreviation(), 1)
+                    continue
+
                 for rank in Rank:
                     if rank.abbreviation() in temp:
                         continue
@@ -493,6 +498,9 @@ class PlayerHand():
         if self.ordered_pattern()[2] == 4:
             return True
         return False
+    
+    def opening_values(self) -> bool:
+        return self.hcp() >= 12 or self.hcp()==11 and self.ordered_pattern()[0]>=5
 
 
 TOTAL_DECK: List[Card_] = []
@@ -669,7 +677,6 @@ def remove_same_indexes(dict_to_clear, dict_to_take_values_from):
 # dict_to_take_values_from = {1: [1, 2, 3, 4], 2: [1, 6, 3, 8]}
 # new_dict = remove_same_indexes(dict_to_clear,dict_to_take_values_from)
 # print(new_dict)
-
 def convert_to_probability(x):
     """Compute softmax values for each sets of scores in x."""
     sum_of_proba = np.sum(x, axis=0)

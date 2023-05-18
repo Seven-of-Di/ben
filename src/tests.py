@@ -356,10 +356,10 @@ def run_tm_btwn_ben_versions(force_same_sequence: bool = False, force_same_lead:
 
     for deal in deals:
         deal.diag = Diag.generate_random()
-        # while not deal.diag.hands[Direction.NORTH].opening_values() or deal.diag.hands[Direction.SOUTH].opening_values():
-        #     deal.diag = Diag.generate_random()
-        while not deal.diag.hands[Direction.NORTH].hcp() + deal.diag.hands[Direction.SOUTH].hcp()>=26:
+        while not deal.diag.hands[Direction.NORTH].opening_values() or deal.diag.hands[Direction.SOUTH].opening_values():
             deal.diag = Diag.generate_random()
+        # while not deal.diag.hands[Direction.NORTH].hcp() + deal.diag.hands[Direction.SOUTH].hcp()>=26:
+        #     deal.diag = Diag.generate_random()
         pbn = run_deal_on_both_rooms(
             deal, force_same_sequence, force_same_lead, force_same_card_play)
         print("Ben times average : bidding : {},carding : {}".format(

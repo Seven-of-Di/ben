@@ -551,7 +551,7 @@ class CardPlayer:
         # and self.player_direction not in [self.declarer,self.declarer.partner()]
         if cheating_diag_pbn is not None:
             reduced_samples = 10
-            cheating_factor = 0.9 if self.player_direction not in [self.declarer,self.declarer.partner()] and self.tricks_left<=6 else 0.4
+            cheating_factor = 0.5 if self.player_direction not in [self.declarer,self.declarer.partner()] and self.tricks_left<=6 else 0.2
             step = ceil(len(samples_as_diag)/reduced_samples)
             samples_as_diag = samples_as_diag[:reduced_samples] + samples_as_diag[reduced_samples::step]
             probabilities_list = list(probabilities_list[:reduced_samples]) + list(probabilities_list[reduced_samples::step])

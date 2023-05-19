@@ -118,8 +118,8 @@ def from_lin_to_request(
     )
     if contract is None:
         raise Exception("No card play if all pass")
-    contract = contract[:-1]
     declarer = Direction.from_str(contract[-1])
+    contract = contract[:-1]
     leader = declarer.offset(1)
     turn_to_play = leader
     for trick in play_as_list_of_list:

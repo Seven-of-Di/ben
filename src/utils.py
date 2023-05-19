@@ -447,7 +447,7 @@ class PlayerHand():
         return sum([len(ranks) for ranks in self.suits.values()])
 
     def print_as_pbn(self) -> str:
-        return ".".join(["".join([r.abbreviation() for r in sorted(self.suits[suit],reverse=True)]) for suit in reversed(Suit)])
+        return ".".join(["".join([r.abbreviation() for r in sorted(self.suits[suit],reverse=True)]) for suit in Suit])
 
 
     def suit_hcp(self, suit: Suit) -> int:

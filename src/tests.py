@@ -205,8 +205,8 @@ def send_request(
         (open_room and direction in [Direction.NORTH, Direction.SOUTH])
         or (not open_room and direction in [Direction.EAST, Direction.WEST])
         or type_of_action != "place_bid"
-    ) and type_of_action != "make_lead"
-    port = "http://localhost:{}".format("8081" if new_ben_called else "8082")
+    ) or type_of_action == "make_lead"
+    port = "http://localhost:{}".format("5001" if new_ben_called else "54700")
     start = time.time()
     res = requests.post("{}/{}".format(port, type_of_action), json=data)
     request_time = time.time() - start
@@ -224,6 +224,7 @@ def send_request(
         else:
             OLD_BIDDING_TIME[0] += request_time
             OLD_BIDDING_TIME[1] += 1
+    print("Sending to port {}".format(port))
     print(res.json())
     return res.json()
 
@@ -243,8 +244,8 @@ def bid_deal(deal: Deal, open_room: bool):
         }
         res = (
             send_request("place_bid", data, current_player, open_room)
-            if current_player in [Direction.NORTH, Direction.SOUTH]
-            else {"bid": "P", "alert": ""}
+            # if current_player in [Direction.NORTH, Direction.SOUTH]
+            # else {"bid": "P", "alert": ""}
         )
         if not sequence.append_with_check(SequenceAtom.from_str(res["bid"])):
             raise Exception(res["bid"] + "is not valid ?")
@@ -555,7 +556,7 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    # run_tm_btwn_ben_versions(force_same_lead=True,force_same_card_play=True)
+    run_tm_btwn_ben_versions(force_same_lead=True,force_same_card_play=True)
     # tests = run_tests()
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))

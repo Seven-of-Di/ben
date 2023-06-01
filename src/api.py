@@ -177,6 +177,14 @@ async def place_bid():
         data = await request.get_json()
         req = PlaceBid(data)
 
+        if tracing_enabled:
+            current_span = trace.get_current_span()
+            current_span.set_attributes({
+                "game.hand": req.hand,
+                "game.dealer": req.dealer,
+                "game.auction": ",".join(req.auction),
+            })
+
         # 1NT - (P)
         bot = AsyncBotBid(
             req.vuln,
@@ -219,6 +227,14 @@ async def place_bid():
 async def make_lead():
     data = await request.get_json()
     req = MakeLead(data)
+
+    if tracing_enabled:
+        current_span = trace.get_current_span()
+        current_span.set_attributes({
+            "game.hand": req.hand,
+            "game.dealer": req.dealer,
+            "game.auction": ",".join(req.auction),
+        })
 
     bot = AsyncBotLead(req.vuln, req.hand, MODELS)
 

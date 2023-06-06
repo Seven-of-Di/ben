@@ -15,6 +15,7 @@ from utils import (
     VULS_REVERSE,
 )
 from PlayRecord import Trick
+from SequenceAtom import Declaration
 from bidding import bidding
 from DealRecord import DealRecord
 from Deal import Deal
@@ -201,24 +202,24 @@ def send_request(
 ):
     # new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (
     #     not open_room and direction in [Direction.EAST, Direction.WEST])
-    new_ben_called = (
+    ben_called = (
         (open_room and direction in [Direction.NORTH, Direction.SOUTH])
         or (not open_room and direction in [Direction.EAST, Direction.WEST])
         or type_of_action != "place_bid"
     ) or type_of_action == "make_lead"
-    port = "http://localhost:{}".format("5001" if new_ben_called else "54700")
+    port = "http://localhost:{}".format("5001" if ben_called else "51801")
     start = time.time()
     res = requests.post("{}/{}".format(port, type_of_action), json=data)
     request_time = time.time() - start
     if type_of_action == "play_card":
-        if new_ben_called:
+        if ben_called:
             NEW_CARD_TIME[0] += request_time
             NEW_CARD_TIME[1] += 1
         else:
             OLD_CARD_TIME[0] += request_time
             OLD_CARD_TIME[1] += 1
     elif type_of_action == "place_bid":
-        if new_ben_called:
+        if ben_called:
             NEW_BIDDING_TIME[0] += request_time
             NEW_BIDDING_TIME[1] += 1
         else:
@@ -248,7 +249,8 @@ def bid_deal(deal: Deal, open_room: bool):
             # else {"bid": "P", "alert": ""}
         )
         if not sequence.append_with_check(SequenceAtom.from_str(res["bid"])):
-            raise Exception(res["bid"] + "is not valid ?")
+            print(Declaration.is_str_declaration(res["bid"]))
+            raise Exception(" |{}| is not valid ?".format(str(res["bid"])))
         sequence.sequence[-1].alert = res["alert"] if res["alert"] else None
         current_player = current_player.offset(1)
 

@@ -3,7 +3,7 @@ import json
 import os
 from typing import Dict, List
 import bots
-from utils import Direction, BiddingSuit, Card_, Diag, VULNERABILITIES
+from utils import Direction, BiddingSuit, Card_, Diag, VULNERABILITIES,DIRECTIONS
 from PlayRecord import Trick
 from bidding import bidding
 from play_card_pre_process import play_a_card
@@ -22,6 +22,12 @@ class PlayFullBoard:
         self.dealer = Direction.from_str(play_full_board_request["dealer"])
         self.hands = Diag.init_from_pbn(play_full_board_request["hands"])
 
+class PlayFullCardPlay:
+    def __init__(self, play_full_board_request) -> None:
+        self.vuln = VULNERABILITIES[play_full_board_request["vuln"]]
+        self.dealer = Direction.from_str(play_full_board_request["dealer"])
+        self.hands = Diag.init_from_pbn(play_full_board_request["hands"])
+        self.auction = play_full_board_request["auction"]
 
 class FullBoardPlayer:
     def __init__(self, diag: Diag, vuls: List[bool], dealer: Direction, models) -> None:

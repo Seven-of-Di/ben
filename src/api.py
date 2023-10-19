@@ -5,7 +5,7 @@ from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
 
 from nn.models import MODELS
 from game import AsyncBotBid, AsyncBotLead
-from FullBoardPlayer import AsyncFullBoardPlayer,PlayFullBoard
+from FullBoardPlayer import AsyncFullBoardPlayer,PlayFullBoard,PlayFullCardPlay
 from health_checker import HealthChecker
 from alerting import find_alert
 
@@ -29,7 +29,7 @@ tf.disable_v2_behavior()
 
 sentry_sdk.init(
     dsn=os.environ.get("SENTRY_DSN", ""),
-    environment=os.environ.get("SENTRY_ENVIRONMENT", ""),
+    environment=os.environ.get("SENTRY_ENVIRONMENT", ""), 
     release=os.environ.get("SENTRY_RELEASE", ""),
 )
 
@@ -297,6 +297,30 @@ async def play_full_board() -> Dict:
     board_data = await bot.async_full_board()
 
     return board_data
+
+'''
+{
+    "hand": "N:J962.KA3.87.T983 Q7.QJ965.6.KJA54 KA84.872.TQJA2.6 T53.T4.K9543.Q72",
+    "dealer": "E",
+    "vuln": "None",
+    "sequence" : "["P","1S","P","2S","P","P","P"]
+}
+'''
+
+
+@app.post('/play_full_card_play')
+async def play_full_card_play() -> Dict:
+    data = await request.get_json()
+    req = PlayFullCardPlay(data)
+    bot = AsyncFullBoardPlayer(
+        req.hands,
+        req.vuln,
+        req.dealer,
+        MODELS
+    )
+    play_data = await bot.get_card_play(deepcopy(req.auction))
+
+    return {"auction" : req.auction,"play" : play_data}
 
 
 '''

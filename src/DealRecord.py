@@ -54,7 +54,6 @@ class DealRecord:
                 if self.names[dir]:
                     string += Pbn.print_tag(Pbn.direction_to_tag(dir),
                                             self.names[dir])
-            string += "\n"
         if self.sequence:
             if not self.play_record:
                 string += self.sequence.print_as_pbn(

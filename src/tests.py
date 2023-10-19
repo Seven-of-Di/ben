@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from copy import deepcopy
 import datetime
@@ -25,7 +27,6 @@ import json
 from FullBoardPlayer import AsyncFullBoardPlayer
 from score_calculation import calculate_score
 from Board import Board
-import git
 
 NEW_BIDDING_TIME: List[float] = [0, 0]
 OLD_BIDDING_TIME: List[float] = [0, 0]
@@ -207,7 +208,7 @@ def send_request(
         or (not open_room and direction in [Direction.EAST, Direction.WEST])
         or type_of_action != "place_bid"
     ) or type_of_action == "make_lead"
-    port = "http://localhost:{}".format("5001" if ben_called else "51801")
+    port = "http://localhost:{}".format("5001" if ben_called else "5002")
     start = time.time()
     res = requests.post("{}/{}".format(port, type_of_action), json=data)
     request_time = time.time() - start
@@ -320,6 +321,7 @@ def full_card_play(
                 "contract_direction": contract.declarer.abbreviation(),
                 "next_player": current_player.abbreviation(),
                 "tricks": tricks,
+                "cheating_diag_pbn" : deal.diag.print_as_pbn()
             }
             res = send_request(
                 type_of_action="play_card",
@@ -486,18 +488,23 @@ def run_tm_btwn_ben_versions(
     force_same_sequence: bool = False,
     force_same_lead: bool = False,
     force_same_card_play: bool = False,
+    file : str ="./test_data/match_to_replay.pbn",
+    specific_boards : None|List[int] = None,
+    deal_random : bool = False
 ):
-    with open("./test_data/test_data.pbn") as f:
+    with open(file) as f:
         boards = f.read().strip("\n").split("\n\n")
-        deals: List[Deal] = [Deal.from_pbn(board) for board in boards][:50]
+        deals: List[Deal] = [Deal.from_pbn(board) for board in boards]
+        boards_number_seen = set()
+        deals = [boards_number_seen.add(board.board_number) or board for board in deals if board.board_number not in boards_number_seen]
+
+        if specific_boards :
+            deals = [deal for deal in deals if deal.board_number in specific_boards]
 
     for deal in deals:
-        deal.diag = Diag.generate_random()
-        while (
-            not deal.diag.hands[Direction.NORTH].opening_values()
-            or deal.diag.hands[Direction.SOUTH].opening_values()
-        ):
+        if deal_random :
             deal.diag = Diag.generate_random()
+
         # while not deal.diag.hands[Direction.NORTH].hcp() + deal.diag.hands[Direction.SOUTH].hcp()>=26:
         #     deal.diag = Diag.generate_random()
         pbn = run_deal_on_both_rooms(
@@ -558,7 +565,7 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    run_tm_btwn_ben_versions(force_same_lead=True,force_same_card_play=True)
+    run_tm_btwn_ben_versions(force_same_lead=True,force_same_card_play=True,deal_random=True)
     # tests = run_tests()
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))

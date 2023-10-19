@@ -303,7 +303,7 @@ async def play_full_board() -> Dict:
     "hand": "N:J962.KA3.87.T983 Q7.QJ965.6.KJA54 KA84.872.TQJA2.6 T53.T4.K9543.Q72",
     "dealer": "E",
     "vuln": "None",
-    "sequence" : "["P","1S","P","2S","P","P","P"]
+    "auction" : "["P","1S","P","2S","P","P","P"]
 }
 '''
 

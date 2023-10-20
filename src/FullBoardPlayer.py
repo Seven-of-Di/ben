@@ -22,8 +22,7 @@ class PlayFullBoard:
         self.dealer = Direction.from_str(play_full_board_request['dealer'])
         self.hands = Diag.init_from_pbn(play_full_board_request['hands'])
 
-
-class FullBoardPlayer():
+class FullBoardPlayer:
     def __init__(self, diag: Diag, vuls: List[bool], dealer: Direction, models) -> None:
         diag.is_valid()
         self.diag = diag

@@ -29,7 +29,7 @@ else:
 LIBDDSPATH = "libdds/.build/src/"
 
 if platform.system() == "Windows":
-    LIBDDSPATH ='C:\\Users\\lucbe\\OneDrive\\Documents\\Bridge\\ben\\ben\\'
+    LIBDDSPATH ='C:\\ben\\'
     libname = "dds.dll"
 elif platform.system() == "Darwin":
     libname = "libdds.2.dylib"

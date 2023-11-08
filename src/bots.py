@@ -367,8 +367,9 @@ class BotLead:
         tricks_to_defeat_contract = 13 - (6 + level) + 1
         strain = bidding.get_strain_i(contract)
 
-        lead_card_indexes, lead_softmax = self.get_lead_candidates(auction)
-        accepted_samples = self.get_accepted_samples(4096, auction, lead_card_indexes)
+        lead_card_indexes, lead_softmax = self.get_lead_candidates(auction,level)
+        accepted_samples = self.get_accepted_samples(
+            4096, auction, lead_card_indexes)
 
         samples = []
 
@@ -450,7 +451,7 @@ class BotLead:
             card=candidate_cards[0].card, candidates=candidate_cards, samples=samples
         )
 
-    def get_lead_candidates(self, auction):
+    def get_lead_candidates(self, auction,level):
         x_ftrs, b_ftrs = binary.get_lead_binary(
             auction, self.hand, self.binfo_model, self.vuln
         )
@@ -459,17 +460,29 @@ class BotLead:
             lead_softmax, self.hand, np.array([[0, 0, 0, 0]])
         )
 
-        candidates = []
+        candidates = set()
+        hand = PlayerHand.from_pbn(self.hand_str)
 
         while True:
             c = np.argmax(lead_softmax[0])
+            card = Card.from_code(c,xcards=True)
             score = lead_softmax[0][c]
             if score < 0.05:
                 break
             lead_softmax[0][c] = 0
-            candidates.append(c)
+            if level>=6 and Rank.ACE in hand.suits[Suit(card.suit)] and card.rank!=0 :
+                if len(candidates)>=1 :
+                    break
+                else :
+                    continue
+            candidates.add(c)
 
-        return candidates, lead_softmax
+        if level>=6 :
+            for suit in Suit :
+                if Rank.ACE in hand.suits[suit] :
+                    candidates.add(Card(suit.value,rank=0,xcards=True).code())
+
+        return list(candidates), lead_softmax
 
     def get_accepted_samples(self, n_samples, auction, lead_card_indexes):
         contract = bidding.get_contract(auction)

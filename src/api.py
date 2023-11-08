@@ -1,15 +1,17 @@
 from copy import deepcopy
 from typing import Dict, List
-from quart import Quart, request
+from quart import Quart, request, g
 from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
 
 from nn.models import MODELS
 from game import AsyncBotBid, AsyncBotLead
-from FullBoardPlayer import AsyncFullBoardPlayer,PlayFullBoard
+from FullBoardPlayer import AsyncFullBoardPlayer,PlayFullBoard,PlayFullCardPlay
 from health_checker import HealthChecker
 from alerting import find_alert
 
 from opentelemetry import trace
+from opentelemetry.propagate import extract
+from opentelemetry.context import attach, detach
 from tracing import tracing_enabled
 import numpy as np
 
@@ -29,7 +31,7 @@ tf.disable_v2_behavior()
 
 sentry_sdk.init(
     dsn=os.environ.get("SENTRY_DSN", ""),
-    environment=os.environ.get("SENTRY_ENVIRONMENT", ""),
+    environment=os.environ.get("SENTRY_ENVIRONMENT", ""), 
     release=os.environ.get("SENTRY_RELEASE", ""),
 )
 
@@ -39,6 +41,32 @@ app.asgi_app = OpenTelemetryMiddleware(app.asgi_app)
 
 health_checker = HealthChecker(app.logger)
 health_checker.start()
+
+@app.before_request
+async def before_request():
+    if not tracing_enabled:
+        pass
+
+    extracted_context = extract(request.headers)
+    span = trace.get_current_span(extracted_context)
+    if span is not None:
+        trace.use_span(span, end_on_exit=True)
+        g.otel_token = attach(trace.set_span_in_context(span))
+
+@app.after_request
+async def after_request(response):
+    if not tracing_enabled:
+        return response
+
+    token = getattr(g, 'otel_token', None)
+    if token:
+        current_span = trace.get_current_span()
+        if current_span:
+            current_span.end()
+
+        detach(token)
+
+    return response
 
 
 class PlaceBid:
@@ -177,6 +205,14 @@ async def place_bid():
         data = await request.get_json()
         req = PlaceBid(data)
 
+        if tracing_enabled:
+            current_span = trace.get_current_span()
+            current_span.set_attributes({
+                "game.hand": req.hand,
+                "game.dealer": req.dealer,
+                "game.auction": ",".join(req.auction),
+            })
+
         # 1NT - (P)
         bot = AsyncBotBid(
             req.vuln,
@@ -219,6 +255,14 @@ async def place_bid():
 async def make_lead():
     data = await request.get_json()
     req = MakeLead(data)
+
+    if tracing_enabled:
+        current_span = trace.get_current_span()
+        current_span.set_attributes({
+            "game.hand": req.hand,
+            "game.dealer": req.dealer,
+            "game.auction": ",".join(req.auction),
+        })
 
     bot = AsyncBotLead(req.vuln, req.hand, MODELS)
 
@@ -281,6 +325,30 @@ async def play_full_board() -> Dict:
     board_data = await bot.async_full_board()
 
     return board_data
+
+'''
+{
+    "hand": "N:J962.KA3.87.T983 Q7.QJ965.6.KJA54 KA84.872.TQJA2.6 T53.T4.K9543.Q72",
+    "dealer": "E",
+    "vuln": "None",
+    "auction" : "["P","1S","P","2S","P","P","P"]
+}
+'''
+
+
+@app.post('/play_full_card_play')
+async def play_full_card_play() -> Dict:
+    data = await request.get_json()
+    req = PlayFullCardPlay(data)
+    bot = AsyncFullBoardPlayer(
+        req.hands,
+        req.vuln,
+        req.dealer,
+        MODELS
+    )
+    play_data = await bot.get_card_play(deepcopy(req.auction))
+
+    return {"auction" : req.auction,"play" : play_data}
 
 
 '''

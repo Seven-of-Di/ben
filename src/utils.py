@@ -25,6 +25,15 @@ VULNERABILITIES = {
 
 VULS_REVERSE = {tuple(v): k for k, v in VULNERABILITIES.items()}
 
+class PlayingMode(Enum) :
+    MATCHPOINTS = 0
+    TEAMS = 1
+
+    __from_str_map__ = {"MP": MATCHPOINTS, "MATCHPOINTS": MATCHPOINTS, "TEAM": TEAMS, "TEAMS": TEAMS}
+
+    @classmethod
+    def from_str(cls, playing_mode_str: str) -> PlayingMode:
+        return PlayingMode(cls.__from_str_map__[playing_mode_str.upper()])
 
 @total_ordering
 class Direction(Enum):

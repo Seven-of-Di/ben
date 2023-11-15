@@ -32,6 +32,7 @@ from utils import (
     TOTAL_DECK,
     Diag,
     convert_to_probability,
+    PlayingMode
 )
 from human_carding import play_real_card
 from PlayRecord import PlayRecord
@@ -368,8 +369,7 @@ class BotLead:
         strain = bidding.get_strain_i(contract)
 
         lead_card_indexes, lead_softmax = self.get_lead_candidates(auction,level)
-        accepted_samples = self.get_accepted_samples(
-            4096, auction, lead_card_indexes)
+        accepted_samples = self.get_accepted_samples(4096, auction, lead_card_indexes)
 
         samples = []
 
@@ -404,6 +404,7 @@ class BotLead:
             [diag.print_as_pbn(first_direction=Direction.WEST) for diag in samples],
         )
         dd_solved = {Card_.get_from_52(k): v for k, v in dd_solved.items()}
+        print(dd_solved)
 
         candidate_cards: List[CandidateCard] = []
         for i, card_i in enumerate(lead_card_indexes):
@@ -433,19 +434,14 @@ class BotLead:
                     expected_tricks=sum((dd_solved[card])) / len(dd_solved[card]),
                 )
             )
-            # print(Card_.get_from_52(deck52.card32to52(card_i)))
-            # print((tricks[:, i, 0]))
-            # print(np.mean((tricks[:, i, 0])))
-            # print(tricks[:, i, 1])
-            # print(np.mean(tricks[:, i, 1]))
             pass
+        for c in candidate_cards :
+            print(c.card,c.p_make_contract)
         candidate_cards = sorted(
             candidate_cards,
             key=lambda c: c.p_make_contract if c.p_make_contract != None else 1,
         )
 
-        # for c in candidate_cards :
-        #     print(c.card,c.p_make_contract)
 
         return CardResp(
             card=candidate_cards[0].card, candidates=candidate_cards, samples=samples
@@ -461,20 +457,23 @@ class BotLead:
         )
 
         candidates = set()
+        suits = set()
         hand = PlayerHand.from_pbn(self.hand_str)
+        suit_length = len([s for s in Suit if len(hand.suits[s])>=1])
 
         while True:
             c = np.argmax(lead_softmax[0])
             card = Card.from_code(c,xcards=True)
             score = lead_softmax[0][c]
-            if score < 0.05:
+            if score < 0.05 and not (level>=6 and card.suit not in suits):
+                if level>=6 and not len(suits)==suit_length:
+                    lead_softmax[0][c] = 0
+                    continue
                 break
             lead_softmax[0][c] = 0
             if level>=6 and Rank.ACE in hand.suits[Suit(card.suit)] and card.rank!=0 :
-                if len(candidates)>=1 :
-                    break
-                else :
-                    continue
+                continue
+            suits.add(card.suit)
             candidates.add(c)
 
         if level>=6 :
@@ -542,6 +541,7 @@ class CardPlayer:
         player_direction: Direction,
         dummy_hand: PlayerHand,
         player_hand: PlayerHand,
+        playing_mode : PlayingMode,
         debug: bool = False,
     ):
         self.player_models = player_models
@@ -569,6 +569,7 @@ class CardPlayer:
         self.declarer = declarer
         self.dummy_hand: PlayerHand = dummy_hand
         self.hand: PlayerHand = player_hand
+        self.playing_mode = playing_mode
         self.hidden_cards = [
             card
             for card in deepcopy(TOTAL_DECK)
@@ -626,7 +627,7 @@ class CardPlayer:
         current_trick52,
         players_states,
         probabilities_list,
-        cheating_diag_pbn: Optional[str],
+        cheating_diag_pbn: Optional[str] = None,
     ):
         current_trick = [deck52.card52to32(c) for c in current_trick52]
         card52_dd = self.get_cards_dd_evaluation(
@@ -793,8 +794,10 @@ class CardPlayer:
             self.check_claim = True
 
         card_tricks = ddsolver.expected_tricks(dd_solved, probabilities_list)
-        # card_ev = self.get_card_ev(dd_solved, probabilities_list)
-        card_ev = self.get_card_ev_mp(dd_solved, probabilities_list)
+        if self.playing_mode is PlayingMode.MATCHPOINTS :
+            card_ev = self.get_card_ev_mp(dd_solved, probabilities_list)
+        else :
+            card_ev = self.get_card_ev(dd_solved, probabilities_list)
 
         card_result = {}
         for key in dd_solved.keys():

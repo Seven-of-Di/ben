@@ -23,5 +23,5 @@ def replay_last_match(specific_boards: List[int] | None = None):
 
 
 if __name__ == "__main__":
-    # replay_last_match(specific_boards = [17])
+    # replay_last_match(specific_boards = [46])
     replay_last_match()

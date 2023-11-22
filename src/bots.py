@@ -404,7 +404,7 @@ class BotLead:
             [diag.print_as_pbn(first_direction=Direction.WEST) for diag in samples],
         )
         dd_solved = {Card_.get_from_52(k): v for k, v in dd_solved.items()}
-        print(dd_solved)
+        # print(dd_solved)
 
         candidate_cards: List[CandidateCard] = []
         for i, card_i in enumerate(lead_card_indexes):
@@ -435,8 +435,8 @@ class BotLead:
                 )
             )
             pass
-        for c in candidate_cards :
-            print(c.card,c.p_make_contract)
+        # for c in candidate_cards :
+        #     print(c.card,c.p_make_contract)
         candidate_cards = sorted(
             candidate_cards,
             key=lambda c: c.p_make_contract if c.p_make_contract != None else 1,

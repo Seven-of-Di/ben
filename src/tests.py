@@ -15,6 +15,7 @@ from utils import (
     DIRECTIONS,
     BiddingSuit,
     VULS_REVERSE,
+    PlayingMode
 )
 from PlayRecord import Trick
 from SequenceAtom import Declaration
@@ -321,7 +322,8 @@ def full_card_play(
                 "contract_direction": contract.declarer.abbreviation(),
                 "next_player": current_player.abbreviation(),
                 "tricks": tricks,
-                "cheating_diag_pbn" : deal.diag.print_as_pbn()
+                "cheating_diag_pbn" : deal.diag.print_as_pbn(),
+                "playing_mode" : "teams"
             }
             res = send_request(
                 type_of_action="play_card",
@@ -505,8 +507,8 @@ def run_tm_btwn_ben_versions(
         if deal_random :
             deal.diag = Diag.generate_random()
 
-        # while not deal.diag.hands[Direction.NORTH].hcp() + deal.diag.hands[Direction.SOUTH].hcp()>=26:
-        #     deal.diag = Diag.generate_random()
+        while not deal.diag.hands[Direction.NORTH].hcp() + deal.diag.hands[Direction.SOUTH].hcp()>=26:
+            deal.diag = Diag.generate_random()
         pbn = run_deal_on_both_rooms(
             deal, force_same_sequence, force_same_lead, force_same_card_play
         )

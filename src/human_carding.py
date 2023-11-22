@@ -41,7 +41,7 @@ def play_real_card(hand: PlayerHand, valid_cards: List[Card_], trump: BiddingSui
     else:
         cards_played_by_player = play_record.get_cards_played_by_direction(
             player_direction)
-        if any([card.suit == play_record.record[-1].__trick_as_tuple_list__()[0][1].suit for card in cards_played_by_player]):
+        if any([card.suit == suit_to_play for card in cards_played_by_player]):
             return Card_(suit_to_play, sorted(valid_ranks)[0])
         else:
             return Card_(suit_to_play, low_encouraging(hand, suit_to_play, valid_ranks))

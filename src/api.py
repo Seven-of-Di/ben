@@ -22,7 +22,7 @@ from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 
 from play_card_pre_process import play_a_card
 from human_carding import lead_real_card
-from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit, Diag, Direction
+from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit, Diag, Direction,PlayingMode
 from claim_dds import check_claim_from_api
 
 import tensorflow.compat.v1 as tf  # type: ignore
@@ -99,6 +99,8 @@ class PlayCard:
         self.tricks = play_card_request['tricks']
         self.cheating_diag_pbn = play_card_request[
             "cheating_diag_pbn"] if "cheating_diag_pbn" in play_card_request else None
+        self.playing_mode = PlayingMode.from_str(play_card_request[
+            "playing_mode"]) if "playing_mode" in play_card_request else PlayingMode.MATCHPOINTS
 
 
 class MakeLead:
@@ -135,9 +137,6 @@ class CheckClaim:
     "tricks": [["SA", "SK"]]
 }
 '''
-
-
-
 
 '''
 {
@@ -176,7 +175,8 @@ async def play_card():
         req.next_player,
         req.tricks,
         MODELS,
-        req.cheating_diag_pbn
+        req.cheating_diag_pbn,
+        req.playing_mode
     )
 
     """
@@ -236,7 +236,11 @@ async def place_bid():
             )
             bid_resp = await bot.async_bid(req.auction)
 
-        return {'bid': bid_resp.bid, 'alert': alert}
+        resp = {'bid': bid_resp.bid}
+        if alert != None:
+            resp['alert'] = { 'text': alert, 'artificial': False }
+
+        return resp
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}
@@ -343,7 +347,7 @@ async def alert_bid():
         req = AlertBid(data)
         alert = await find_alert(req.auction, req.vuln)
 
-        return {"alert": alert}
+        return {"alert": alert, "artificial" : False}
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'}

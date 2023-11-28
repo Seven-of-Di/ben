@@ -3,7 +3,7 @@ import json
 import os
 from typing import Dict, List
 import bots
-from utils import Direction, BiddingSuit, Card_, Diag, VULNERABILITIES,DIRECTIONS
+from utils import Direction, BiddingSuit, PlayingMode, Card_, Diag, VULNERABILITIES,DIRECTIONS
 from PlayRecord import Trick
 from bidding import bidding
 from play_card_pre_process import play_a_card
@@ -23,12 +23,13 @@ class PlayFullBoard:
         self.hands = Diag.init_from_pbn(play_full_board_request["hands"])
 
 class FullBoardPlayer:
-    def __init__(self, diag: Diag, vuls: List[bool], dealer: Direction, models) -> None:
+    def __init__(self, diag: Diag, vuls: List[bool], dealer: Direction, playing_mode: PlayingMode, models) -> None:
         diag.is_valid()
         self.diag = diag
         self.vuls = vuls
         self.dealer = dealer
         self.models = models
+        self.playing_mode = playing_mode
 
     def get_auction(self):
         auction: List[str] = ["PAD_START"] * Direction.from_str(
@@ -85,6 +86,7 @@ class FullBoardPlayer:
                 tricks_str=tricks,
                 MODELS=self.models,
                 cheating_diag_pbn=self.diag.print_as_pbn(),
+                playing_mode=self.playing_mode
             )
             # print(dict_result)
             tricks[-1].append(str(dict_result["card"]))
@@ -137,7 +139,7 @@ async def start():
 
         for message in resp["Messages"]:
             req = PlayFullBoard(json.loads(message["Body"]))
-            bot = FullBoardPlayer(req.hands, req.vuln, req.dealer, MODELS)
+            bot = FullBoardPlayer(req.hands, req.vuln, req.dealer, req.playing_mode, MODELS)
 
             auction = bot.get_auction()
 

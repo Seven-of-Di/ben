@@ -363,7 +363,8 @@ class BotLead:
         contract = bidding.get_contract(auction)
         if contract is None:
             raise Exception("Contract should not be None if asking for a lead")
-
+        if len(self.hand_str)!=16 :
+            raise Exception("Not 13 cards in hand")
         level = int(contract[0])
         tricks_to_defeat_contract = 13 - (6 + level) + 1
         strain = bidding.get_strain_i(contract)

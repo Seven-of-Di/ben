@@ -255,7 +255,7 @@ def bid_deal(deal: Deal, open_room: bool):
         if not sequence.append_with_check(SequenceAtom.from_str(res["bid"])):
             print(Declaration.is_str_declaration(res["bid"]))
             raise Exception(" |{}| is not valid ?".format(str(res["bid"])))
-        if res["alert"] :
+        if "alert" in res :
             if isinstance(res["alert"],str) :
                 sequence.sequence[-1].alert = Alert(text=res["alert"]) 
             elif isinstance(res["alert"],Dict) :

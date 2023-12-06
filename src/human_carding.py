@@ -52,7 +52,7 @@ def pick_random_from_valid_ranks(valid_ranks: List[Rank]) -> Rank:
 
 
 def pick_random_low(valid_ranks: List[Rank]) -> Rank:
-    return random.choice([c for c in valid_ranks if c <= Rank.SEVEN])
+    return random.choice([c for c in valid_ranks])
 
 
 def fourth_best(hand: PlayerHand, suit: Suit, partner_suit: bool) -> Rank:

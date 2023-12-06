@@ -369,6 +369,19 @@ class BotLead:
         strain = bidding.get_strain_i(contract)
 
         lead_card_indexes, lead_softmax = self.get_lead_candidates(auction,level)
+        if len(lead_card_indexes) == 1:
+            return CardResp(
+                card=Card.from_code(lead_card_indexes[0], xcards=True),
+                candidates=[
+                    CandidateCard(
+                        card=Card.from_code(lead_card_indexes[0], xcards=True),
+                        insta_score=lead_softmax[0, lead_card_indexes[0]],
+                        p_make_contract=None,
+                        expected_tricks=None,
+                    )
+                ],
+                samples=[],
+            )
         accepted_samples = self.get_accepted_samples(4096, auction, lead_card_indexes)
 
         samples = []
@@ -404,7 +417,7 @@ class BotLead:
             [diag.print_as_pbn(first_direction=Direction.WEST) for diag in samples],
         )
         dd_solved = {Card_.get_from_52(k): v for k, v in dd_solved.items()}
-        print(dd_solved)
+        # print(dd_solved)
 
         candidate_cards: List[CandidateCard] = []
         for i, card_i in enumerate(lead_card_indexes):
@@ -435,8 +448,8 @@ class BotLead:
                 )
             )
             pass
-        for c in candidate_cards :
-            print(c.card,c.p_make_contract)
+        # for c in candidate_cards :
+        #     print(c.card,c.p_make_contract)
         candidate_cards = sorted(
             candidate_cards,
             key=lambda c: c.p_make_contract if c.p_make_contract != None else 1,
@@ -474,7 +487,12 @@ class BotLead:
             if level>=6 and Rank.ACE in hand.suits[Suit(card.suit)] and card.rank!=0 :
                 continue
             suits.add(card.suit)
-            candidates.add(c)
+            if card.rank>=5 :
+                card.rank = 7 
+            # print(card.code())
+            candidates.add(card.code())
+            if score > 0.85 :
+                break
 
         if level>=6 :
             for suit in Suit :

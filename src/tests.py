@@ -18,7 +18,7 @@ from utils import (
     PlayingMode
 )
 from PlayRecord import Trick
-from SequenceAtom import Declaration
+from SequenceAtom import Declaration,Alert
 from bidding import bidding
 from DealRecord import DealRecord
 from Deal import Deal
@@ -244,6 +244,8 @@ def bid_deal(deal: Deal, open_room: bool):
             "dealer": deal.dealer.abbreviation(),
             "vuln": VULS_REVERSE[(deal.ns_vulnerable, deal.ew_vulnerable)],
             "auction": sequence.get_as_ben_request(),
+            "conventions_ew" : "SEF" if open_room else "DEFAULT",
+            "conventions_ns" : "DEFAULT" if open_room else "SEF",
         }
         res = (
             send_request("place_bid", data, current_player, open_room)
@@ -253,7 +255,12 @@ def bid_deal(deal: Deal, open_room: bool):
         if not sequence.append_with_check(SequenceAtom.from_str(res["bid"])):
             print(Declaration.is_str_declaration(res["bid"]))
             raise Exception(" |{}| is not valid ?".format(str(res["bid"])))
-        sequence.sequence[-1].alert = res["alert"] if res["alert"] else None
+        if res["alert"] :
+            if isinstance(res["alert"],str) :
+                sequence.sequence[-1].alert = Alert(text=res["alert"]) 
+            elif isinstance(res["alert"],Dict) :
+                sequence.sequence[-1].alert = Alert(text=res["alert"]["text"],artificial=res["alert"]["artificial"])
+                
         current_player = current_player.offset(1)
 
     return sequence
@@ -507,8 +514,8 @@ def run_tm_btwn_ben_versions(
         if deal_random :
             deal.diag = Diag.generate_random()
 
-        while not deal.diag.hands[Direction.NORTH].hcp() + deal.diag.hands[Direction.SOUTH].hcp()>=26:
-            deal.diag = Diag.generate_random()
+        # while not deal.diag.hands[Direction.NORTH].hcp() + deal.diag.hands[Direction.SOUTH].hcp()>=26:
+        #     deal.diag = Diag.generate_random()
         pbn = run_deal_on_both_rooms(
             deal, force_same_sequence, force_same_lead, force_same_card_play
         )

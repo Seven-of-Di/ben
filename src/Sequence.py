@@ -7,7 +7,7 @@ from parsing_tools import Pbn
 from score_calculation import calculate_score
 
 
-from SequenceAtom import Declaration, FinalContract, SequenceAtom, Bid
+from SequenceAtom import Declaration, FinalContract, SequenceAtom, Bid,Alert
 from typing import Dict, List, Optional
 
 
@@ -218,18 +218,21 @@ class Sequence:
                 string += Pbn.print_tag("Score", "NS 0")
         string += Pbn.print_tag("Auction", dealer.abbreviation())
         i = 0
-        alerts = {}
+        alerts : Dict[int,Alert] = {}
         for j, atom in enumerate(self.sequence):
             string += '{0:7}'.format(atom.print_as_pbn())
             if atom.alert:
                 string += "="+str(i+1)+"= "
                 alerts[i] = atom.alert
+                alerts[i].text = alerts[i].text.replace("\n"," -- ")
+                if alerts[i].artificial :
+                    alerts[i].text = "ART" + alerts[i].text
                 i += 1
             if j % 4 == 3:
                 string += "\n"
         string += "\n" if string[-1]!="\n" else ""
         for index in range(i):
-            string += '[Note "{}:'.format(index+1)+alerts[index]+'"]\n'
+            string += '[Note "{}:'.format(index+1)+alerts[index].text+'"]\n'
         string = string[:-1] if string[-2:]=="\n\n" else string
         return string
 

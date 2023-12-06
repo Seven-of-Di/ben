@@ -239,7 +239,7 @@ async def place_bid():
         return {'bid': bid_resp.bid, 'alert': alert}
     except Exception as e:
         app.logger.exception(e)
-        return {'error': 'Unexpected error'}
+        return {'error': 'Unexpected error'},500
 
 '''
 {
@@ -273,7 +273,7 @@ async def make_lead():
     if contract is None:
         raise Exception("contract is None")
 
-    return {'card': lead_real_card(PlayerHand.from_pbn(req.hand), card_str, BiddingSuit.from_str(contract[1])).__str__()}
+    return {'card': lead_real_card(PlayerHand.from_pbn(req.hand), card_str, BiddingSuit.from_str(contract[1])).__str__()},500
 
 '''
 {
@@ -301,7 +301,7 @@ async def check_claim():
         req.tricks,
         req.claim)
 
-    return {'claim_accepted': res}
+    return {'claim_accepted': res},500
 
 '''
 {
@@ -346,7 +346,7 @@ async def alert_bid():
         return {"alert": alert}
     except Exception as e:
         app.logger.exception(e)
-        return {'error': 'Unexpected error'}
+        return {'error': 'Unexpected error'},500
 
 
 @app.get('/healthz')

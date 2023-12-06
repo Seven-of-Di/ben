@@ -3,7 +3,7 @@ import json
 import os
 from typing import Dict, List
 import bots
-from utils import Direction, BiddingSuit, Card_, Diag, VULNERABILITIES, DIRECTIONS
+from utils import Direction, Diag, PlayingMode, VULNERABILITIES, DIRECTIONS
 from PlayRecord import Trick
 from FullBoardPlayer import FullBoardPlayer
 from bidding import bidding
@@ -23,7 +23,8 @@ class PlayFullCardPlay:
         self.dealer = Direction.from_str(play_full_board_request["dealer"])
         self.hands = Diag.init_from_pbn(play_full_board_request["hands"])
         self.auction = play_full_board_request["auction"]
-
+        self.playing_mode = PlayingMode.from_str(play_full_board_request[
+            "playing_mode"]) if "playing_mode" in play_full_board_request else PlayingMode.MATCHPOINTS
 
 async def start():
     sqs_client = boto3.client(
@@ -45,7 +46,7 @@ async def start():
 
         for message in resp["Messages"]:
             req = PlayFullCardPlay(json.loads(message["Body"]))
-            bot = FullBoardPlayer(req.hands, req.vuln, req.dealer, MODELS)
+            bot = FullBoardPlayer(req.hands, req.vuln, req.dealer, req.playing_mode, MODELS)
 
             play = await bot.get_card_play(req.auction)
             message_body = {"auction": req.auction, "play": play}

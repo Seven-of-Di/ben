@@ -236,7 +236,11 @@ async def place_bid():
             )
             bid_resp = await bot.async_bid(req.auction)
 
-        return {'bid': bid_resp.bid, 'alert': alert}
+        resp = {'bid': bid_resp.bid}
+        if alert != None:
+            resp['alert'] = { 'text': alert, 'artificial': False }
+
+        return resp
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'},500
@@ -343,7 +347,7 @@ async def alert_bid():
         req = AlertBid(data)
         alert = await find_alert(req.auction, req.vuln)
 
-        return {"alert": alert}
+        return {"alert": alert, "artificial" : False}
     except Exception as e:
         app.logger.exception(e)
         return {'error': 'Unexpected error'},500

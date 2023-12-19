@@ -15,10 +15,10 @@ from utils import (
     DIRECTIONS,
     BiddingSuit,
     VULS_REVERSE,
-    PlayingMode
+    PlayingMode,
 )
 from PlayRecord import Trick
-from SequenceAtom import Declaration,Alert
+from SequenceAtom import Declaration, Alert
 from bidding import bidding
 from DealRecord import DealRecord
 from Deal import Deal
@@ -207,8 +207,8 @@ def send_request(
     ben_called = (
         (open_room and direction in [Direction.NORTH, Direction.SOUTH])
         or (not open_room and direction in [Direction.EAST, Direction.WEST])
-        or type_of_action != "place_bid"
-    ) or type_of_action == "make_lead"
+        or type_of_action == "play_card"
+    )
     port = "http://localhost:{}".format("5001" if ben_called else "5002")
     start = time.time()
     res = requests.post("{}/{}".format(port, type_of_action), json=data)
@@ -244,8 +244,8 @@ def bid_deal(deal: Deal, open_room: bool):
             "dealer": deal.dealer.abbreviation(),
             "vuln": VULS_REVERSE[(deal.ns_vulnerable, deal.ew_vulnerable)],
             "auction": sequence.get_as_ben_request(),
-            "conventions_ew" : "SEF" if open_room else "DEFAULT",
-            "conventions_ns" : "DEFAULT" if open_room else "SEF",
+            "conventions_ew": "DEFAULT" if open_room else "DEFAULT",
+            "conventions_ns": "DEFAULT" if open_room else "DEFAULT",
         }
         res = (
             send_request("place_bid", data, current_player, open_room)
@@ -255,12 +255,14 @@ def bid_deal(deal: Deal, open_room: bool):
         if not sequence.append_with_check(SequenceAtom.from_str(res["bid"])):
             print(Declaration.is_str_declaration(res["bid"]))
             raise Exception(" |{}| is not valid ?".format(str(res["bid"])))
-        if "alert" in res :
-            if isinstance(res["alert"],str) :
-                sequence.sequence[-1].alert = Alert(text=res["alert"]) 
-            elif isinstance(res["alert"],Dict) :
-                sequence.sequence[-1].alert = Alert(text=res["alert"]["text"],artificial=res["alert"]["artificial"])
-                
+        if "alert" in res:
+            if isinstance(res["alert"], str):
+                sequence.sequence[-1].alert = Alert(text=res["alert"])
+            elif isinstance(res["alert"], Dict):
+                sequence.sequence[-1].alert = Alert(
+                    text=res["alert"]["text"], artificial=res["alert"]["artificial"]
+                )
+
         current_player = current_player.offset(1)
 
     return sequence
@@ -329,8 +331,8 @@ def full_card_play(
                 "contract_direction": contract.declarer.abbreviation(),
                 "next_player": current_player.abbreviation(),
                 "tricks": tricks,
-                "cheating_diag_pbn" : deal.diag.print_as_pbn(),
-                "playing_mode" : "teams"
+                "cheating_diag_pbn": deal.diag.print_as_pbn(),
+                "playing_mode": "teams",
             }
             res = send_request(
                 type_of_action="play_card",
@@ -497,21 +499,25 @@ def run_tm_btwn_ben_versions(
     force_same_sequence: bool = False,
     force_same_lead: bool = False,
     force_same_card_play: bool = False,
-    file : str ="./test_data/match_to_replay.pbn",
-    specific_boards : None|List[int] = None,
-    deal_random : bool = False
+    file: str = "./test_data/match_to_replay.pbn",
+    specific_boards: None | List[int] = None,
+    deal_random: bool = False,
 ):
     with open(file) as f:
         boards = f.read().strip("\n").split("\n\n")
         deals: List[Deal] = [Deal.from_pbn(board) for board in boards]
         boards_number_seen = set()
-        deals = [boards_number_seen.add(board.board_number) or board for board in deals if board.board_number not in boards_number_seen]
+        deals = [
+            boards_number_seen.add(board.board_number) or board
+            for board in deals
+            if board.board_number not in boards_number_seen
+        ]
 
-        if specific_boards :
+        if specific_boards:
             deals = [deal for deal in deals if deal.board_number in specific_boards]
 
     for deal in deals:
-        if deal_random :
+        if deal_random:
             deal.diag = Diag.generate_random()
 
         # while not deal.diag.hands[Direction.NORTH].hcp() + deal.diag.hands[Direction.SOUTH].hcp()>=26:
@@ -574,13 +580,13 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    run_tm_btwn_ben_versions(force_same_lead=True,force_same_card_play=True,deal_random=True)
+    # run_tm_btwn_ben_versions(force_same_lead=True,force_same_card_play=True,deal_random=True)
     # tests = run_tests()
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))
     # load_test_pbn("c4f380988fc67c0fe6e5f4bc5502d67a3b45d2c0.pbn")
-    link = r"https://play.intobridge.com/hand?lin=pn|Lordy,Ben,Ben,Ben|md|1SKQJ8752HK9DJ762C,S96H52D9853CKQT85,SA3HQ7DAKQ4CJ6432,ST4HAJT8643DTCA97|ah|Board%2011|mb|4S|mb|p|mb|p|mb|5H|mb|d|mb|p|mb|p|mb|p|pc|SK|pc|S6|pc|SA|pc|S4|pc|DA|pc|DT|pc|D7|pc|D3|pc|DK|pc|H3|pc|D2|pc|D5|pc|HA|pc|H9|pc|H2|pc|H7|pc|H4|pc|HK|pc|H5|pc|HQ|pc|SQ|pc|S9|pc|S3|pc|ST|pc|SJ|pc|C5|mc|9|&boardId=6464e2d8c3504dc8561e19bd"
-    print(from_lin_to_request(link, Card_.from_str("D3")))
+    link = r"https://play.intobridge.com/hand?lin=pn%7CGavin,Lia,Lia,Lia%7Cmd%7C4SJT43HA8DKQJ92C43,SQHK64DAT76CQJT62,S98765HJ3D853CK97,SAK2HQT9752D4CA85%7Cah%7CBoard%202%7Cmb%7C1H%7Cmb%7Cp%7Cmb%7C2C%7Cmb%7Cp%7Cmb%7C2H%7Cmb%7Cp%7Cmb%7C4H%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CDK%7Cpc%7CDA%7Cpc%7CD8%7Cpc%7CD4%7Cpc%7CH4%7Cpc%7CH3%7Cpc%7CHT%7Cpc%7CHA%7Cpc%7CDQ%7Cpc%7CD6%7Cpc%7CD3%7Cpc%7CH7%7Cpc%7CH2%7Cpc%7CH8%7Cpc%7CHK%7Cpc%7CHJ%7Cpc%7CSQ%7Cpc%7CS5%7Cpc%7CS2%7Cpc%7CS4%7Cpc%7CD7%7Cpc%7CD5%7Cpc%7CH5%7Cpc%7CD9%7Cpc%7CSK%7Cpc%7CS3%7Cpc%7CC2%7Cpc%7CS6%7Cpc%7CSA%7Cpc%7CST%7Cpc%7CH6%7Cpc%7CS7%7Cpc%7CCQ%7Cpc%7CC7%7Cpc%7CC5%7Cpc%7CC4%7Cpc%7CCJ%7Cpc%7CC9%7Cpc%7CC8%7Cpc%7CC3%7Cpc%7CC6%7Cmc%7C12%7Csv%7Cn%7C"
+    print(from_lin_to_request(link, Card_.from_str("DA")))
     # print(from_lin_to_request(link, bid_to_remove_after="X"))
 
     # print(from_lin_to_request(link, None))

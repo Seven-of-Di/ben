@@ -22,7 +22,12 @@ class PlayFullCardPlay:
         self.vuln = VULNERABILITIES[play_full_board_request["vuln"]]
         self.dealer = Direction.from_str(play_full_board_request["dealer"])
         self.hands = Diag.init_from_pbn(play_full_board_request["hands"])
-        self.auction = play_full_board_request["auction"]
+
+        auction = []
+        for bid in play_full_board_request['auction']:
+            auction.append(bid['bid'])
+
+        self.auction = auction
         self.playing_mode = PlayingMode.from_str(play_full_board_request[
             "playing_mode"]) if "playing_mode" in play_full_board_request else PlayingMode.MATCHPOINTS
 
@@ -45,17 +50,19 @@ async def start():
             continue
 
         for message in resp["Messages"]:
-            req = PlayFullCardPlay(json.loads(message["Body"]))
+            msg_body_json = json.loads(message["Body"])
+
+            req = PlayFullCardPlay(msg_body_json)
             bot = FullBoardPlayer(req.hands, req.vuln, req.dealer, req.playing_mode, MODELS)
 
             play = await bot.get_card_play(req.auction)
-            message_body = {"auction": req.auction, "play": play}
+            response_msg_body = {"auction": msg_body_json['auction'], "play": play}
 
             sqs_client.send_message(
                 QueueUrl=response_queue_url,
                 MessageAttributes={
                     "BoardID": message["MessageAttributes"]["BoardID"]},
-                MessageBody=json.dumps(message_body),
+                MessageBody=json.dumps(response_msg_body),
             )
 
             # Mark the message as processed via deleating

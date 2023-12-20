@@ -149,35 +149,39 @@ class CheckClaim:
 
 @app.post('/play_card')
 async def play_card():
-    data = await request.get_json()
-    # app.logger.warn(data)
-    req = PlayCard(data)
+    try:
+        data = await request.get_json()
+        req = PlayCard(data)
 
-    if tracing_enabled:
-        current_span = trace.get_current_span()
-        current_span.set_attributes({
-            "game.next_player": req.next_player,
-            "game.hand": req.hand,
-            "game.dummy_hand": req.dummy_hand,
-            "game.contract": req.contract,
-            "game.contract_direction": req.contract_direction,
-            "game.tricks": ",".join(np.concatenate(req.tricks).tolist()),
-        })
+        if tracing_enabled:
+            current_span = trace.get_current_span()
+            current_span.set_attributes({
+                "game.next_player": req.next_player,
+                "game.hand": req.hand,
+                "game.dummy_hand": req.dummy_hand,
+                "game.contract": req.contract,
+                "game.contract_direction": req.contract_direction,
+                "game.tricks": ",".join(np.concatenate(req.tricks).tolist()),
+            })
 
-    dict_result = await play_a_card(
-        req.hand,
-        req.dummy_hand,
-        req.dealer,
-        req.vuln,
-        req.auction,
-        req.contract,
-        req.contract_direction,
-        req.next_player,
-        req.tricks,
-        MODELS,
-        req.cheating_diag_pbn,
-        req.playing_mode
-    )
+        dict_result = await play_a_card(
+            req.hand,
+            req.dummy_hand,
+            req.dealer,
+            req.vuln,
+            req.auction,
+            req.contract,
+            req.contract_direction,
+            req.next_player,
+            req.tricks,
+            MODELS,
+            req.cheating_diag_pbn,
+            req.playing_mode
+        )
+    except Exception as e:
+        app.logger.exception(e)
+
+        return {'error': str(e)}, 500
 
     """
     dict_result = {
@@ -186,7 +190,7 @@ async def play_card():
     }
     """
 
-    return dict_result
+    return dict_result, 200
 
 
 '''
@@ -240,10 +244,10 @@ async def place_bid():
         if alert != None:
             resp['alert'] = { 'text': alert, 'artificial': False }
 
-        return resp
+        return resp, 200
     except Exception as e:
         app.logger.exception(e)
-        return {'error': 'Unexpected error'}
+        return {'error': str(e)}, 500
 
 '''
 {
@@ -257,27 +261,34 @@ async def place_bid():
 
 @app.post('/make_lead')
 async def make_lead():
-    data = await request.get_json()
-    req = MakeLead(data)
+    try:
+        data = await request.get_json()
+        req = MakeLead(data)
 
-    if tracing_enabled:
-        current_span = trace.get_current_span()
-        current_span.set_attributes({
-            "game.hand": req.hand,
-            "game.dealer": req.dealer,
-            "game.auction": ",".join(req.auction),
-        })
+        if tracing_enabled:
+            current_span = trace.get_current_span()
+            current_span.set_attributes({
+                "game.hand": req.hand,
+                "game.dealer": req.dealer,
+                "game.auction": ",".join(req.auction),
+            })
 
-    bot = AsyncBotLead(req.vuln, req.hand, MODELS)
+        bot = AsyncBotLead(req.vuln, req.hand, MODELS)
 
-    lead = bot.lead(req.auction)
-    card_str = lead.to_dict()['candidates'][0]['card']
-    contract = next((bid for bid in reversed(req.auction)
-                    if len(bid) == 2 and bid != "XX"), None)
-    if contract is None:
-        raise Exception("contract is None")
+        lead = bot.lead(req.auction)
+        card_str = lead.to_dict()['candidates'][0]['card']
+        contract = next((bid for bid in reversed(req.auction)
+                        if len(bid) == 2 and bid != "XX"), None)
+        if contract is None:
+            raise Exception("contract is None")
 
-    return {'card': lead_real_card(PlayerHand.from_pbn(req.hand), card_str, BiddingSuit.from_str(contract[1])).__str__()}
+        return {
+            'card': lead_real_card(PlayerHand.from_pbn(req.hand), card_str, BiddingSuit.from_str(contract[1])).__str__()
+        }, 200
+    except Exception as e:
+        app.logger.exception(e)
+
+        return {'error': str(e)}, 500
 
 '''
 {
@@ -294,18 +305,23 @@ async def make_lead():
 
 @app.post('/check_claim')
 async def check_claim():
-    data = await request.get_json()
-    req = CheckClaim(data)
-    res = await check_claim_from_api(
-        req.claiming_hand,
-        req.dummy_hand,
-        req.claiming_direction,
-        req.contract_direction,
-        req.contract,
-        req.tricks,
-        req.claim)
+    try:
+        data = await request.get_json()
+        req = CheckClaim(data)
+        res = await check_claim_from_api(
+            req.claiming_hand,
+            req.dummy_hand,
+            req.claiming_direction,
+            req.contract_direction,
+            req.contract,
+            req.tricks,
+            req.claim)
 
-    return {'claim_accepted': res}
+        return {'claim_accepted': res}, 200
+    except Exception as e:
+        app.logger.exception(e)
+
+        return {'error': str(e)}, 500
 
 '''
 {
@@ -347,10 +363,10 @@ async def alert_bid():
         req = AlertBid(data)
         alert = await find_alert(req.auction, req.vuln)
 
-        return {"alert": alert, "artificial" : False}
+        return {"alert": alert, "artificial" : False}, 200
     except Exception as e:
         app.logger.exception(e)
-        return {'error': 'Unexpected error'}
+        return {'error': 'Unexpected error'},500
 
 
 @app.get('/healthz')

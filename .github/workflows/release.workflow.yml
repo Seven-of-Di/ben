@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      pre-release:
+        description: "Pre-release?"
+        type: boolean
+        default: true
+
+      pre-release-channel:
+        type: choice
+        description: "Pre-release channel to use (only if pre-release is selected)"
+        required: false
+        options:
+          - dev
+          - stage
+
+      sync_argocd:
+        description: "Sync Argo CD app after release?"
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.INTOBRIDGE_GITHUB_TOKEN }}
+
+      - run: git fetch --prune --unshallow --tags
+        continue-on-error: true
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+
+      - run: npm install -g standard-version
+        continue-on-error: true
+
+      - name: Set Environment Variable
+        id: set_env
+        run: |
+          if [ "${{ github.event.inputs.pre-release }}" == "true" ]; then
+            echo "DEPLOY_ENV=${{ github.event.inputs.pre-release-channel }}" >> $GITHUB_ENV
+          else
+            echo "DEPLOY_ENV=prod" >> $GITHUB_ENV
+          fi
+
+      - name: Configure committer
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+
+      - if: ${{ github.event.inputs.pre-release == 'true' }}
+        run: |
+          git tag -l | grep -vE '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-${{ github.event.inputs.pre-release-channel }}\.(0|[1-9][0-9]*)$' | xargs git tag -d
+          npx standard-version --prerelease ${{ github.event.inputs.pre-release-channel }}
+
+      - if: ${{ github.event.inputs.pre-release != 'true' }}
+        run: |
+          git tag -l | grep -vE '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' | xargs git tag -d
+          npx standard-version
+
+      - name: Publish tag
+        id: publish_tag
+        run: |
+          git push --follow-tags
+          echo "tag_name=$(git describe HEAD --abbrev=0)" >> $GITHUB_ENV
+
+      - name: Create Github Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.INTOBRIDGE_GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.tag_name }}
+          release_name: ${{ env.tag_name }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: ${{ github.event.inputs.pre-release }}
+
+      - name: Trigger Update in Stack Repo
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.INTOBRIDGE_GITHUB_TOKEN }}
+          repository: 'seven-of-di/stack'
+          event-type: 'update-robot-version'
+          client-payload: |
+            {
+              "robot": "ben",
+              "version": "${{ env.tag_name }}",
+              "environment": "${{ env.DEPLOY_ENV }}",
+              "syncArgo": ${{ github.event.inputs.sync_argocd }}
+            }

@@ -55,7 +55,7 @@ async def start():
             req = PlayFullCardPlay(msg_body_json)
             bot = FullBoardPlayer(req.hands, req.vuln, req.dealer, req.playing_mode, MODELS)
 
-            play = await bot.get_card_play(req.auction)
+            play = await bot.get_card_play(req.auction, msg_body_json['lead'])
             response_msg_body = {"auction": msg_body_json['auction'], "play": play}
 
             sqs_client.send_message(

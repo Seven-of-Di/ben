@@ -58,12 +58,12 @@ spec:
         - name: LITESTREAM_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
-              name: {{ .Release.Name }}-secrets
+              name: {{ .Values.secretName }}
               key: api-access-key-id
         - name: LITESTREAM_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ .Release.Name }}-secrets
+              name: {{ .Values.secretName }}
               key: api-secret-access-key
       containers:
       - name: api

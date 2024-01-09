@@ -89,12 +89,15 @@ class Declaration(Enum):
     def __str__(self) -> str:
         return self.value[1]
 
-
+@dataclass
+class Alert:
+    text: str
+    artificial: bool = False
 @dataclass
 class SequenceAtom():
     declaration: Optional[Declaration]
     bid: Optional[Bid]
-    alert: Optional[str] = None
+    alert: Optional[Alert] = None
 
     def __post_init__(self):
         if self.declaration and self.bid:
@@ -137,7 +140,7 @@ class SequenceAtom():
         elif self.bid != None:
             string += self.bid.__str__()
         if self.alert != None:
-            string += "("+self.alert+")"
+            string += "("+self.alert.text+")"
         return string
 
     def __repr__(self) -> str:
@@ -147,7 +150,7 @@ class SequenceAtom():
         elif self.bid != None:
             string += self.bid.__str__()
         if self.alert != None:
-            string += "("+self.alert+")"
+            string += "("+self.alert.text+")"
         return string
 
     def print_as_lin(self) -> str:

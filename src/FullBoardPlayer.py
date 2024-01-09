@@ -45,7 +45,7 @@ class FullBoardPlayer:
             pass
         return [bid for bid in auction if bid != "PAD_START"]
 
-    async def get_card_play(self, auction):
+    async def get_card_play(self, auction, raw_lead):
         padded_auction = ["PAD_START"] * Direction.from_str(
             self.dealer.abbreviation()
         ).value + auction
@@ -57,14 +57,18 @@ class FullBoardPlayer:
         declarer = Direction.from_str(contract[-1])
         dummy = declarer.offset(2)
         leader = declarer.offset(1)
-        raw_lead = (
-            bots.BotLead(self.vuls, self.diag.hands[leader].to_pbn(), self.models)
-            .lead(auction)
-            .to_dict()["candidates"][0]["card"]
-        )
+
+        if raw_lead == None:
+            raw_lead = (
+                bots.BotLead(self.vuls, self.diag.hands[leader].to_pbn(), self.models)
+                .lead(auction)
+                .to_dict()["candidates"][0]["card"]
+            )
+
         lead = lead_real_card(
             self.diag.hands[leader], raw_lead, BiddingSuit.from_str(contract[1])
         )
+
         self.diag.hands[leader].remove(lead)
 
         tricks = [[str(lead)]]

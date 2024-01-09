@@ -32,7 +32,7 @@ from utils import (
     TOTAL_DECK,
     Diag,
     convert_to_probability,
-    PlayingMode
+    PlayingMode,
 )
 from human_carding import play_real_card
 from PlayRecord import PlayRecord
@@ -363,13 +363,27 @@ class BotLead:
         contract = bidding.get_contract(auction)
         if contract is None:
             raise Exception("Contract should not be None if asking for a lead")
-
+        if len(self.hand_str)!=16 :
+            raise Exception("Not 13 cards in hand")
         level = int(contract[0])
         tricks_to_defeat_contract = 13 - (6 + level) + 1
         strain = bidding.get_strain_i(contract)
 
-        lead_card_indexes, lead_softmax = self.get_lead_candidates(auction,level)
-        accepted_samples = self.get_accepted_samples(4096, auction, lead_card_indexes)
+        lead_card_indexes, lead_softmax = self.get_lead_candidates(auction, level)
+        if len(lead_card_indexes) == 1:
+            return CardResp(
+                card=Card.from_code(lead_card_indexes[0], xcards=True),
+                candidates=[
+                    CandidateCard(
+                        card=Card.from_code(lead_card_indexes[0], xcards=True),
+                        insta_score=lead_softmax[0, lead_card_indexes[0]],
+                        p_make_contract=None,
+                        expected_tricks=None,
+                    )
+                ],
+                samples=[],
+            )
+        accepted_samples = self.get_accepted_samples(4096, auction)
 
         samples = []
 
@@ -442,12 +456,11 @@ class BotLead:
             key=lambda c: c.p_make_contract if c.p_make_contract != None else 1,
         )
 
-
         return CardResp(
             card=candidate_cards[0].card, candidates=candidate_cards, samples=samples
         )
 
-    def get_lead_candidates(self, auction,level):
+    def get_lead_candidates(self, auction, level):
         x_ftrs, b_ftrs = binary.get_lead_binary(
             auction, self.hand, self.binfo_model, self.vuln
         )
@@ -459,31 +472,40 @@ class BotLead:
         candidates = set()
         suits = set()
         hand = PlayerHand.from_pbn(self.hand_str)
-        suit_length = len([s for s in Suit if len(hand.suits[s])>=1])
+        suit_length = len([s for s in Suit if len(hand.suits[s]) >= 1])
 
         while True:
             c = np.argmax(lead_softmax[0])
-            card = Card.from_code(c,xcards=True)
+            card = Card.from_code(c, xcards=True)
             score = lead_softmax[0][c]
-            if score < 0.05 and not (level>=6 and card.suit not in suits):
-                if level>=6 and not len(suits)==suit_length:
+            if score < 0.05 and not (level >= 6 and card.suit not in suits):
+                if level >= 6 and not len(suits) == suit_length:
                     lead_softmax[0][c] = 0
                     continue
                 break
             lead_softmax[0][c] = 0
-            if level>=6 and Rank.ACE in hand.suits[Suit(card.suit)] and card.rank!=0 :
+            if (
+                level >= 6
+                and Rank.ACE in hand.suits[Suit(card.suit)]
+                and card.rank != 0
+            ):
                 continue
             suits.add(card.suit)
-            candidates.add(c)
+            if card.rank >= 5:
+                card.rank = 7
+            # print(card.code())
+            candidates.add(card.code())
+            if score > 0.85:
+                break
 
-        if level>=6 :
-            for suit in Suit :
-                if Rank.ACE in hand.suits[suit] :
-                    candidates.add(Card(suit.value,rank=0,xcards=True).code())
+        if level >= 6:
+            for suit in Suit:
+                if Rank.ACE in hand.suits[suit]:
+                    candidates.add(Card(suit.value, rank=0, xcards=True).code())
 
         return list(candidates), lead_softmax
 
-    def get_accepted_samples(self, n_samples, auction, lead_card_indexes):
+    def get_accepted_samples(self, n_samples, auction):
         contract = bidding.get_contract(auction)
 
         decl_i = bidding.get_decl_i(contract)
@@ -541,7 +563,7 @@ class CardPlayer:
         player_direction: Direction,
         dummy_hand: PlayerHand,
         player_hand: PlayerHand,
-        playing_mode : PlayingMode,
+        playing_mode: PlayingMode,
         debug: bool = False,
     ):
         self.player_models = player_models
@@ -794,9 +816,9 @@ class CardPlayer:
             self.check_claim = True
 
         card_tricks = ddsolver.expected_tricks(dd_solved, probabilities_list)
-        if self.playing_mode is PlayingMode.MATCHPOINTS :
+        if self.playing_mode is PlayingMode.MATCHPOINTS:
             card_ev = self.get_card_ev_mp(dd_solved, probabilities_list)
-        else :
+        else:
             card_ev = self.get_card_ev(dd_solved, probabilities_list)
 
         card_result = {}
@@ -933,14 +955,24 @@ class CardPlayer:
         }
         if len(card_with_max_expected_score) == 1:
             return best_card_resp.card.symbol()
+        candidate_cards = [
+            c for c in candidate_cards if c in card_with_max_expected_score.keys()
+        ]
+
+        # Don't pick a 8 or 9 when NN difference if you have a small card in the same suit
+        for c in candidate_cards:
+            if c.card.rank in [5, 6]:  # 8 or 9
+                for compared_candidate in candidate_cards:
+                    if (
+                        compared_candidate.card.rank >= 7
+                        and compared_candidate.card.suit == c.card.suit
+                    ):
+                        c.insta_score = compared_candidate.insta_score
+                        break  # Below 7, they all have the same insta_score
 
         # NN difference ?
         max_insta_score = max(
-            [
-                float(c.insta_score)
-                for c in card_with_max_expected_score.keys()
-                if c.insta_score is not None
-            ]
+            [float(c.insta_score) for c in candidate_cards if c.insta_score is not None]
         )
         card_with_max_insta_score = {
             c: c.insta_score

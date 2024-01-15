@@ -340,7 +340,8 @@ async def play_full_board() -> Dict:
         req.hands,
         req.vuln,
         req.dealer,
-        MODELS
+        playing_mode=PlayingMode.MATCHPOINTS,
+        models=MODELS
     )
     board_data = await bot.async_full_board()
 

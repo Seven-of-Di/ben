@@ -244,8 +244,8 @@ def bid_deal(deal: Deal, open_room: bool):
             "dealer": deal.dealer.abbreviation(),
             "vuln": VULS_REVERSE[(deal.ns_vulnerable, deal.ew_vulnerable)],
             "auction": sequence.get_as_ben_request(),
-            "conventions_ew": "DEFAULT" if open_room else "DEFAULT",
-            "conventions_ns": "DEFAULT" if open_room else "DEFAULT",
+            "conventions_ew": "ACOL" if open_room else "DEFAULT",
+            "conventions_ns": "DEFAULT" if open_room else "ACOL",
         }
         res = (
             send_request("place_bid", data, current_player, open_room)
@@ -580,7 +580,7 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    # run_tm_btwn_ben_versions(force_same_lead=True,force_same_card_play=True,deal_random=True)
+    run_tm_btwn_ben_versions(force_same_lead=True,force_same_card_play=True,deal_random=True)
     # tests = run_tests()
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))

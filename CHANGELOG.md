@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.6.0-dev.3](https://github.com/Seven-of-Di/ben/compare/v0.6.0-dev.2...v0.6.0-dev.3) (2024-01-16)
+
+
+### Features
+
+* Introduce better workflow for releasing ([9107542](https://github.com/Seven-of-Di/ben/commit/91075420cdde9aaaddb1c57c50dda86df5b74686))
+
 ## [0.6.0-dev.2](https://github.com/Seven-of-Di/ben/compare/v0.6.0-dev.1...v0.6.0-dev.2) (2024-01-09)
 
 

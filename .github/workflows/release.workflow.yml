@@ -93,8 +93,8 @@ jobs:
     with:
       version: ${{ needs.release.outputs.version }}
     secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets[format('{0}_AWS_ACCESS_KEY_ID', needs.release.outputs.deploy-env)] }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets[format('{0}_AWS_SECRET_ACCESS_KEY', needs.release.outputs.deploy-env)] }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
   sync_stack:
     needs: [release, build]

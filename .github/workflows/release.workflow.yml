@@ -25,6 +25,10 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.publish_tag.outputs.version }}
+      deploy-env: ${{ steps.set_env.outputs.deploy-env }}
+
     steps:
       - uses: actions/checkout@v2
         with:
@@ -39,15 +43,6 @@ jobs:
 
       - run: npm install -g standard-version
         continue-on-error: true
-
-      - name: Set Environment Variable
-        id: set_env
-        run: |
-          if [ "${{ github.event.inputs.pre-release }}" == "true" ]; then
-            echo "DEPLOY_ENV=${{ github.event.inputs.pre-release-channel }}" >> $GITHUB_ENV
-          else
-            echo "DEPLOY_ENV=prod" >> $GITHUB_ENV
-          fi
 
       - name: Configure committer
         run: |
@@ -68,7 +63,17 @@ jobs:
         id: publish_tag
         run: |
           git push --follow-tags
-          echo "tag_name=$(git describe HEAD --abbrev=0)" >> $GITHUB_ENV
+          echo "TAG_NAME=$(git describe HEAD --abbrev=0)" >> $GITHUB_ENV
+          echo "version=$(git describe HEAD --abbrev=0)" >> $GITHUB_OUTPUT
+
+      - name: Set Environment Variable
+        id: set_env
+        run: |
+          if [ "${{ github.event.inputs.pre-release }}" == "true" ]; then
+            echo "deploy-env=${{ github.event.inputs.pre-release-channel }}" >> $GITHUB_OUTPUT
+          else
+            echo "deploy-env=prod" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create Github Release
         id: create_release
@@ -76,12 +81,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.INTOBRIDGE_GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.tag_name }}
-          release_name: ${{ env.tag_name }}
+          tag_name: ${{ env.TAG_NAME }}
+          release_name: ${{ env.TAG_NAME }}
           body_path: CHANGELOG.md
           draft: false
           prerelease: ${{ github.event.inputs.pre-release }}
 
+  build:
+    needs: release
+    uses: ./.github/workflows/build.workflow.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  sync_stack:
+    needs: [release, build]
+    runs-on: ubuntu-latest
+    steps:
       - name: Trigger Update in Stack Repo
         uses: peter-evans/repository-dispatch@v2
         with:
@@ -91,7 +109,7 @@ jobs:
           client-payload: |
             {
               "robot": "ben",
-              "version": "${{ env.tag_name }}",
-              "environment": "${{ env.DEPLOY_ENV }}",
+              "version": "${{ needs.release.outputs.version }}",
+              "environment": "${{ needs.release.outputs.deploy-env }}",
               "syncArgo": ${{ github.event.inputs.sync_argocd }}
             }

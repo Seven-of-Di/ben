@@ -1,10 +1,16 @@
-name: Upgrade Ben API image
+name: Upgrade Ben image
 
 on:
-  push:
-    tags:
-       - '*'
-
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
 env:
   AWS_ACCOUNT_ID: "004345335763"
   AWS_REGION: "eu-central-1"
@@ -16,10 +22,10 @@ jobs:
   # This workflow contains a single job called "build"
   build-push-and-deploy:
     # The type of runner that the job will run on
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - run: git fetch --prune --unshallow --tags
         continue-on-error: true
@@ -30,11 +36,6 @@ jobs:
       - name: Install Build Essential
         run: sudo apt-get install build-essential
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          install: true
-
       - name: Login to ECR
         uses: docker/login-action@v1
         with:
@@ -44,10 +45,16 @@ jobs:
         env:
           AWS_REGION: ""
 
-      - name: Build and push the image
-        env:
-          VERSION: ${{ github.ref_name }}
-          DOCKER_REPO: public.ecr.aws/i8e5j7a1/robot-api
-          DOCKER_TAG: public.ecr.aws/i8e5j7a1/robot-api:${{ github.ref_name }}
-        shell: bash
-        run: make buildx_push
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          install: true
+
+      - id: build-and-publish
+        name: Build and push ben image
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: public.ecr.aws/i8e5j7a1/robot-api:${{ inputs.version }}
+          cache-from: type=gha,scope=ben
+          cache-to: type=gha,scope=ben,mode=max

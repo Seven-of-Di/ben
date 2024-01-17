@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-ben
+  labels:
+    app: intobridge
+    component: ben
+spec:
+  replicas: {{ .Values.minReplicas }}
+  selector:
+    matchLabels:
+      app: intobridge
+      component: ben
+  template:
+    metadata:
+      labels:
+        app: intobridge
+        workload: robot
+        component: ben
+    spec:
+      {{ if .Values.nodeSelector }}
+      nodeSelector:
+        {{ range $k, $v := .Values.nodeSelector }}
+        {{ $k }}: "{{ $v }}"
+        {{ end }}
+      {{ end }}
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: intobridge
+            workload: robot
+      volumes:
+      - name: alerts-db-data
+        emptyDir: {}
+      initContainers:
+      - name: ensure-db-path
+        image: busybox:1.28
+        imagePullPolicy: IfNotPresent
+        command:
+          - /bin/sh
+          - -c
+          - mkdir -p /var/lib/alerts_db
+      - name: init-alerts-db
+        image: litestream/litestream:0.3.9
+        imagePullPolicy: IfNotPresent
+        args: ['restore', '-o', '$(ALERTS_DB_FILE)', '$(ALERTS_DB_URL)']
+        volumeMounts:
+        - name: alerts-db-data
+          mountPath: /var/lib/alerts_db
+        env:
+        - name: ALERTS_DB_FILE
+          value: /var/lib/alerts_db/alert_database_1.sqlite
+        - name: ALERTS_DB_URL
+          value: "s3://{{ .Values.environment }}-intobridge-robot/alerts_database_1.sqlite"
+        - name: LITESTREAM_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secretName }}
+              key: api-access-key-id
+        - name: LITESTREAM_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secretName }}
+              key: api-secret-access-key
+      containers:
+      - name: api
+        image: "{{ .Values.registry }}:{{ .Values.version }}"
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        resources:
+          requests:
+            # We are using 2 out of 4 CPU for requests and 100% utilization for HPA.
+            # This means we are going to scale up at 50% utilisation of the instance.
+            cpu: "2"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 5001
+          initialDelaySeconds: 90
+          periodSeconds: 15
+        volumeMounts:
+        - name: alerts-db-data
+          mountPath: /var/lib/alerts_db
+        env:
+        - name: ALERTS_DB_FILE
+          value: /var/lib/alerts_db/alert_database_1.sqlite
+        - name: TF_CPP_MIN_LOG_LEVEL
+          value: "3"
+        - name: PORT
+          value: "5001"
+        - name: SENTRY_DSN
+          value: {{ required "Sentry DSN is required!" .Values.sentryDSN }}
+        - name: SENTRY_ENVIRONMENT
+          value: {{ required "Environment is required!" .Values.environment  }}
+        - name: SENTRY_RELEASE
+          value: {{ required "Sentry release is required!" .Values.version }}
+        {{ if .Values.tracing.enabled }}
+        - name: OTEL_SERVICE_NAME
+          value: ben
+        - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+          value: {{ required "Tracing endpoint is required!" .Values.tracing.endpoint }}
+        - name: OTEL_EXPORTER_OTLP_TRACES_INSECURE
+          value: "True"
+        {{ end }}
+        command: ["python"]
+        args: ["-m", "hypercorn", "--bind", "0.0.0.0:5001", "--workers", "4", "api:app"]
+        ports:
+          - containerPort: 5001

@@ -1,0 +1,15 @@
+environment:
+
+imagePullPolicy: IfNotPresent
+
+registry: public.ecr.aws/i8e5j7a1/robot-api
+version:
+minReplicas: 1
+maxReplicas: 4
+sentryDSN: https://e69c133c4fd74b4a9dd2a1de689e0e17@o542245.ingest.sentry.io/5666776
+nodeSelector:
+  intobridge.com/node-type: robots
+
+tracing:
+  endpoint: grafana-agent-grafana-agent.monitoring.svc.cluster.local:4317
+  enabled: true

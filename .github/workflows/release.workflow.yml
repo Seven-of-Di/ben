@@ -26,7 +26,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.publish_tag.outputs.version }}
+      version: ${{ steps.read_version.outputs.version }}
       deploy-env: ${{ steps.set_env.outputs.deploy-env }}
 
     steps:
@@ -64,7 +64,6 @@ jobs:
         run: |
           git push --follow-tags
           echo "TAG_NAME=$(git describe HEAD --abbrev=0)" >> $GITHUB_ENV
-          echo "version=$(git describe HEAD --abbrev=0)" >> $GITHUB_OUTPUT
 
       - name: Set Environment Variable
         id: set_env
@@ -86,6 +85,9 @@ jobs:
           body_path: CHANGELOG.md
           draft: false
           prerelease: ${{ github.event.inputs.pre-release }}
+
+      - id: read_version
+        run: echo "version=v$(cat VERSION)" >> $GITHUB_OUTPUT
 
   build:
     needs: release

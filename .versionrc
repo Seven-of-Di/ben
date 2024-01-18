@@ -1,0 +1,21 @@
+{
+    "packageFiles": [
+        {
+            "filename": "version.json",
+            "type": "json"
+        }
+    ],
+    "bumpFiles": [
+        {
+            "filename": "version.json",
+            "type": "json"
+        },
+        {
+            "filename": "VERSION",
+            "type": "plain-text"
+        }
+    ],
+    "scripts": {
+        "prechangelog": "rm CHANGELOG.md"
+    }
+}

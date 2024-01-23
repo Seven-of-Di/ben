@@ -1,0 +1,97 @@
+{{ if .Values.fullboardEnabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-robot-fullboard
+  labels:
+    app: intobridge
+    component: robot-fullboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: intobridge
+      component: robot-fullboard
+  template:
+    metadata:
+      labels:
+        app: intobridge
+        component: robot-fullboard
+        workload: robot
+    spec:
+      {{ if .Values.nodeSelector }}
+      nodeSelector:
+        {{ range $k, $v := .Values.nodeSelector }}
+        {{ $k }}: "{{ $v }}"
+        {{ end }}
+      {{ end }}
+      serviceAccountName: {{ .Values.serviceAccount }}
+      containers:
+      - name: worker
+        image: "{{ .Values.registry }}:{{ .Values.version }}"
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: "2"
+        env:
+        - name: TF_CPP_MIN_LOG_LEVEL
+          value: "3"
+        - name: SENTRY_DSN
+          value: {{ required "Sentry DSN is required!" .Values.sentryDSN }}
+        - name: SENTRY_ENVIRONMENT
+          value: {{ required "Environment is required!" .Values.environment  }}
+        - name: SENTRY_RELEASE
+          value: "intobridge-api@{{ .Values.version }}"
+        - name: ROBOT_CARDPLAYFULLBOARD_QUEUE_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secretName }}
+              key: robot-cardplayfullboard-queue-url
+        - name: ROBOT_FULLBOARDPLAYED_QUEUE_URL
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secretName }}
+              key: robot-fullboardplayed-queue-url
+        {{ if .Values.tracing.enabled }}
+        - name: OTEL_SERVICE_NAME
+          value: ben
+        - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+          value: {{ required "Tracing endpoint is required!" .Values.tracing.endpoint }}
+        - name: OTEL_EXPORTER_OTLP_TRACES_INSECURE
+          value: "True"
+        {{ end }}
+        command: ["python"]
+        args: ["FullBoardCardPlayer.py"]
+# We dropped Keda for know as we decided that having the instance running 24/7 is fine.
+# That can change soon so let's keep it that way.
+# ---
+# apiVersion: keda.sh/v1alpha1
+# kind: TriggerAuthentication
+# metadata:
+#   name: keda-trigger-auth-aws-credentials
+# spec:
+#   secretTargetRef:
+#     - parameter: awsAccessKeyID
+#       name: "{{ .Values.secretName }}"
+#       key: keda-access-key-id
+#     - parameter: awsSecretAccessKey
+#       name: "{{ .Values.secretName }}"
+#       key: keda-secret-access-key
+# ---
+# apiVersion: keda.sh/v1alpha1
+# kind: ScaledObject
+# metadata:
+#   name: {{ .Release.Name }}-robot-fullboard
+# spec:
+#   scaleTargetRef:
+#     name: {{ .Release.Name }}-robot-fullboard
+#   triggers:
+#   - type: aws-sqs-queue
+#     authenticationRef:
+#       name: keda-trigger-auth-aws-credentials
+#     metadata:
+#       queueURL: https://sqs.eu-central-1.amazonaws.com/061784013122/dev-robot-playfullboard-queue
+#       queueLength: "5"
+#       awsRegion: "{{ .Values.awsRegion }}"
+{{ end }}

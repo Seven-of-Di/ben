@@ -108,6 +108,6 @@ spec:
           value: "True"
         {{ end }}
         command: ["python"]
-        args: ["-m", "hypercorn", "--bind", "0.0.0.0:5001", "--workers", "4", "api:app"]
+        args: ["-m", "hypercorn", "--bind", "0.0.0.0:5001", "--workers", "4", "starlette_api:app"]
         ports:
           - containerPort: 5001

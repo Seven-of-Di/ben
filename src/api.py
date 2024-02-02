@@ -39,7 +39,7 @@ app = Quart(__name__)
 app.asgi_app = SentryAsgiMiddleware(app.asgi_app)._run_asgi3
 app.asgi_app = OpenTelemetryMiddleware(app.asgi_app)
 
-health_checker = HealthChecker(app.logger)
+health_checker = HealthChecker()
 health_checker.start()
 
 @app.before_request

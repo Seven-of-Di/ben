@@ -2,9 +2,9 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [0.6.0-stage.0](https://github.com/Seven-of-Di/ben/compare/v0.5.0-stage.1...v0.6.0-stage.0) (2024-01-17)
+## [0.6.0-stage.1](https://github.com/Seven-of-Di/ben/compare/v0.6.0-stage.0...v0.6.0-stage.1) (2024-02-02)
 
 
-### Bug Fixes
+### Features
 
-* Versioning of Ben should go via version files ([231e777](https://github.com/Seven-of-Di/ben/commit/231e7773ed8ff52dec0923735942faedacbfe337))
+* starlette api ([744e428](https://github.com/Seven-of-Di/ben/commit/744e428bc572675a8a332f30bf7ba7031feec963))

@@ -17,6 +17,9 @@ spec:
         app: intobridge
         workload: robot
         component: ben
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5001"
     spec:
       {{ if .Values.nodeSelector }}
       nodeSelector:

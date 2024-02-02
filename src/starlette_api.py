@@ -263,6 +263,7 @@ async def alert_bid(request: Request):
         logging.exception(e)
         return {'error': str(e)},500
 
+health_checker = HealthChecker()
 
 async def healthz():
     healthy = health_checker.healthy()
@@ -334,7 +335,5 @@ def make_metrics_app():
     return make_asgi_app(registry=registry)
 
 metrics_app = make_metrics_app()
+app.mount('/', metrics_app)
 
-app.mount("/metrics", metrics_app)
-app = SentryAsgiMiddleware(app)
-health_checker = HealthChecker()

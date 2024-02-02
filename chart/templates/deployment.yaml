@@ -93,6 +93,10 @@ spec:
           value: "3"
         - name: PORT
           value: "5001"
+        - name: ENVIRONMENT
+          value: {{ required "Environment is required!" .Values.environment  }}
+        - name: PROMETHEUS_MULTIPROC_DIR
+          value: /tmp/metrics
         - name: SENTRY_DSN
           value: {{ required "Sentry DSN is required!" .Values.sentryDSN }}
         - name: SENTRY_ENVIRONMENT

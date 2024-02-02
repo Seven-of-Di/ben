@@ -42,10 +42,6 @@ sentry_sdk.init(
 )
 
 
-env = os.environ.get("ENVIRONMENT")
-if env is None:
-    raise Exception("ENVIRONMENT not set")
-
 class PlaceBid:
     def __init__(self, place_bid_request):
         place_bid_request = dict(place_bid_request)

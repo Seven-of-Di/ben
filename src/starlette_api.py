@@ -319,7 +319,7 @@ app = Starlette(
     ],
     middleware=[
         Middleware(OpenTelemetryMiddleware),
-        Middleware(PrometheusMiddleware, app_name="ben",labels={"env": env}),
+        Middleware(PrometheusMiddleware, app_name="ben"),
         Middleware(TracingHeaderMiddleware),
         Middleware(SentryAsgiMiddleware),
     ]

@@ -14,6 +14,7 @@ from prometheus_client import make_asgi_app
 import os
 from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
 import sentry_sdk
+from health_checker import HealthChecker
 
 from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
 from tracing import tracing_enabled
@@ -263,12 +264,12 @@ async def alert_bid(request: Request):
         return {'error': str(e)},500
 
 
-# async def healthz():
-#     healthy = health_checker.healthy()
-#     if healthy:
-#         return 'ok', 200
+async def healthz():
+    healthy = health_checker.healthy()
+    if healthy:
+        return 'ok', 200
 
-#     return 'unhealthy', 500
+    return 'unhealthy', 500
     
 class TracingHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
@@ -336,3 +337,4 @@ metrics_app = make_metrics_app()
 
 app.mount("/metrics", metrics_app)
 app = SentryAsgiMiddleware(app)
+health_checker = HealthChecker()

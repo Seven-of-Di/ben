@@ -1,19 +1,18 @@
 import psutil
 import threading
 from typing import List
-
+import logging
 
 class HealthChecker:
     cpu_usage: List[float]
 
-    def __init__(self, logger) -> None:
+    def __init__(self) -> None:
         self.cpu_usage = []
-        self.logger = logger
 
     def healthy(self) -> bool:
         for cpu_per_core in self.cpu_usage:
             if cpu_per_core > 95:
-                self.logger.warning(self.cpu_usage)
+                logging.warning(self.cpu_usage)
                 return False
 
         return True

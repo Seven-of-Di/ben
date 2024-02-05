@@ -254,7 +254,7 @@ async def alert_bid(request: Request):
         req = AlertBid(data)
         alert = await find_alert(req.auction, req.vuln)
 
-        return {"alert": alert, "artificial" : False}, 200
+        return JSONResponse({"alert": alert, "artificial" : False}, 200)
     except Exception as e:
         logging.exception(e)
         return {'error': str(e)},500

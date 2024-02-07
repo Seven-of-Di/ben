@@ -10,7 +10,7 @@ services:
     user: root
     # command: python api.py
     # command: python create_alerts_database.py
-    command: python -m hypercorn --bind 0.0.0.0:5001 --workers 4 api:app
+    command: python -m hypercorn --bind 0.0.0.0:5001 --workers 4 starlette_api:app
     ports:
       - 5001:5001
     volumes:
@@ -24,9 +24,12 @@ services:
       - PORT=5001
       - DEBUG=true
       - USE_RELOADER=true
+      - SENTRY_ENVIRONMENT=local
+      - ENVIRONMENT=local
       - OTEL_EXPORTER_OTLP_TRACES_INSECURE=True
       - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=otel:4317
       - OTEL_SERVICE_NAME=robot
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/metrics
     networks:
       - ben
 

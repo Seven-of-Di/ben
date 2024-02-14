@@ -244,8 +244,8 @@ def bid_deal(deal: Deal, open_room: bool):
             "dealer": deal.dealer.abbreviation(),
             "vuln": VULS_REVERSE[(deal.ns_vulnerable, deal.ew_vulnerable)],
             "auction": sequence.get_as_ben_request(),
-            "conventions_ew": "DEFAULT" if open_room else "DEFAULT",
-            "conventions_ns": "DEFAULT" if open_room else "DEFAULT",
+            "conventions_ew": "ACOL" if open_room else "DEFAULT",
+            "conventions_ns": "DEFAULT" if open_room else "ACOL",
         }
         res = (
             send_request("place_bid", data, current_player, open_room)

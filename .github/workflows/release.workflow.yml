@@ -130,10 +130,10 @@ jobs:
         with:
           token: ${{ secrets.INTOBRIDGE_GITHUB_TOKEN }}
           repository: 'seven-of-di/stack'
-          event-type: 'update-robot-version'
+          event-type: 'update-version'
           client-payload: |
             {
-              "robot": "ben",
+              "service": "ben",
               "version": "${{ needs.release.outputs.version }}",
               "environment": "${{ needs.release.outputs.deploy-env }}",
               "syncArgo": ${{ github.event.inputs.sync_argocd }}

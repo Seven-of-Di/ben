@@ -17,6 +17,9 @@ spec:
         app: intobridge
         workload: robot
         component: ben
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5001"
     spec:
       {{ if .Values.nodeSelector }}
       nodeSelector:
@@ -90,6 +93,10 @@ spec:
           value: "3"
         - name: PORT
           value: "5001"
+        - name: ENVIRONMENT
+          value: {{ required "Environment is required!" .Values.environment  }}
+        - name: PROMETHEUS_MULTIPROC_DIR
+          value: /tmp/metrics
         - name: SENTRY_DSN
           value: {{ required "Sentry DSN is required!" .Values.sentryDSN }}
         - name: SENTRY_ENVIRONMENT
@@ -105,6 +112,6 @@ spec:
           value: "True"
         {{ end }}
         command: ["python"]
-        args: ["-m", "hypercorn", "--bind", "0.0.0.0:5001", "--workers", "4", "api:app"]
+        args: ["-m", "hypercorn", "--bind", "0.0.0.0:5001", "--workers", "4", "starlette_api:app"]
         ports:
           - containerPort: 5001

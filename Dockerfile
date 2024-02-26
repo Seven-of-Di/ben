@@ -31,12 +31,13 @@ RUN cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo \
   # (Required step because it can modify RUNPATH)
   env DESTDIR=install cmake -DCMAKE_INSTALL_COMPONENT=Runtime -P cmake_install.cmake
 
-FROM python:3.7.16-slim
+FROM python:3.11-slim-buster
 
 # Copy installed runtime files to real image
 COPY --from=dds-builder /app/.build/install/usr/lib /usr/lib
 
 RUN mkdir -p /app
+RUN mkdir -p /tmp/metrics
 
 WORKDIR /app
 
@@ -45,7 +46,7 @@ COPY requirements.txt .
 RUN apt-get update \
   && apt-get install -y build-essential
 
-RUN pip install -r requirements.txt
+RUN pip3 install -r requirements.txt
 
 COPY . .
 

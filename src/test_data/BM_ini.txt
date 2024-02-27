@@ -1,0 +1,21 @@
+[Joueurs:
+Gérard]
+[Hosts:
+LocalHost]
+[Ports:
+2000]
+[Connexions 4]
+[Langue: Français]
+[Donnes /C/ben/src/test_data/]
+[Affichage Vrai]
+[Popup Vrai]
+[Attente 1]
+[AlphaNum Faux]
+[Départ Tournoi Faux]
+[IRMAS Vrai]
+[Pause Toujours]
+[Arrêt Fin Enchères Faux]
+[Arrêt Fin Jeu Faux]
+[Carte Jouée Fantôme]
+[Display 10 Vrai]
+[Passer Les alertes Faux]

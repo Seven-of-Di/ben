@@ -3,18 +3,24 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      pre-release:
-        description: "Pre-release?"
-        type: boolean
-        default: true
-
-      pre-release-channel:
+      prerelease-channel:
         type: choice
-        description: "Pre-release channel to use (only if pre-release is selected)"
+        description: "Prerelease channel to use (only if prerelease is selected)"
         required: false
         options:
           - dev
           - stage
+          - none
+
+      release-as:
+        type: choice
+        description: "Release as option to use (none, patch, minor, major)"
+        required: false
+        options:
+          - none
+          - patch
+          - minor
+          - major
 
       sync_argocd:
         description: "Sync Argo CD app after release?"
@@ -28,7 +34,6 @@ jobs:
     outputs:
       version: ${{ steps.read_version.outputs.version }}
       deploy-env: ${{ steps.set_env.outputs.deploy-env }}
-
     steps:
       - uses: actions/checkout@v2
         with:
@@ -49,15 +54,33 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
 
-      - if: ${{ github.event.inputs.pre-release == 'true' }}
+      - name: Prepare release command args
+        id: release_args
         run: |
-          git tag -l | grep -vE '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-${{ github.event.inputs.pre-release-channel }}\.(0|[1-9][0-9]*)$' | xargs git tag -d
-          npx standard-version --prerelease ${{ github.event.inputs.pre-release-channel }}
+          STANDARD_VERSION_ARGS=
 
-      - if: ${{ github.event.inputs.pre-release != 'true' }}
+          if [ "${{ github.event.inputs.prerelease-channel }}" != "none" ]; then
+            STANDARD_VERSION_ARGS="$STANDARD_VERSION_ARGS --prerelease=${{ github.event.inputs.prerelease-channel }}"
+          fi
+
+          if [ "${{ github.event.inputs.release-as }}" != "none" ]; then
+            STANDARD_VERSION_ARGS="$STANDARD_VERSION_ARGS --release-as=${{ github.event.inputs.release-as }}"
+          fi
+
+          echo "standard-version-args=$STANDARD_VERSION_ARGS" >> $GITHUB_OUTPUT
+
+
+      - if: ${{ github.event.inputs.prerelease-channel == 'none' }}
+        run: |
+          git tag -l | grep -vE '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-${{ github.event.inputs.prerelease-channel }}\.(0|[1-9][0-9]*)$' | xargs git tag -d
+
+      - if: ${{ github.event.inputs.prerelease-channel != 'none' }}
         run: |
           git tag -l | grep -vE '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' | xargs git tag -d
-          npx standard-version
+
+      - name: Release
+        run: |
+          npx standard-version ${{ steps.release_args.outputs.standard-version-args }}
 
       - name: Publish tag
         id: publish_tag
@@ -65,11 +88,11 @@ jobs:
           git push --follow-tags
           echo "TAG_NAME=$(git describe HEAD --abbrev=0)" >> $GITHUB_ENV
 
-      - name: Set Environment Variable
+      - name: Set deploy environment
         id: set_env
         run: |
-          if [ "${{ github.event.inputs.pre-release }}" == "true" ]; then
-            echo "deploy-env=${{ github.event.inputs.pre-release-channel }}" >> $GITHUB_OUTPUT
+          if [ "${{ github.event.inputs.prerelease-channel }}" != "none" ]; then
+            echo "deploy-env=${{ github.event.inputs.prerelease-channel }}" >> $GITHUB_OUTPUT
           else
             echo "deploy-env=prod" >> $GITHUB_OUTPUT
           fi
@@ -84,7 +107,7 @@ jobs:
           release_name: ${{ env.TAG_NAME }}
           body_path: CHANGELOG.md
           draft: false
-          prerelease: ${{ github.event.inputs.pre-release }}
+          prerelease: ${{ github.event.inputs.prerelease-channel == 'none' }}
 
       - id: read_version
         run: echo "version=v$(cat VERSION)" >> $GITHUB_OUTPUT
@@ -107,10 +130,10 @@ jobs:
         with:
           token: ${{ secrets.INTOBRIDGE_GITHUB_TOKEN }}
           repository: 'seven-of-di/stack'
-          event-type: 'update-robot-version'
+          event-type: 'update-version'
           client-payload: |
             {
-              "robot": "ben",
+              "service": "ben",
               "version": "${{ needs.release.outputs.version }}",
               "environment": "${{ needs.release.outputs.deploy-env }}",
               "syncArgo": ${{ github.event.inputs.sync_argocd }}

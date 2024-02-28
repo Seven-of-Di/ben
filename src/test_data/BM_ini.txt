@@ -5,7 +5,7 @@ LocalHost]
 [Ports:
 2000]
 [Connexions 4]
-[Langue: Français]
+[Langue: english]
 [Donnes /C/ben/src/test_data/]
 [Affichage Vrai]
 [Popup Vrai]

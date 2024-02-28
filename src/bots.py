@@ -59,7 +59,8 @@ class BotBid:
             if not human_model
             else models.wide_bidder_model.zero_state
         )
-        self.lead_model = models.lead
+        self.lead_suit_model = models.lead_suit_model
+        self.lead_nt_model = models.lead_nt_model
         self.sd_model = models.sd_model
 
         self.binfo_model = models.binfo
@@ -76,7 +77,9 @@ class BotBid:
         n_steps = BotBid.get_n_steps_auction(auction)
         hand_ix = len(auction) % 4
 
-        X = binary.get_auction_binary(n_steps, auction, hand_ix, self.hand, self.vuln)
+        X = binary.get_auction_binary_sampling(
+            n_steps, auction, hand_ix, self.hand, self.vuln
+        )
         return X[:, -1, :]
 
     def restful_bid(self, auction) -> BidResp:
@@ -149,6 +152,9 @@ class BotBid:
             )
 
         # print(samples)
+        self.contract = bidding.get_contract(auction)
+        if self.contract is None:
+            raise Exception("No contract")
 
         if BotBid.do_rollout(auction, candidates):
             ev_candidates = []
@@ -245,9 +251,9 @@ class BotBid:
 
         n_steps_vals = [0, 0, 0, 0]
         for i in range(1, 5):
-            n_steps_vals[
-                (len(auction_so_far) % 4 + i) % 4
-            ] = BotBid.get_n_steps_auction(auction_so_far + ["?"] * i)
+            n_steps_vals[(len(auction_so_far) % 4 + i) % 4] = (
+                BotBid.get_n_steps_auction(auction_so_far + ["?"] * i)
+            )
 
         # initialize auction vector
         auction_np = (
@@ -259,7 +265,7 @@ class BotBid:
         bid_i = len(auction) - 1
         turn_i = len(auction) % 4
         while not np.all(auction_np[:, bid_i] == bidding.BID2ID["PAD_END"]):
-            X = binary.get_auction_binary(
+            X = binary.get_auction_binary_sampling(
                 n_steps_vals[turn_i],
                 auction_np,
                 turn_i,
@@ -293,6 +299,8 @@ class BotBid:
             ]
             auctions.append(sample_auction)
             contract = bidding.get_contract(sample_auction)
+            if contract is None:
+                raise Exception("Contract should not be None")
             contracts.append(contract)
             strains[i] = "NSHDC".index(contract[1])
             declarers[i] = "NESW".index(contract[-1])
@@ -303,7 +311,10 @@ class BotBid:
                 sample_auction, hand_on_lead, self.binfo_model, self.vuln
             )
 
-        lead_softmax = self.lead_model.model(X_ftrs, B_ftrs)
+        if self.contract[1] == "N":
+            lead_softmax = self.lead_nt_model.model(X_ftrs, B_ftrs)
+        else:
+            lead_softmax = self.lead_suit_model.model(X_ftrs, B_ftrs)
         lead_cards = np.argmax(lead_softmax, axis=1)
 
         X_sd = np.zeros((n_samples, 32 + 5 + 4 * 32))
@@ -363,7 +374,7 @@ class BotLead:
         contract = bidding.get_contract(auction)
         if contract is None:
             raise Exception("Contract should not be None if asking for a lead")
-        if len(self.hand_str)!=16 :
+        if len(self.hand_str) != 16:
             raise Exception("Not 13 cards in hand")
         level = int(contract[0])
         tricks_to_defeat_contract = 13 - (6 + level) + 1
@@ -567,7 +578,6 @@ class CardPlayer:
         debug: bool = False,
     ):
         self.player_models = player_models
-        self.model = player_models[player_i]
         self.player_i = player_i
         self.hand_32 = parse_hand_f(32)(hand_str).reshape(32)
         self.hand52 = parse_hand_f(52)(hand_str).reshape(52)
@@ -580,6 +590,10 @@ class CardPlayer:
         self.verbose = False
         self.level = int(contract[0])
         self.strain_i = bidding.get_strain_i(contract)
+        if self.strain_i == 0:
+            self.playermodel = player_models[player_i]
+        else:
+            self.playermodel = player_models[player_i + 4]
         self.trump = BiddingSuit.from_str(contract[1])
         self.play_record = play_record
         self.current_trick_as_dict = (
@@ -753,9 +767,11 @@ class CardPlayer:
             if dir
             not in [
                 self.player_direction,
-                self.declarer.offset(2)
-                if self.player_direction != self.declarer.offset(2)
-                else self.declarer,
+                (
+                    self.declarer.offset(2)
+                    if self.player_direction != self.declarer.offset(2)
+                    else self.declarer
+                ),
             ]
         ]
         low_hidden_cards = [c for c in self.hidden_cards if c.rank <= Rank.SEVEN]
@@ -883,11 +899,16 @@ class CardPlayer:
         }
 
     def next_card_softmax(self, trick_i):
-        return player.follow_suit(
-            self.model.next_cards_softmax(self.x_play[:, : (trick_i + 1), :]),
-            binary.BinaryInput(self.x_play[:, trick_i, :]).get_player_hand(),
-            binary.BinaryInput(self.x_play[:, trick_i, :]).get_this_trick_lead_suit(),
-        ).reshape(-1)
+        # print(trick_i)
+        # print(self.x_play[:,:(trick_i + 1),:])
+        cards_softmax = self.playermodel.next_cards_softmax(self.x_play[:,:(trick_i + 1),:])
+        assert cards_softmax.shape == (1, 32), f"Expected shape (1, 32), but got shape {cards_softmax.shape}"
+        x = player.follow_suit(
+            self.playermodel.next_cards_softmax(self.x_play[:,:(trick_i + 1),:]),
+            binary.BinaryInput(self.x_play[:,trick_i,:]).get_player_hand(),
+            binary.BinaryInput(self.x_play[:,trick_i,:]).get_this_trick_lead_suit(),
+        )
+        return x.reshape(-1)
 
     def pick_card_after_dd_eval(
         self, trick_i, leader_i, current_trick, players_states, card_dd

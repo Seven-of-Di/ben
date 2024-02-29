@@ -196,9 +196,9 @@ async def play_a_card(
                     hands_for_diag[next_player],
                     [Card_.from_str(card) for card in tricks_str[-1]],
                 )
-                if play_status == "Follow":
+                if play_status == "Follow" and cheating_diag_pbn:
                     n_samples /= 2
-                elif play_status == "Discard":
+                elif play_status == "Discard" and cheating_diag_pbn:
                     n_samples /= 2
                 n_samples = int(n_samples)
                 rollout_states, probabilities_list = sample.init_rollout_states(
@@ -221,6 +221,7 @@ async def play_a_card(
                     current_trick52,
                     rollout_states,
                     probabilities_list,
+                    n_samples,
                     cheating_diag_pbn,
                 )
                 if card_players[player_i].check_claim and next_player in [

@@ -663,6 +663,7 @@ class CardPlayer:
         current_trick52,
         players_states,
         probabilities_list,
+        number_of_samples : int,
         cheating_diag_pbn: Optional[str] = None,
     ):
         current_trick = [deck52.card52to32(c) for c in current_trick52]

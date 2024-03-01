@@ -2,7 +2,6 @@ import sys
 import re
 import pprint
 import asyncio
-from typing import Dict
 import numpy as np
 from bidding import binary
 
@@ -14,312 +13,419 @@ from nn.models import Models
 from deck52 import decode_card
 from bidding import bidding
 from objects import Card
-from utils import Direction, VULS_REVERSE, PlayerHand
-from time import time
-from Sequence import Sequence, SequenceAtom
-from PlayRecord import PlayRecord, Trick, Card_
-import requests
 
-SEATS = ["North", "East", "South", "West"]
+SEATS = ['North', 'East', 'South', 'West']
 
 
 class TMClient:
 
-    def __init__(self, name, seat):
+    def __init__(self, name, seat, models):
         self.name = name
         self.seat = seat
-        self.direction = Direction.from_str(seat)
         self.player_i = SEATS.index(self.seat)
         self.reader = None
         self.writer = None
 
-    async def send_request_to_lia(self, type_of_action: str, data: Dict):
-        # new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (
-        #     not open_room and direction in [Direction.EAST, Direction.WEST])
-        port = "http://localhost:{}".format("5002")
-        res = requests.post("{}/{}".format(port, type_of_action), json=data)
-        return res.json()
-
-    async def send_request_to_ben(self, type_of_action: str, data: Dict):
-        print(data)
-        port = "http://localhost:{}".format("5001")
-        res = requests.post("{}/{}".format(port, type_of_action), json=data)
-        return res.json()
+        self.models = models
 
     async def run(self):
-        await asyncio.sleep(1)
-        while True :
-            try:
-                self.dealer_i, self.vuln_ns, self.vuln_ew, self.hand_str = (
-                    await self.receive_deal()
-                )
-                print(self.dealer_i, self.vuln_ns, self.vuln_ew, self.hand_str)
-                break
-            except:
-                await asyncio.sleep(1)
+        self.dealer_i, self.vuln_ns, self.vuln_ew, self.hand_str = await self.receive_deal()
 
-        await asyncio.sleep(0.02)
         auction = await self.bidding()
 
-        self.contract = self.sequence.get_current_contract(self.dealer)
-        if self.contract is None or self.contract.bid is None:
+        self.contract = bidding.get_contract(auction)
+        if self.contract is None:
             return
-        self.declarer = self.contract.declarer
-        if self.declarer is None:
-            return
+
+        level = int(self.contract[0])
+        strain_i = bidding.get_strain_i(self.contract)
+        self.decl_i = bidding.get_decl_i(self.contract)
+
         print(auction)
         print(self.contract)
+        print(self.decl_i)
 
-        opening_lead_card = await self.opening_lead()
+        opening_lead_card = await self.opening_lead(auction)
+        opening_lead52 = Card.from_symbol(opening_lead_card).code()
 
-        if self.direction != self.declarer.partner() :
+        if self.player_i != (self.decl_i + 2) % 4:
             self.dummy_hand_str = await self.receive_dummy()
-        else:
-            self.dummy_hand_str = self.hand_str
 
-        await self.play(auction, opening_lead_card)
+        await self.play(auction, opening_lead52)
 
     async def connect(self, host, port):
         self.reader, self.writer = await asyncio.open_connection(host, port)
 
-        print("connected")
+        print('connected')
 
-        await self.send_message(
-            f'Connecting "{self.name}" as {self.seat} using protocol version 18.\n'
-        )
+        await self.send_message(f'Connecting "{self.name}" as {self.seat} using protocol version 18.\n')
 
         print(await self.receive_line())
 
-        await self.send_message(f"{self.seat} ready for teams.\n")
+        await self.send_message(f'{self.seat} ready for teams.\n')
 
         print(await self.receive_line())
 
     async def bidding(self):
         vuln = [self.vuln_ns, self.vuln_ew]
+        bot = bots.BotBid(vuln, self.hand_str, self.models)
 
-        auction = Sequence([], None)
+        auction = ['PAD_START'] * self.dealer_i
 
-        current_player = self.dealer
+        player_i = self.dealer_i
 
-        while auction.is_done() == False:
-            await asyncio.sleep(0.01)
-            if current_player == self.direction:
+        while not bidding.auction_over(auction):
+            if player_i == self.player_i:
                 # now it's this player's turn to bid
-                bid_resp = await self.send_request_to_lia(
-                    type_of_action="place_bid",
-                    data={
-                        "hand": self.hand_str,
-                        "dealer": "NESW"[self.dealer_i],
-                        "vuln": VULS_REVERSE[self.vuln_ns, self.vuln_ew],
-                        "auction": auction.get_as_str_list(),
-                        "conventions_ew": (
-                            "DEFAULT" if self.seat in ["East,West"] else "DEFAULT"
-                        ),
-                        "conventions_ns": (
-                            "DEFAULT" if self.seat in ["North,South"] else "DEFAULT"
-                        ),
-                    },
-                )
-                bid = bid_resp["bid"]
-                await asyncio.sleep(0.01)
-                auction.append_with_check(SequenceAtom.from_str(bid))
-                await self.send_own_bid(bid)
+                bid_resp = bot.bid(auction)
+                auction.append(bid_resp.bid)
+                await self.send_own_bid(bid_resp.bid)
             else:
                 # just wait for the other player's bid
-                bid = await self.receive_bid_for(current_player)
-                auction.append_with_check(SequenceAtom.from_str(bid))
+                bid = await self.receive_bid_for(player_i)
+                auction.append(bid)
 
-            current_player = current_player.next()
+            player_i = (player_i + 1) % 4
 
-        print("Auction over")
-        self.sequence = auction
-        return auction.get_as_ben_request()
+        return auction
 
-    async def opening_lead(self):
-        if not self.declarer:
-            raise Exception("No declarer")
+    async def opening_lead(self, auction):
+        contract = bidding.get_contract(auction)
+        decl_i = bidding.get_decl_i(contract)
+        on_lead_i = (decl_i + 1) % 4
 
-        if self.direction == self.declarer.next():
+        if self.player_i == on_lead_i:
             # this player is on lead
             print(await self.receive_line())
-            data = {
-                "hand": self.hand_str,
-                "dealer": "NESW"[self.dealer_i],
-                "vuln": VULS_REVERSE[self.vuln_ns, self.vuln_ew],
-                "auction": [a for a in self.sequence.get_as_ben_request() if a != "PAD_START"],
-            }
-            lead = await self.send_request_to_lia(
-                type_of_action="make_lead",
-                data=data,
-            )
-            lead = lead["card"]
-            # card_symbol = 'D5'
-            print("Lead: ", lead)
-            await asyncio.sleep(0.01)
-            await self.send_card_played(lead)
-            await asyncio.sleep(0.01)
 
-            return lead
+            bot_lead = bots.BotLead(
+                [self.vuln_ns, self.vuln_ew],
+                self.hand_str,
+                self.models
+            )
+            card_resp = bot_lead.lead(auction)
+            card_symbol = card_resp.card.symbol()
+            # card_symbol = 'D5'
+            await self.send_card_played(card_symbol)
+            return card_symbol
         else:
             # just send that we are ready for the opening lead
-            return await self.receive_card_play_for(self.declarer.offset(1), 0)
+            return await self.receive_card_play_for(on_lead_i, 0)
 
-    async def play(self, auction, lead):
-        auction = Sequence.from_str_list(auction)
-        contract = auction.get_current_contract(
-            dealer=Direction.from_str("NESW"[self.dealer_i])
-        )
-        if contract is None:
-            raise Exception("No contract")
+    async def play(self, auction, opening_lead52):
+        contract = bidding.get_contract(auction)
 
-        declarer = contract.declarer
-        if declarer is None or contract.bid is None:
-            raise Exception("No declarer")
-        dummy = declarer.partner()
-        leader = declarer.next()
-        dummy_hand = PlayerHand.from_pbn(self.dummy_hand_str)
-        my_hand = PlayerHand.from_pbn(self.hand_str)
-        if self.direction == leader :
-            my_hand.remove(Card_.from_str(lead))
-        tricks = [[lead]]
-        print(tricks)
-        current_player = leader.offset(1)
-        for _ in range(47):
-            print(tricks)
-            print("hand :" ,my_hand.to_pbn())
-            print("dummy_hand :" ,dummy_hand.to_pbn())
-            if (
-                current_player == self.direction
-                or (current_player == dummy and self.seat == declarer.to_str())
-            ) and not self.direction == dummy:
-                ranks_in_suit = (
-                    my_hand.suits[Card_.from_str(tricks[-1][0]).suit]
-                    if len(tricks[-1]) != 0 and current_player != dummy
-                    else (
-                        dummy_hand.suits[Card_.from_str(tricks[-1][0]).suit]
-                        if len(tricks[-1]) != 0 and current_player == dummy
-                        else []
-                    )
-                )
-                if len(ranks_in_suit) == 1:  # Forced card
-                    card = Card_(
-                            Card_.from_str(tricks[-1][0]).suit, ranks_in_suit[0]
-                        )
-                    card = card.suit_first_str()
-                else :
-                    data = {
-                        "hand": (my_hand.to_pbn()),
-                        "dummy_hand": dummy_hand.to_pbn(),
-                        "dealer": "NESW"[self.dealer_i],
-                        "vuln": VULS_REVERSE[self.vuln_ns, self.vuln_ew],
-                        "auction": auction.get_as_ben_request(),
-                        "contract": str(contract),
-                        "contract_direction": declarer.abbreviation(),
-                        "next_player": current_player.abbreviation(),
-                        "tricks": tricks,
-                        "playing_mode": "teams",
-                    }
-                    res = await self.send_request_to_ben(
-                        type_of_action="play_card", data=data
-                    )
-                    print(res)
-                    card = res["card"]
-                await self.send_card_played(card)
-                if current_player != dummy:
-                    my_hand.remove(Card_.from_str(card))
+        level = int(contract[0])
+        strain_i = bidding.get_strain_i(contract)
+        decl_i = bidding.get_decl_i(contract)
+        is_decl_vuln = [self.vuln_ns, self.vuln_ew,
+                        self.vuln_ns, self.vuln_ew][decl_i]
+        # lefty=0, dummy=1, righty=2, decl=3
+        cardplayer_i = (self.player_i + 3 - decl_i) % 4
+        print(
+            f'play starts. decl_i={decl_i}, player_i={self.player_i}, cardplayer_i={cardplayer_i}')
+
+        own_hand_str = self.hand_str
+        dummy_hand_str = '...'
+
+        if not cardplayer_i == 1:
+            dummy_hand_str = self.dummy_hand_str
+
+        lefty_hand_str = '...'
+        if cardplayer_i == 0:
+            lefty_hand_str = own_hand_str
+
+        righty_hand_str = '...'
+        if cardplayer_i == 2:
+            righty_hand_str = own_hand_str
+
+        decl_hand_str = '...'
+        if cardplayer_i == 3:
+            decl_hand_str = own_hand_str
+
+        card_players = [
+            bots.CardPlayer(self.models.player_models, 0, lefty_hand_str,
+                            dummy_hand_str, contract, is_decl_vuln),
+            bots.CardPlayer(self.models.player_models, 1,
+                            dummy_hand_str, decl_hand_str, contract, is_decl_vuln),
+            bots.CardPlayer(self.models.player_models, 2, righty_hand_str,
+                            dummy_hand_str, contract, is_decl_vuln),
+            bots.CardPlayer(self.models.player_models, 3,
+                            decl_hand_str, dummy_hand_str, contract, is_decl_vuln)
+        ]
+
+        player_cards_played = [[] for _ in range(4)]
+        shown_out_suits = [set() for _ in range(4)]
+
+        leader_i = 0
+
+        tricks = []
+        tricks52 = []
+        trick_won_by = []
+
+        opening_lead = deck52.card52to32(opening_lead52)
+
+        current_trick = [opening_lead]
+        current_trick52 = [opening_lead52]
+
+        card_players[0].hand52[opening_lead52] -= 1
+
+        for trick_i in range(12):
+            print("trick {}".format(trick_i))
+
+            for player_i in map(lambda x: x % 4, range(leader_i, leader_i + 4)):
+                print('player {}'.format(player_i))
+
+                nesw_i = (decl_i + player_i + 1) % 4  # N=0, E=1, S=2, W=3
+
+                if trick_i == 0 and player_i == 0:
+                    print('skipping')
+                    for i, card_player in enumerate(card_players):
+                        card_player.set_card_played(
+                            trick_i=trick_i, leader_i=leader_i, i=0, card=opening_lead)
+
+                    continue
+
+                card52 = None
+                if player_i == 1 and cardplayer_i == 3:
+                    # it's dummy's turn and this is the declarer
+                    print('decls turn for dummy')
+
+                    rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits,
+                                                                current_trick, 100, auction, card_players[player_i].hand_32.reshape((-1, 32)), [self.vuln_ns, self.vuln_ew], self.models)
+
+                    card_resp = card_players[player_i].play_card(
+                        trick_i, leader_i, current_trick52, rollout_states)
+
+                    card52 = card_resp.card.code()
+
+                    await self.send_card_played(card_resp.card.symbol())
+                elif player_i == cardplayer_i and player_i != 1:
+                    # we are on play
+                    print(f'{player_i} turn')
+
+                    rollout_states = sample.init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits,
+                                                                current_trick, 100, auction, card_players[player_i].hand_32.reshape((-1, 32)), [self.vuln_ns, self.vuln_ew], self.models)
+
+                    card_resp = card_players[player_i].play_card(
+                        trick_i, leader_i, current_trick52, rollout_states)
+
+                    card52 = card_resp.card.code()
+
+                    await self.send_card_played(card_resp.card.symbol())
+                else:
+                    # another player is on play, we just have to wait for their card
+                    card52_symbol = await self.receive_card_play_for(nesw_i, trick_i)
+                    card52 = Card.from_symbol(card52_symbol).code()
+
+                card = deck52.card52to32(card52)
+
+                for card_player in card_players:
+                    card_player.set_card_played(
+                        trick_i=trick_i, leader_i=leader_i, i=player_i, card=card)
+
+                current_trick.append(card)
+
+                current_trick52.append(card52)
+
+                card_players[player_i].set_own_card_played52(card52)
+                if player_i == 1:
+                    for i in [0, 2, 3]:
+                        card_players[i].set_public_card_played52(card52)
+                if player_i == 3:
+                    card_players[1].set_public_card_played52(card52)
+
+                # update shown out state
+                # card is different suit than lead card
+                if card // 8 != current_trick[0] // 8:
+                    shown_out_suits[player_i].add(current_trick[0] // 8)
+
+            # sanity checks after trick completed
+            assert len(current_trick) == 4
+
+            for i in [cardplayer_i] + ([1] if cardplayer_i == 3 else []):
+                if cardplayer_i == 1:
+                    break
+                assert np.min(card_players[i].hand52) == 0
+                assert np.min(card_players[i].public52) == 0
+                assert np.sum(card_players[i].hand52) == 13 - trick_i - 1
+                assert np.sum(card_players[i].public52) == 13 - trick_i - 1
+
+            tricks.append(current_trick)
+            tricks52.append(current_trick52)
+
+            # initializing for the next trick
+            # initialize hands
+            for i, card in enumerate(current_trick):
+                card_players[(leader_i + i) % 4].x_play[:, trick_i + 1,
+                                                        0:32] = card_players[(leader_i + i) % 4].x_play[:, trick_i, 0:32]
+                card_players[(leader_i + i) % 4].x_play[:,
+                                                        trick_i + 1, 0 + card] -= 1
+
+            # initialize public hands
+            for i in (0, 2, 3):
+                card_players[i].x_play[:, trick_i + 1,
+                                       32:64] = card_players[1].x_play[:, trick_i + 1, 0:32]
+            card_players[1].x_play[:, trick_i + 1,
+                                   32:64] = card_players[3].x_play[:, trick_i + 1, 0:32]
+
+            for card_player in card_players:
+                # initialize last trick
+                for i, card in enumerate(current_trick):
+                    card_player.x_play[:, trick_i + 1, 64 + i * 32 + card] = 1
+
+                # initialize last trick leader
+                card_player.x_play[:, trick_i + 1, 288 + leader_i] = 1
+
+                # initialize level
+                card_player.x_play[:, trick_i + 1, 292] = level
+
+                # initialize strain
+                card_player.x_play[:, trick_i + 1, 293 + strain_i] = 1
+
+            # sanity checks for next trick
+            for i in [cardplayer_i] + ([1] if cardplayer_i == 3 else []):
+                if cardplayer_i == 1:
+                    break
+                assert np.min(
+                    card_players[i].x_play[:, trick_i + 1, 0:32]) == 0
+                assert np.min(
+                    card_players[i].x_play[:, trick_i + 1, 32:64]) == 0
+                assert np.sum(
+                    card_players[i].x_play[:, trick_i + 1, 0:32], axis=1) == 13 - trick_i - 1
+                assert np.sum(
+                    card_players[i].x_play[:, trick_i + 1, 32:64], axis=1) == 13 - trick_i - 1
+
+            trick_winner = (
+                leader_i + deck52.get_trick_winner_i(current_trick52, (strain_i - 1) % 5)) % 4
+            trick_won_by.append(trick_winner)
+
+            if trick_winner % 2 == 0:
+                card_players[0].n_tricks_taken += 1
+                card_players[2].n_tricks_taken += 1
             else:
-                card = await self.receive_card_play_for(current_player, len(tricks))
-            if current_player == dummy:
-                dummy_hand.remove(Card_.from_str(card))
-            current_player = current_player.offset(1)
-            tricks[-1].append(card)
-            if len(tricks[-1]) == 4:
-                leader = Trick.from_list(
-                    leader=leader, trick_as_list=[Card_.from_str(c) for c in tricks[-1]]
-                ).winner(trump=contract.bid.suit)
-                current_player = leader
-                tricks.append([])
-        for _ in range(4):
-            if (
-                current_player == self.direction
-                or (current_player == dummy and self.seat == declarer.to_str())
-            ) and not self.direction == dummy:
-                card = my_hand.cards[0].suit_first_str() if current_player != dummy else dummy_hand.cards[0].suit_first_str()
-                await self.send_card_played(card)
-            else :
-                card = await self.receive_card_play_for(current_player, len(tricks))
-            tricks[-1].append(card)
-            current_player = current_player.offset(1)
-        await asyncio.sleep(0.01)
+                card_players[1].n_tricks_taken += 1
+                card_players[3].n_tricks_taken += 1
+
+            print('trick52 {} cards={}. won by {}'.format(
+                trick_i, list(map(decode_card, current_trick52)), trick_winner))
+
+            print('trick52 {} cards={}. won by {}'.format(
+                trick_i, list(map(decode_card, current_trick52)), trick_winner))
+
+            # update cards shown
+            for i, card in enumerate(current_trick):
+                player_cards_played[(leader_i + i) % 4].append(card)
+
+            leader_i = trick_winner
+            current_trick = []
+            current_trick52 = []
+
+            # player on lead will receive message (or decl if dummy on lead)
+            if leader_i == 1:
+                if cardplayer_i == 3:
+                    await self.receive_line()
+            elif leader_i == cardplayer_i:
+                await self.receive_line()
+
+        # play last trick
+        for player_i in map(lambda x: x % 4, range(leader_i, leader_i + 4)):
+            nesw_i = (decl_i + player_i + 1) % 4  # N=0, E=1, S=2, W=3
+            card52 = None
+            if player_i == 1 and cardplayer_i == 3 or player_i == cardplayer_i and player_i != 1:
+                # we are on play
+                card52 = np.nonzero(card_players[player_i].hand52)[0][0]
+                card52_symbol = Card.from_code(card52).symbol()
+                await self.send_card_played(card52_symbol)
+            else:
+                # someone else is on play. we just have to wait for their card
+                card52_symbol = await self.receive_card_play_for(nesw_i, trick_i)
+                card52 = Card.from_symbol(card52_symbol).code()
+
+            card = deck52.card52to32(card52)
+
+            current_trick.append(card)
+            current_trick52.append(card52)
+
+        tricks.append(current_trick)
+        tricks52.append(current_trick52)
+
+        trick_winner = (
+            leader_i + deck52.get_trick_winner_i(current_trick52, (strain_i - 1) % 5)) % 4
+        trick_won_by.append(trick_winner)
+
+        print('last trick')
+        print(current_trick)
+        print(current_trick52)
+        print(trick_won_by)
+
+        pprint.pprint(list(zip(tricks, trick_won_by)))
+
+        self.trick_winners = trick_won_by
 
     async def send_card_played(self, card_symbol):
-        msg_card = f"{self.seat} plays {card_symbol[::-1]}\n"
+        msg_card = f'{self.seat} plays {card_symbol[::-1]}\n'
         await self.send_message(msg_card)
 
     async def send_own_bid(self, bid):
-        bid = bid.replace("N", "NT")
-        msg_bid = f"{SEATS[self.player_i]} bids {bid}.\n"
-        if bid in ["P", "PASS"]:
-            msg_bid = f"{SEATS[self.player_i]} passes.\n"
-        elif bid == "X":
-            msg_bid = f"{SEATS[self.player_i]} doubles.\n"
-        elif bid == "XX":
-            msg_bid = f"{SEATS[self.player_i]} redoubles.\n"
+        bid = bid.replace('N', 'NT')
+        msg_bid = f'{SEATS[self.player_i]} bids {bid}.\n'
+        if bid == 'PASS':
+            msg_bid = f'{SEATS[self.player_i]} passes.\n'
+        elif bid == 'X':
+            msg_bid = f'{SEATS[self.player_i]} doubles.\n'
+        elif bid == 'XX':
+            msg_bid = f'{SEATS[self.player_i]} redoubles.\n'
 
         await self.send_message(msg_bid)
 
-    async def receive_card_play_for(self, current_player: Direction, trick_i: int):
-        msg_ready = f"{self.seat} ready for {current_player.to_str()}'s card to trick {trick_i}.\n"
+    async def receive_card_play_for(self, player_i, trick_i):
+        msg_ready = f"{self.seat} ready for {SEATS[player_i]}'s card to trick {trick_i + 1}.\n"
         await self.send_message(msg_ready)
 
         card_resp = await self.receive_line()
         card_resp_parts = card_resp.strip().split()
 
-        try :
-            assert card_resp_parts[0] == current_player.to_str()
-            return card_resp_parts[-1][::-1].upper()
-        except Exception as e :
-            print(card_resp)
-            print(card_resp_parts)
-            print(e)
-            return await self.receive_card_play_for(current_player, trick_i)
+        assert card_resp_parts[0] == SEATS[player_i]
 
+        return card_resp_parts[-1][::-1].upper()
 
-
-
-    async def receive_bid_for(self, player : Direction):
-        msg_ready = f"{SEATS[self.player_i]} ready for {player.to_str()}'s bid.\n"
+    async def receive_bid_for(self, player_i):
+        msg_ready = f"{SEATS[self.player_i]} ready for {SEATS[player_i]}'s bid.\n"
         await self.send_message(msg_ready)
 
         bid_resp = await self.receive_line()
         bid_resp_parts = bid_resp.strip().split()
 
-        assert bid_resp_parts[0] == player.to_str()
+        assert bid_resp_parts[0] == SEATS[player_i]
 
-        bid = bid_resp_parts[-1].rstrip(".").upper().replace("NT", "N")
+        bid = bid_resp_parts[-1].rstrip('.').upper().replace('NT', 'N')
 
-        return {"PASSES": "PASS", "DOUBLES": "X", "REDOUBLES": "XX"}.get(bid, bid)
+        return {
+            'PASSES': 'PASS',
+            'DOUBLES': 'X',
+            'REDOUBLES': 'XX'
+        }.get(bid, bid)
 
     async def receive_dummy(self):
-        if not self.declarer:
-            raise Exception("No declarer")
-        if self.declarer.partner() == self.direction:
+        dummy_i = (self.decl_i + 2) % 4
+
+        if self.player_i == dummy_i:
             return self.hand_str
         else:
-            msg_ready = f"{self.seat} ready for dummy.\n"
+            msg_ready = f'{self.seat} ready for dummy.\n'
             await self.send_message(msg_ready)
             line = await self.receive_line()
             # Dummy's cards : S A Q T 8 2. H K 7. D K 5 2. C A 7 6.
             return TMClient.parse_hand(line)
 
     async def send_ready(self):
-        await self.send_message(f"{self.seat} ready to start.\n")
+        await self.send_message(f'{self.seat} ready to start.\n')
 
     async def receive_deal(self):
-        print("Trying to receive deal")
         print(await self.receive_line())
 
-        await self.send_message(f"{self.seat} ready for deal.\n")
+        await self.send_message(f'{self.seat} ready for deal.\n')
 
         # 'Board number 1. Dealer North. Neither vulnerable. \r\n'
         deal_line_1 = await self.receive_line()
@@ -327,48 +433,34 @@ class TMClient:
         # "North's cards : S 9 3. H -. D J 7 5. C A T 9 8 6 4 3 2."
         deal_line_2 = await self.receive_line()
 
-        rx_dealer_vuln = r"(?P<dealer>[a-zA-z]+?)\.\s(?P<vuln>.+?)\svulnerable"
+        rx_dealer_vuln = r'(?P<dealer>[a-zA-z]+?)\.\s(?P<vuln>.+?)\svulnerable'
         match = re.search(rx_dealer_vuln, deal_line_1)
-        if match is None:
-            raise Exception(f"Could not parse deal line 1: {deal_line_1}")
 
         hand_str = TMClient.parse_hand(deal_line_2)
 
-        dealer_i = "NESW".index(match.groupdict()["dealer"][0])
-        vuln_str = match.groupdict()["vuln"]
-        assert vuln_str in {"Neither", "N/S", "E/W", "Both"}
-        vuln_ns = vuln_str == "N/S" or vuln_str == "Both"
-        vuln_ew = vuln_str == "E/W" or vuln_str == "Both"
-        self.dealer = Direction.from_str("NESW"[dealer_i])
+        dealer_i = 'NESW'.index(match.groupdict()['dealer'][0])
+        vuln_str = match.groupdict()['vuln']
+        assert vuln_str in {'Neither', 'N/S', 'E/W', 'Both'}
+        vuln_ns = vuln_str == 'N/S' or vuln_str == 'Both'
+        vuln_ew = vuln_str == 'E/W' or vuln_str == 'Both'
 
         return dealer_i, vuln_ns, vuln_ew, hand_str
 
     @staticmethod
     def parse_hand(s):
-        return (
-            s[s.index(":") + 1 : s.rindex(".")]
-            .replace(" ", "")
-            .replace("-", "")
-            .replace("S", "")
-            .replace("H", "")
-            .replace("D", "")
-            .replace("C", "")
-        )
+        return s[s.index(':') + 1: s.rindex('.')] \
+            .replace(' ', '').replace('-', '').replace('S', '').replace('H', '').replace('D', '').replace('C', '')
 
     async def send_message(self, message: str):
-        print(f"about to send: {message}")
-        if self.writer is None:
-            raise Exception("Writer is None")
+        print(f'about to send: {message}')
         self.writer.write(message.encode())
         await self.writer.drain()
-        print("sent successfully")
+        print('sent successfully')
 
     async def receive_line(self) -> str:
-        print("receiving message")
-        if self.reader is None:
-            raise Exception("Reader is None")
+        print('receiving message')
         message = await self.reader.readline()
-        print(f"received: {message.decode()}")
+        print(f'received: {message.decode()}')
         return message.decode()
 
 
@@ -379,22 +471,16 @@ async def main():
     seat = sys.argv[4]
     is_continue = len(sys.argv) > 5
 
-    client = TMClient(
-        name,
-        seat,
-    )
+    client = TMClient(name, seat, Models.load('../models'))
     await client.connect(host, port)
 
     if is_continue:
-        print("Is continue")
         await client.receive_line()
 
     await client.send_ready()
 
     while True:
-        print("Run client")
         await client.run()
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.get_event_loop().run_until_complete(main())

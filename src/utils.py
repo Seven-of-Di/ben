@@ -42,7 +42,7 @@ class Direction(Enum):
     SOUTH = 2
     WEST = 3
 
-    __from_str_map__ = {"N": NORTH, "E": EAST, "S": SOUTH, "W": WEST, "NORTH": NORTH, "EAST": EAST, "SOUTH": SOUTH, "WEST": WEST}
+    __from_str_map__ = {"N": NORTH, "E": EAST, "S": SOUTH, "W": WEST}
     __to_str__ = {NORTH: "North", SOUTH: "South", EAST: "East", WEST: "West"}
 
     @classmethod

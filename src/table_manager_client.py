@@ -224,7 +224,6 @@ class TMClient:
                     )
                     print(res)
                     card = res["card"]
-                await asyncio.sleep(0.1)
                 await self.send_card_played(card)
                 if current_player != dummy:
                     my_hand.remove(Card_.from_str(card))
@@ -246,7 +245,6 @@ class TMClient:
                 or (current_player == dummy and self.seat == declarer.to_str())
             ) and not self.direction == dummy:
                 card = my_hand.cards[0].suit_first_str() if current_player != dummy else dummy_hand.cards[0].suit_first_str()
-                await asyncio.sleep(0.1)
                 await self.send_card_played(card)
             else :
                 card = await self.receive_card_play_for(current_player, len(tricks))
@@ -259,14 +257,14 @@ class TMClient:
         await self.send_message(msg_card)
 
     async def send_own_bid(self, bid):
-        # bid = bid.replace("N", "NT")
-        msg_bid = f"{SEATS[self.player_i]} bids {bid}\n"
+        bid = bid.replace("N", "NT")
+        msg_bid = f"{SEATS[self.player_i]} bids {bid}.\n"
         if bid in ["P", "PASS"]:
-            msg_bid = f"{SEATS[self.player_i]} passes\n"
+            msg_bid = f"{SEATS[self.player_i]} passes.\n"
         elif bid == "X":
-            msg_bid = f"{SEATS[self.player_i]} doubles\n"
+            msg_bid = f"{SEATS[self.player_i]} doubles.\n"
         elif bid == "XX":
-            msg_bid = f"{SEATS[self.player_i]} redoubles\n"
+            msg_bid = f"{SEATS[self.player_i]} redoubles.\n"
 
         await self.send_message(msg_bid)
 

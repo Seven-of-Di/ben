@@ -84,8 +84,10 @@ def sample_cards_vec(n_samples, p_hcp, p_shp, my_hand):
     lho_pard_rho = np.zeros((n_samples, 3, 32), dtype=int)
     cards_received = np.zeros((n_samples, 3), dtype=int)
 
-    ak_out_i = np.vectorize(np.random.permutation, signature="(n)->(n)")(ak_out_i)
-    small_out_i = np.vectorize(np.random.permutation, signature="(n)->(n)")(small_out_i)
+    ak_out_i = np.vectorize(np.random.permutation,
+                            signature='(n)->(n)')(ak_out_i)
+    small_out_i = np.vectorize(
+        np.random.permutation, signature='(n)->(n)')(small_out_i)
 
     s_all = np.arange(n_samples)
 
@@ -93,22 +95,17 @@ def sample_cards_vec(n_samples, p_hcp, p_shp, my_hand):
     js = np.zeros(n_samples, dtype=int)
     while np.min(js) < ak_out_i.shape[1]:
         cards = ak_out_i[s_all, js]
-        receivers = distr2_vec(r_shp[s_all, :, cards // 8], r_hcp)
+        receivers = distr2_vec(r_shp[s_all, :, cards//8], r_hcp)
 
         can_receive_cards = cards_received[s_all, receivers] < 13
 
-        cards_received[s_all[can_receive_cards], receivers[can_receive_cards]] += 1
-        lho_pard_rho[
-            s_all[can_receive_cards],
-            receivers[can_receive_cards],
-            cards[can_receive_cards],
-        ] += 1
+        cards_received[s_all[can_receive_cards],
+                       receivers[can_receive_cards]] += 1
+        lho_pard_rho[s_all[can_receive_cards],
+                     receivers[can_receive_cards], cards[can_receive_cards]] += 1
         r_hcp[s_all[can_receive_cards], receivers[can_receive_cards]] -= 3
-        r_shp[
-            s_all[can_receive_cards],
-            receivers[can_receive_cards],
-            cards[can_receive_cards] // 8,
-        ] -= 0.5
+        r_shp[s_all[can_receive_cards], receivers[can_receive_cards],
+              cards[can_receive_cards] // 8] -= 0.5
         js[can_receive_cards] += 1
 
     # distribute small cards
@@ -121,21 +118,16 @@ def sample_cards_vec(n_samples, p_hcp, p_shp, my_hand):
         js_r = js[s_all_r]
 
         cards = small_out_i[s_all_r, js_r]
-        receivers = distr_vec(r_shp[s_all_r, :, cards // 8])
+        receivers = distr_vec(r_shp[s_all_r, :, cards//8])
 
         can_receive_cards = cards_received[s_all_r, receivers] < 13
 
-        cards_received[s_all_r[can_receive_cards], receivers[can_receive_cards]] += 1
-        lho_pard_rho[
-            s_all_r[can_receive_cards],
-            receivers[can_receive_cards],
-            cards[can_receive_cards],
-        ] += 1
-        r_shp[
-            s_all_r[can_receive_cards],
-            receivers[can_receive_cards],
-            cards[can_receive_cards] // 8,
-        ] -= 0.5
+        cards_received[s_all_r[can_receive_cards],
+                       receivers[can_receive_cards]] += 1
+        lho_pard_rho[s_all_r[can_receive_cards],
+                     receivers[can_receive_cards], cards[can_receive_cards]] += 1
+        r_shp[s_all_r[can_receive_cards], receivers[can_receive_cards],
+              cards[can_receive_cards] // 8] -= 0.5
         js[s_all_r[can_receive_cards]] += 1
 
     # re-apply constraints
@@ -143,19 +135,16 @@ def sample_cards_vec(n_samples, p_hcp, p_shp, my_hand):
 
     for i in range(3):
         if np.round(c_hcp[i]) >= 11:
-            accept_hcp &= (
-                binary.get_hcp(lho_pard_rho[:, i, :]) >= np.round(c_hcp[i]) - 5
-            )
+            accept_hcp &= binary.get_hcp(
+                lho_pard_rho[:, i, :]) >= np.round(c_hcp[i]) - 5
 
     accept_shp = np.ones(n_samples).astype(bool)
 
     for i in range(3):
         for j in range(4):
             if np.round(c_shp[i, j] >= 5):
-                accept_shp &= (
-                    np.sum(lho_pard_rho[:, i, (j * 8) : ((j + 1) * 8)], axis=1)
-                    >= np.round(c_shp[i, j]) - 1
-                )
+                accept_shp &= np.sum(
+                    lho_pard_rho[:, i, (j*8):((j+1)*8)], axis=1) >= np.round(c_shp[i, j]) - 1
 
     accept = accept_hcp & accept_shp
 
@@ -165,28 +154,24 @@ def sample_cards_vec(n_samples, p_hcp, p_shp, my_hand):
         return lho_pard_rho
 
 
-def sample_cards_auction(
-    n_samples, n_steps, auction, nesw_i, hand, vuln, bidder_model, binfo_model
-):
+def sample_cards_auction(n_samples, n_steps, auction, nesw_i, hand, vuln, bidder_model, binfo_model):
     n_steps = 1 + len(auction) // 4
 
-    A = binary.get_auction_binary_sampling(n_steps, auction, nesw_i, hand, vuln)
-    A_lho = binary.get_auction_binary_sampling(
-        n_steps, auction, (nesw_i + 1) % 4, hand, vuln
-    )
-    A_pard = binary.get_auction_binary_sampling(
-        n_steps, auction, (nesw_i + 2) % 4, hand, vuln
-    )
-    A_rho = binary.get_auction_binary_sampling(
-        n_steps, auction, (nesw_i + 3) % 4, hand, vuln
-    )
+    A = binary.get_auction_binary(n_steps, auction, nesw_i, hand, vuln)
+    A_lho = binary.get_auction_binary(
+        n_steps, auction, (nesw_i + 1) % 4, hand, vuln)
+    A_pard = binary.get_auction_binary(
+        n_steps, auction, (nesw_i + 2) % 4, hand, vuln)
+    A_rho = binary.get_auction_binary(
+        n_steps, auction, (nesw_i + 3) % 4, hand, vuln)
 
     p_hcp, p_shp = binfo_model.model(A)
 
     p_hcp = p_hcp.reshape((-1, n_steps, 3))[:, -1, :]
     p_shp = p_shp.reshape((-1, n_steps, 12))[:, -1, :]
 
-    lho_pard_rho = sample_cards_vec(n_samples, p_hcp[0], p_shp[0], hand.reshape(32))
+    lho_pard_rho = sample_cards_vec(
+        n_samples, p_hcp[0], p_shp[0], hand.reshape(32))
 
     n_samples = lho_pard_rho.shape[0]
 
@@ -196,55 +181,46 @@ def sample_cards_auction(
 
     X_lho[:, :, :] = A_lho
     X_lho[:, :, 7:39] = lho_pard_rho[:, 0:1, :]
-    X_lho[:, :, 2] = (binary.get_hcp(lho_pard_rho[:, 0, :]).reshape((-1, 1)) - 10) / 4
-    X_lho[:, :, 3:7] = (
-        binary.get_shape(lho_pard_rho[:, 0, :]).reshape((-1, 1, 4)) - 3.25
-    ) / 1.75
+    X_lho[:, :, 2] = (binary.get_hcp(
+        lho_pard_rho[:, 0, :]).reshape((-1, 1)) - 10) / 4
+    X_lho[:, :, 3:7] = (binary.get_shape(
+        lho_pard_rho[:, 0, :]).reshape((-1, 1, 4)) - 3.25) / 1.75
     lho_actual_bids = bidding.get_bid_ids(auction, (nesw_i + 1) % 4, n_steps)
-    lho_sample_bids = bidder_model.model_seq(X_lho).reshape((n_samples, n_steps, -1))
+    lho_sample_bids = bidder_model.model_seq(
+        X_lho).reshape((n_samples, n_steps, -1))
 
     X_pard[:, :, :] = A_pard
     X_pard[:, :, 7:39] = lho_pard_rho[:, 1:2, :]
-    X_pard[:, :, 2] = (binary.get_hcp(lho_pard_rho[:, 1, :]).reshape((-1, 1)) - 10) / 4
-    X_pard[:, :, 3:7] = (
-        binary.get_shape(lho_pard_rho[:, 1, :]).reshape((-1, 1, 4)) - 3.25
-    ) / 1.75
+    X_pard[:, :, 2] = (binary.get_hcp(
+        lho_pard_rho[:, 1, :]).reshape((-1, 1)) - 10) / 4
+    X_pard[:, :, 3:7] = (binary.get_shape(
+        lho_pard_rho[:, 1, :]).reshape((-1, 1, 4)) - 3.25) / 1.75
     pard_actual_bids = bidding.get_bid_ids(auction, (nesw_i + 2) % 4, n_steps)
-    pard_sample_bids = bidder_model.model_seq(X_pard).reshape((n_samples, n_steps, -1))
+    pard_sample_bids = bidder_model.model_seq(
+        X_pard).reshape((n_samples, n_steps, -1))
 
     X_rho[:, :, :] = A_rho
     X_rho[:, :, 7:39] = lho_pard_rho[:, 2:, :]
-    X_rho[:, :, 2] = (binary.get_hcp(lho_pard_rho[:, 2, :]).reshape((-1, 1)) - 10) / 4
-    X_rho[:, :, 3:7] = (
-        binary.get_shape(lho_pard_rho[:, 2, :]).reshape((-1, 1, 4)) - 3.25
-    ) / 1.75
+    X_rho[:, :, 2] = (binary.get_hcp(
+        lho_pard_rho[:, 2, :]).reshape((-1, 1)) - 10) / 4
+    X_rho[:, :, 3:7] = (binary.get_shape(
+        lho_pard_rho[:, 2, :]).reshape((-1, 1, 4)) - 3.25) / 1.75
     rho_actual_bids = bidding.get_bid_ids(auction, (nesw_i + 3) % 4, n_steps)
-    rho_sample_bids = bidder_model.model_seq(X_rho).reshape((n_samples, n_steps, -1))
+    rho_sample_bids = bidder_model.model_seq(
+        X_rho).reshape((n_samples, n_steps, -1))
 
     min_scores = np.ones(n_samples)
 
     for i in range(n_steps):
-        if lho_actual_bids[i] not in (
-            bidding.BID2ID["PAD_START"],
-            bidding.BID2ID["PAD_END"],
-        ):
+        if lho_actual_bids[i] not in (bidding.BID2ID['PAD_START'], bidding.BID2ID['PAD_END']):
             min_scores = np.minimum(
-                min_scores, lho_sample_bids[:, i, lho_actual_bids[i]]
-            )
-        if pard_actual_bids[i] not in (
-            bidding.BID2ID["PAD_START"],
-            bidding.BID2ID["PAD_END"],
-        ):
+                min_scores, lho_sample_bids[:, i, lho_actual_bids[i]])
+        if pard_actual_bids[i] not in (bidding.BID2ID['PAD_START'], bidding.BID2ID['PAD_END']):
             min_scores = np.minimum(
-                min_scores, pard_sample_bids[:, i, pard_actual_bids[i]]
-            )
-        if rho_actual_bids[i] not in (
-            bidding.BID2ID["PAD_START"],
-            bidding.BID2ID["PAD_END"],
-        ):
+                min_scores, pard_sample_bids[:, i, pard_actual_bids[i]])
+        if rho_actual_bids[i] not in (bidding.BID2ID['PAD_START'], bidding.BID2ID['PAD_END']):
             min_scores = np.minimum(
-                min_scores, rho_sample_bids[:, i, rho_actual_bids[i]]
-            )
+                min_scores, rho_sample_bids[:, i, rho_actual_bids[i]])
 
     accept_threshold = 0.1
 
@@ -258,27 +234,13 @@ def sample_cards_auction(
 
 
 @tracer.start_as_current_span("shuffle_cards_bidding_info")
-def shuffle_cards_bidding_info(
-    n_samples,
-    binfo,
-    auction,
-    hand,
-    vuln,
-    known_nesw,
-    h_1_nesw,
-    h_2_nesw,
-    visible_cards,
-    hidden_cards,
-    cards_played,
-    shown_out_suits,
-    ns = 0,
-    ew = 0
-):
-    n_cards_to_receive = np.array([len(hidden_cards) // 2, len(hidden_cards) - len(hidden_cards) // 2])
+def shuffle_cards_bidding_info(n_samples, binfo, auction, hand, vuln, known_nesw, h_1_nesw, h_2_nesw, visible_cards, hidden_cards, cards_played, shown_out_suits):
+    n_cards_to_receive = np.array(
+        [len(hidden_cards) // 2, len(hidden_cards) - len(hidden_cards) // 2])
 
-    n_steps = binary.calculate_step_bidding_info(auction)
+    n_steps = 1 + len(auction) // 4
 
-    A = binary.get_auction_binary_sampling(n_steps, auction, known_nesw, hand, vuln, ns, ew)
+    A = binary.get_auction_binary(n_steps, auction, known_nesw, hand, vuln)
 
     p_hcp, p_shp = binfo.model(A)
 
@@ -288,8 +250,12 @@ def shuffle_cards_bidding_info(
     def f_trans_hcp(x): return 4 * x + 10
     def f_trans_shp(x): return 1.75 * x + 3.25
 
-    p_hcp = f_trans_hcp(p_hcp[0, [(h_1_nesw - known_nesw) % 4 - 1, (h_2_nesw - known_nesw) % 4 - 1]])
-    p_shp = f_trans_shp(p_shp[0].reshape((3, 4))[[(h_1_nesw - known_nesw) % 4 - 1, (h_2_nesw - known_nesw) % 4 - 1], :])
+    p_hcp = f_trans_hcp(
+        p_hcp[0, [(h_1_nesw - known_nesw) % 4 - 1, (h_2_nesw - known_nesw) % 4 - 1]])
+    p_shp = f_trans_shp(p_shp[0].reshape(
+        (3, 4))[[(h_1_nesw - known_nesw) % 4 - 1, (h_2_nesw - known_nesw) % 4 - 1], :])
+
+    # print(p_hcp)
 
     h1_h2 = np.zeros((n_samples, 2, 32), dtype=int)
     cards_received = np.zeros((n_samples, 2), dtype=int)
@@ -317,7 +283,8 @@ def shuffle_cards_bidding_info(
 
     hidden_cards = [c for c in hidden_cards if c not in cards_shownout_suits]
     ak_cards = [c for c in hidden_cards if c in {0, 1, 8, 9, 16, 17, 24, 25}]
-    small_cards = [c for c in hidden_cards if c not in {0, 1, 8, 9, 16, 17, 24, 25}]
+    small_cards = [c for c in hidden_cards if c not in {
+        0, 1, 8, 9, 16, 17, 24, 25}]
 
     ak_out_i = np.array([np.random.permutation(ak_cards)
                         for _ in range(n_samples)], dtype=int)
@@ -341,12 +308,16 @@ def shuffle_cards_bidding_info(
         cards = ak_out_i[s_all_r, js_r]
         receivers = distr2_vec(r_shp[s_all_r, :, cards//8], r_hcp[s_all_r])
 
-        can_receive_cards = cards_received[s_all_r, receivers] < n_max_cards[s_all_r, receivers]
+        can_receive_cards = cards_received[s_all_r,
+                                           receivers] < n_max_cards[s_all_r, receivers]
 
-        cards_received[s_all_r[can_receive_cards], receivers[can_receive_cards]] += 1
-        h1_h2[s_all_r[can_receive_cards], receivers[can_receive_cards], cards[can_receive_cards]] += 1
+        cards_received[s_all_r[can_receive_cards],
+                       receivers[can_receive_cards]] += 1
+        h1_h2[s_all_r[can_receive_cards], receivers[can_receive_cards],
+              cards[can_receive_cards]] += 1
         r_hcp[s_all_r[can_receive_cards], receivers[can_receive_cards]] -= 3
-        r_shp[s_all_r[can_receive_cards], receivers[can_receive_cards], cards[can_receive_cards] // 8] -= 0.5
+        r_shp[s_all_r[can_receive_cards], receivers[can_receive_cards],
+              cards[can_receive_cards] // 8] -= 0.5
         js[s_all_r[can_receive_cards]] += 1
 
     js = np.zeros(n_samples, dtype=int)
@@ -359,33 +330,30 @@ def shuffle_cards_bidding_info(
         cards = small_out_i[s_all_r, js_r]
         receivers = distr_vec(r_shp[s_all_r, :, cards//8])
 
-        can_receive_cards = cards_received[s_all_r, receivers] < n_max_cards[s_all_r, receivers]
+        can_receive_cards = cards_received[s_all_r,
+                                           receivers] < n_max_cards[s_all_r, receivers]
 
-        cards_received[s_all_r[can_receive_cards], receivers[can_receive_cards]] += 1
-        h1_h2[s_all_r[can_receive_cards], receivers[can_receive_cards], cards[can_receive_cards]] += 1
-        r_shp[s_all_r[can_receive_cards], receivers[can_receive_cards], cards[can_receive_cards] // 8] -= 0.5
+        cards_received[s_all_r[can_receive_cards],
+                       receivers[can_receive_cards]] += 1
+        h1_h2[s_all_r[can_receive_cards], receivers[can_receive_cards],
+              cards[can_receive_cards]] += 1
+        r_shp[s_all_r[can_receive_cards], receivers[can_receive_cards],
+              cards[can_receive_cards] // 8] -= 0.5
         js[s_all_r[can_receive_cards]] += 1
 
     assert np.sum(h1_h2) == n_samples * np.sum(n_cards_to_receive)
 
-    # Shuffle the samples generated
-    indices = np.arange(n_samples)
-
-    return h1_h2[indices]
+    return h1_h2
 
 
 @tracer.start_as_current_span("get_opening_lead_scores")
-def get_opening_lead_scores(
-    auction, vuln, binfo_model, models, hand, opening_lead_card
-):
+def get_opening_lead_scores(auction, vuln, binfo_model, lead_model, hand, opening_lead_card):
     contract = bidding.get_contract(auction)
-    if contract is None :
-        raise Exception("No contract found")
 
     level = int(contract[0])
     strain = bidding.get_strain_i(contract)
-    doubled = int("X" in contract)
-    redbld = int("XX" in contract)
+    doubled = int('X' in contract)
+    redbld = int('XX' in contract)
 
     x = np.zeros((hand.shape[0], 42))
     x[:, 0] = level
@@ -407,25 +375,21 @@ def get_opening_lead_scores(
 
     n_steps = 1 + len(auction) // 4
 
-    A = binary.get_auction_binary_sampling(n_steps, auction, lead_index, hand, vuln)
+    A = binary.get_auction_binary(n_steps, auction, lead_index, hand, vuln)
 
     p_hcp, p_shp = binfo_model.model(A)
 
     b[:, :3] = p_hcp.reshape((-1, n_steps, 3))[:, -1, :].reshape((-1, 3))
     b[:, 3:] = p_shp.reshape((-1, n_steps, 12))[:, -1, :].reshape((-1, 12))
 
-    if contract[1] == "N":
-        lead_softmax = models.lead_nt_model.model(x, b)
-    else:
-        lead_softmax = models.lead_suit_model.model(x, b)
+    lead_softmax = lead_model.model(x, b)
     return convert_to_probability(lead_softmax[:, opening_lead_card])
-
 
 @tracer.start_as_current_span("get_bid_scores")
 def get_bid_scores(nesw_i, auction, vuln, hand, bidder_model: Bidder):
     n_steps = 1 + len(auction) // 4
 
-    A = binary.get_auction_binary_sampling(n_steps, auction, nesw_i, hand, vuln)
+    A = binary.get_auction_binary(n_steps, auction, nesw_i, hand, vuln)
 
     X = np.zeros((hand.shape[0], n_steps, A.shape[-1]))
 
@@ -435,15 +399,13 @@ def get_bid_scores(nesw_i, auction, vuln, hand, bidder_model: Bidder):
     X[:, :, 2] = (binary.get_hcp(hand).reshape((-1, 1)) - 10) / 4
     X[:, :, 3:7] = (binary.get_shape(hand).reshape((-1, 1, 4)) - 3.25) / 1.75
     actual_bids = bidding.get_bid_ids(auction, nesw_i, n_steps)
-    sample_bids = bidder_model.model_seq(X).reshape((hand.shape[0], n_steps, -1))
+    sample_bids = bidder_model.model_seq(
+        X).reshape((hand.shape[0], n_steps, -1))
 
     scores = np.ones(hand.shape[0])
 
     for i in range(n_steps):
-        if actual_bids[i] not in (
-            bidding.BID2ID["PAD_START"],
-            bidding.BID2ID["PAD_END"],
-        ):
+        if actual_bids[i] not in (bidding.BID2ID['PAD_START'], bidding.BID2ID['PAD_END']):
             scores = np.multiply(scores, sample_bids[:, i, actual_bids[i]])
 
     return convert_to_probability(scores)
@@ -454,28 +416,11 @@ def player_to_nesw_i(player_i, contract):
     return (decl_i + player_i + 1) % 4
 
 
-def f_trans_hcp(x):
-    return 4 * x + 10
-
-
-def f_trans_shp(x):
-    return 1.75 * x + 3.25
-
+def f_trans_hcp(x): return 4 * x + 10
+def f_trans_shp(x): return 1.75 * x + 3.25
 
 @tracer.start_as_current_span("init_rollout_states")
-def init_rollout_states(
-    trick_i,
-    player_i,
-    card_players,
-    player_cards_played,
-    shown_out_suits,
-    current_trick,
-    n_samples,
-    auction,
-    hand,
-    vuln,
-    models,
-):
+def init_rollout_states(trick_i, player_i, card_players, player_cards_played, shown_out_suits, current_trick, n_samples, auction, hand, vuln, models):
     leader_i = (player_i - len(current_trick)) % 4
 
     hidden_1_i, hidden_2_i = [(3, 2), (0, 2), (0, 3), (2, 0)][player_i]
@@ -483,18 +428,12 @@ def init_rollout_states(
     # sample the unknown cards
     public_hand_i = 3 if player_i == 1 else 1
     public_hand = card_players[public_hand_i].x_play[0, trick_i, :32]
-    vis_cur_trick_nonpub = [
-        c for i, c in enumerate(current_trick) if (leader_i + i) % 4 != public_hand_i
-    ]
+    vis_cur_trick_nonpub = [c for i, c in enumerate(
+        current_trick) if (leader_i + i) % 4 != public_hand_i]
     visible_cards = np.concatenate(
-        [
-            binary.get_cards_from_binary_hand(
-                card_players[player_i].x_play[0, trick_i, :32]
-            ),
-            binary.get_cards_from_binary_hand(public_hand),
-        ]
-        + [np.array(vis_cur_trick_nonpub)]
-        + [np.array(x, dtype=int) for x in player_cards_played]
+        [binary.get_cards_from_binary_hand(card_players[player_i].x_play[0, trick_i, :32]), binary.get_cards_from_binary_hand(public_hand)] +
+        [np.array(vis_cur_trick_nonpub)] +
+        [np.array(x, dtype=int) for x in player_cards_played]
     )
     hidden_cards = get_all_hidden_cards(visible_cards)
 
@@ -504,7 +443,7 @@ def init_rollout_states(
     h_2_nesw = player_to_nesw_i(hidden_2_i, contract)
 
     h1_h2 = shuffle_cards_bidding_info(
-        40 * n_samples,
+        40*n_samples,
         models.binfo,
         auction,
         hand,
@@ -515,9 +454,8 @@ def init_rollout_states(
         visible_cards,
         hidden_cards,
         [player_cards_played[hidden_1_i], player_cards_played[hidden_2_i]],
-        [shown_out_suits[hidden_1_i], shown_out_suits[hidden_2_i]],
+        [shown_out_suits[hidden_1_i], shown_out_suits[hidden_2_i]]
     )
-
 
     h1_h2 = np.unique(h1_h2, axis=0)
 
@@ -532,24 +470,18 @@ def init_rollout_states(
 
     # for player_i we can use the hand from card_players x_play (because the cards are known)
     for i in range(trick_i + 1):
-        samples_as_np_array[player_i][:, i, :32] = card_players[player_i].x_play[
-            0, i, :32
-        ]
+        samples_as_np_array[player_i][:, i, :32] = card_players[player_i].x_play[0, i, :32]
 
     # all players know dummy's cards
     if player_i in (0, 2, 3):
         for i in range(trick_i + 1):
-            samples_as_np_array[player_i][:, i, 32:64] = card_players[1].x_play[
-                0, i, :32
-            ]
+            samples_as_np_array[player_i][:, i, 32:64] = card_players[1].x_play[0, i, :32]
             samples_as_np_array[1][:, i, :32] = card_players[1].x_play[0, i, :32]
 
     # dummy knows declarer's cards
     if player_i == 1:
         for i in range(trick_i + 1):
-            samples_as_np_array[player_i][:, i, 32:64] = card_players[3].x_play[
-                0, i, :32
-            ]
+            samples_as_np_array[player_i][:, i, 32:64] = card_players[3].x_play[0, i, :32]
             samples_as_np_array[3][:, i, :32] = card_players[3].x_play[0, i, :32]
 
     # add the current trick cards to the hidden hands
@@ -571,7 +503,7 @@ def init_rollout_states(
     # re-apply constraints
     n_steps = 1 + len(auction) // 4
 
-    A = binary.get_auction_binary_sampling(n_steps, auction, known_nesw, hand, vuln)
+    A = binary.get_auction_binary(n_steps, auction, known_nesw, hand, vuln)
 
     p_hcp, p_shp = models.binfo.model(A)
 
@@ -579,13 +511,9 @@ def init_rollout_states(
     p_shp = p_shp.reshape((-1, n_steps, 12))[:, -1, :]
 
     p_hcp = f_trans_hcp(
-        p_hcp[0, [(h_1_nesw - known_nesw) % 4 - 1, (h_2_nesw - known_nesw) % 4 - 1]]
-    )
-    p_shp = f_trans_shp(
-        p_shp[0].reshape((3, 4))[
-            [(h_1_nesw - known_nesw) % 4 - 1, (h_2_nesw - known_nesw) % 4 - 1], :
-        ]
-    )
+        p_hcp[0, [(h_1_nesw - known_nesw) % 4 - 1, (h_2_nesw - known_nesw) % 4 - 1]])
+    p_shp = f_trans_shp(p_shp[0].reshape(
+        (3, 4))[[(h_1_nesw - known_nesw) % 4 - 1, (h_2_nesw - known_nesw) % 4 - 1], :])
 
     c_hcp = p_hcp.copy()
     c_shp = p_shp.copy()
@@ -594,27 +522,16 @@ def init_rollout_states(
 
     for i in range(2):
         if np.round(c_hcp[i]) >= 11:
-            accept_hcp &= (
-                binary.get_hcp(
-                    samples_as_np_array[[hidden_1_i, hidden_2_i][i]][:, 0, :32]
-                )
-                >= np.round(c_hcp[i]) - 5
-            )
-
+            accept_hcp &= binary.get_hcp(
+                samples_as_np_array[[hidden_1_i, hidden_2_i][i]][:, 0, :32]) >= np.round(c_hcp[i]) - 5
+    
     accept_shp = np.ones(samples_as_np_array[0].shape[0]).astype(bool)
 
     for i in range(2):
         for j in range(4):
             if np.round(c_shp[i, j] >= 5):
-                accept_shp &= (
-                    np.sum(
-                        samples_as_np_array[[hidden_1_i, hidden_2_i][i]][
-                            :, 0, (j * 8) : ((j + 1) * 8)
-                        ],
-                        axis=1,
-                    )
-                    >= np.round(c_shp[i, j]) - 1
-                )
+                accept_shp &= np.sum(
+                    samples_as_np_array[[hidden_1_i, hidden_2_i][i]][:, 0, (j*8):((j+1)*8)], axis=1) >= np.round(c_shp[i, j]) - 1
 
     accept = accept_hcp & accept_shp
 
@@ -630,15 +547,10 @@ def init_rollout_states(
     if hidden_1_i == 0 or hidden_2_i == 0:
         opening_lead = current_trick[0] if trick_i == 0 else player_cards_played[0][0]
         lead_scores = get_opening_lead_scores(
-            auction,
-            vuln,
-            models.binfo,
-            models,
-            samples_as_np_array[0][:, 0, :32],
-            opening_lead,
-        )
+            auction, vuln, models.binfo, models.lead, samples_as_np_array[0][:, 0, :32], opening_lead)
 
-        probability_of_occurence = np.multiply(probability_of_occurence, lead_scores)
+        probability_of_occurence = np.multiply(
+            probability_of_occurence, lead_scores)
 
     # reject samples inconsistent with the bidding
     min_bid_scores = np.ones(samples_as_np_array[0].shape[0])
@@ -648,16 +560,12 @@ def init_rollout_states(
         if h_i_nesw >= samples_as_np_array[h_i].shape[0]:
             continue
         bid_scores = get_bid_scores(
-            h_i_nesw,
-            auction,
-            vuln,
-            samples_as_np_array[h_i][:, 0, :32],
-            models.bidder_model,
-        )
+            h_i_nesw, auction, vuln, samples_as_np_array[h_i][:, 0, :32], models.bidder_model)
 
         min_bid_scores = np.multiply(min_bid_scores, bid_scores)
     min_bid_scores = convert_to_probability(min_bid_scores)
-    probability_of_occurence = np.multiply(probability_of_occurence, min_bid_scores)
+    probability_of_occurence = np.multiply(
+        probability_of_occurence, min_bid_scores)
     probability_of_occurence = convert_to_probability(probability_of_occurence)
 
     # reject samples inconsistent with the play
@@ -673,11 +581,8 @@ def init_rollout_states(
             if (leader_i + i) % 4 == p_i:
                 card_played_current_trick.append(card)
 
-        cards_played_prev_tricks = (
-            player_cards_played[p_i][1:trick_i]
-            if p_i == 0
-            else player_cards_played[p_i][:trick_i]
-        )
+        cards_played_prev_tricks = player_cards_played[p_i][1:
+                                                            trick_i] if p_i == 0 else player_cards_played[p_i][:trick_i]
 
         cards_played = cards_played_prev_tricks + card_played_current_trick
 
@@ -688,28 +593,25 @@ def init_rollout_states(
 
         with tracer.start_as_current_span("card_play_coherence"):
             p_cards = models.player_models[p_i].model(
-                samples_as_np_array[p_i][:, :n_tricks_pred, :]
-            )
+                samples_as_np_array[p_i][:, :n_tricks_pred, :])
 
-        card_scores = p_cards[:, np.arange(len(cards_played)), cards_played]
+        card_scores = p_cards[:, np.arange(
+            len(cards_played)), cards_played]
 
         min_scores = np.multiply(min_scores, np.min(card_scores, axis=1))
 
-    probability_of_occurence = np.multiply(probability_of_occurence, min_scores)
+    probability_of_occurence = np.multiply(
+        probability_of_occurence, min_scores)
 
     probability_of_occurence = convert_to_probability(probability_of_occurence)
 
-    n_diag_to_keep = min(n_samples, len(probability_of_occurence))
+    n_diag_to_keep = min(n_samples,len(probability_of_occurence))
 
-    # Get the indices of the n highest probabilities
-    highest_indices = np.argpartition(probability_of_occurence, -n_diag_to_keep)[
-        -n_diag_to_keep:
-    ]
+    # Get the indices of the n highest probabilities 
+    highest_indices = np.argpartition(probability_of_occurence, -n_diag_to_keep)[-n_diag_to_keep:]
 
     # Get the indices that would sort the probabilities in descending order
-    sorted_indices = highest_indices[
-        np.argsort(probability_of_occurence[highest_indices])[::-1]
-    ]
+    sorted_indices = highest_indices[np.argsort(probability_of_occurence[highest_indices])[::-1]]
 
     top_probs = probability_of_occurence[sorted_indices][:n_diag_to_keep]
     mask = top_probs >= 0.0001
@@ -720,6 +622,7 @@ def init_rollout_states(
 
     # Get the objects associated with the n highest probabilities
     highest_states = [obj[top_indices] for obj in samples_as_np_array]
+    
     
     # print(time.time()-start)
 

@@ -57,7 +57,7 @@ async def play_a_card(
     cheating_diag_pbn: Optional[str],
     playing_mode: PlayingMode,
 ) -> Dict:
-    n_samples = int(os.environ.get("LEADING_SAMPLES_COUNT", 100) * (2 if not cheating_diag_pbn else 1))
+    n_samples = int(os.environ.get("LEADING_SAMPLES_COUNT", 100))
     claim_res = False
 
     padded_auction = ["PAD_START"] * Direction.from_str(dealer_str).value + auction
@@ -197,10 +197,9 @@ async def play_a_card(
                     [Card_.from_str(card) for card in tricks_str[-1]],
                 )
                 if play_status == "Follow":
-                    n_samples /= 2
-                elif play_status == "Discard":
-                    n_samples /= 2
-                n_samples = int(n_samples)
+                    n_samples = 50
+                if play_status == "Discard":
+                    n_samples = 50
                 rollout_states, probabilities_list = sample.init_rollout_states(
                     trick_i,
                     player_i,

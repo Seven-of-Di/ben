@@ -37,26 +37,18 @@ class TMClient:
         # new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (
         #     not open_room and direction in [Direction.EAST, Direction.WEST])
         port = "http://localhost:{}".format("5002")
-        while True:
-            try:
-                res = requests.post("{}/{}".format(port, type_of_action), json=data)
-                return res.json()
-            except:
-                await asyncio.sleep(1)
+        res = requests.post("{}/{}".format(port, type_of_action), json=data)
+        return res.json()
 
     async def send_request_to_ben(self, type_of_action: str, data: Dict):
         print(data)
         port = "http://localhost:{}".format("5001")
-        while True:
-            try:
-                res = requests.post("{}/{}".format(port, type_of_action), json=data)
-                return res.json()
-            except:
-                await asyncio.sleep(1)
+        res = requests.post("{}/{}".format(port, type_of_action), json=data)
+        return res.json()
 
     async def run(self):
         await asyncio.sleep(1)
-        while True:
+        while True :
             try:
                 self.dealer_i, self.vuln_ns, self.vuln_ew, self.hand_str = (
                     await self.receive_deal()
@@ -80,7 +72,7 @@ class TMClient:
 
         opening_lead_card = await self.opening_lead()
 
-        if self.direction != self.declarer.partner():
+        if self.direction != self.declarer.partner() :
             self.dummy_hand_str = await self.receive_dummy()
         else:
             self.dummy_hand_str = self.hand_str
@@ -121,10 +113,10 @@ class TMClient:
                         "vuln": VULS_REVERSE[self.vuln_ns, self.vuln_ew],
                         "auction": auction.get_as_str_list(),
                         "conventions_ew": (
-                            "DEFAULT" if self.seat in ["East","West"] else "SEF"
+                            "DEFAULT" if self.seat in ["East,West"] else "DEFAULT"
                         ),
                         "conventions_ns": (
-                            "DEFAULT" if self.seat in ["North","South"] else "SEF"
+                            "DEFAULT" if self.seat in ["North,South"] else "DEFAULT"
                         ),
                     },
                 )
@@ -154,13 +146,7 @@ class TMClient:
                 "hand": self.hand_str,
                 "dealer": "NESW"[self.dealer_i],
                 "vuln": VULS_REVERSE[self.vuln_ns, self.vuln_ew],
-                "auction": [
-                    a for a in self.sequence.get_as_ben_request() if a != "PAD_START"
-                ],
-                "conventions_ew": ("DEFAULT" if self.seat in ["East","West"] else "SEF"),
-                "conventions_ns": (
-                    "DEFAULT" if self.seat in ["North","South"] else "SEF"
-                ),
+                "auction": [a for a in self.sequence.get_as_ben_request() if a != "PAD_START"],
             }
             lead = await self.send_request_to_lia(
                 type_of_action="make_lead",
@@ -193,15 +179,15 @@ class TMClient:
         leader = declarer.next()
         dummy_hand = PlayerHand.from_pbn(self.dummy_hand_str)
         my_hand = PlayerHand.from_pbn(self.hand_str)
-        if self.direction == leader:
+        if self.direction == leader :
             my_hand.remove(Card_.from_str(lead))
         tricks = [[lead]]
         print(tricks)
         current_player = leader.offset(1)
         for _ in range(47):
             print(tricks)
-            print("hand :", my_hand.to_pbn())
-            print("dummy_hand :", dummy_hand.to_pbn())
+            print("hand :" ,my_hand.to_pbn())
+            print("dummy_hand :" ,dummy_hand.to_pbn())
             if (
                 current_player == self.direction
                 or (current_player == dummy and self.seat == declarer.to_str())
@@ -216,9 +202,11 @@ class TMClient:
                     )
                 )
                 if len(ranks_in_suit) == 1:  # Forced card
-                    card = Card_(Card_.from_str(tricks[-1][0]).suit, ranks_in_suit[0])
+                    card = Card_(
+                            Card_.from_str(tricks[-1][0]).suit, ranks_in_suit[0]
+                        )
                     card = card.suit_first_str()
-                else:
+                else :
                     data = {
                         "hand": (my_hand.to_pbn()),
                         "dummy_hand": dummy_hand.to_pbn(),
@@ -235,9 +223,6 @@ class TMClient:
                         type_of_action="play_card", data=data
                     )
                     print(res)
-                    if "card" not in res :
-                        print(data)
-                        raise Exception("No card")
                     card = res["card"]
                 await asyncio.sleep(0.1)
                 await self.send_card_played(card)
@@ -260,19 +245,14 @@ class TMClient:
                 current_player == self.direction
                 or (current_player == dummy and self.seat == declarer.to_str())
             ) and not self.direction == dummy:
-                card = (
-                    my_hand.cards[0].suit_first_str()
-                    if current_player != dummy
-                    else dummy_hand.cards[0].suit_first_str()
-                )
-                await asyncio.sleep(0.5)
+                card = my_hand.cards[0].suit_first_str() if current_player != dummy else dummy_hand.cards[0].suit_first_str()
+                await asyncio.sleep(0.1)
                 await self.send_card_played(card)
-            else:
+            else :
                 card = await self.receive_card_play_for(current_player, len(tricks))
             tricks[-1].append(card)
             current_player = current_player.offset(1)
-            print(tricks)
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.01)
 
     async def send_card_played(self, card_symbol):
         msg_card = f"{self.seat} plays {card_symbol[::-1]}\n"
@@ -297,16 +277,19 @@ class TMClient:
         card_resp = await self.receive_line()
         card_resp_parts = card_resp.strip().split()
 
-        try:
+        try :
             assert card_resp_parts[0] == current_player.to_str()
             return card_resp_parts[-1][::-1].upper()
-        except Exception as e:
+        except Exception as e :
             print(card_resp)
             print(card_resp_parts)
             print(e)
             return await self.receive_card_play_for(current_player, trick_i)
 
-    async def receive_bid_for(self, player: Direction):
+
+
+
+    async def receive_bid_for(self, player : Direction):
         msg_ready = f"{SEATS[self.player_i]} ready for {player.to_str()}'s bid.\n"
         await self.send_message(msg_ready)
 
@@ -359,8 +342,6 @@ class TMClient:
         vuln_ns = vuln_str == "N/S" or vuln_str == "Both"
         vuln_ew = vuln_str == "E/W" or vuln_str == "Both"
         self.dealer = Direction.from_str("NESW"[dealer_i])
-        if self.dealer == self.direction:
-            await asyncio.sleep(1)
 
         return dealer_i, vuln_ns, vuln_ew, hand_str
 

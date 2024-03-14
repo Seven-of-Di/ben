@@ -122,6 +122,8 @@ class CheckClaim:
         self.contract = check_claim_request["contract"]
         self.tricks = check_claim_request['tricks']
         self.claim = check_claim_request['claim']
+        self.real_diag = Diag.init_from_pbn(check_claim_request['real_diag']) if 'real_diag' in check_claim_request else None
+
 
 
 '''
@@ -315,7 +317,10 @@ async def check_claim():
             req.contract_direction,
             req.contract,
             req.tricks,
-            req.claim)
+            req.claim,
+            real_diag=req.real_diag
+            
+            )
 
         return {'claim_accepted': res}, 200
     except Exception as e:

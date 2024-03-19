@@ -234,6 +234,7 @@ async def play_a_card(
                         contract,
                         tricks_str,
                         13 - trick_i + card_players[player_i].n_tricks_taken,
+                        real_diag=None
                     )
                 return {
                     "card": card,

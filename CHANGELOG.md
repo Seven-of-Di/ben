@@ -2,9 +2,9 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [0.8.0-dev.2](https://github.com/Seven-of-Di/ben/compare/v0.8.0-dev.1...v0.8.0-dev.2) (2024-03-29)
+## [0.8.0-dev.3](https://github.com/Seven-of-Di/ben/compare/v0.8.0-dev.2...v0.8.0-dev.3) (2024-05-29)
 
 
 ### Features
 
-* fix requiements file to work in linux ([5b1498e](https://github.com/Seven-of-Di/ben/commit/5b1498e68b1ad8783f5c856e22c2966595daddbd))
+* move to stable autoscalign api group for k8s and remove ([2085182](https://github.com/Seven-of-Di/ben/commit/2085182f7b8f08756820f5d7762f331326ff42ab))

@@ -2,9 +2,10 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [0.8.0-dev.3](https://github.com/Seven-of-Di/ben/compare/v0.8.0-dev.2...v0.8.0-dev.3) (2024-05-29)
+## [0.8.0-dev.4](https://github.com/Seven-of-Di/ben/compare/v0.8.0-dev.3...v0.8.0-dev.4) (2024-05-31)
 
 
 ### Features
 
-* move to stable autoscalign api group for k8s and remove ([2085182](https://github.com/Seven-of-Di/ben/commit/2085182f7b8f08756820f5d7762f331326ff42ab))
+* add back topology spread constraint ([f628cf5](https://github.com/Seven-of-Di/ben/commit/f628cf59c6129cead4a6dbd8c6a89ee71248c91c))
+* add topology spread to fullboard play as well ([d2fee3c](https://github.com/Seven-of-Di/ben/commit/d2fee3cff4b2a3d98cb62b834b7fad3bdd9c6ff0))

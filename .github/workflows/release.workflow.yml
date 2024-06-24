@@ -70,11 +70,11 @@ jobs:
           echo "standard-version-args=$STANDARD_VERSION_ARGS" >> $GITHUB_OUTPUT
 
 
-      - if: ${{ github.event.inputs.prerelease-channel == 'none' }}
+      - if: ${{ github.event.inputs.prerelease-channel != 'none' }}
         run: |
           git tag -l | grep -vE '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-${{ github.event.inputs.prerelease-channel }}\.(0|[1-9][0-9]*)$' | xargs git tag -d
 
-      - if: ${{ github.event.inputs.prerelease-channel != 'none' }}
+      - if: ${{ github.event.inputs.prerelease-channel == 'none' }}
         run: |
           git tag -l | grep -vE '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' | xargs git tag -d
 

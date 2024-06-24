@@ -244,8 +244,8 @@ def bid_deal(deal: Deal, open_room: bool):
             "dealer": deal.dealer.abbreviation(),
             "vuln": VULS_REVERSE[(deal.ns_vulnerable, deal.ew_vulnerable)],
             "auction": sequence.get_as_ben_request(),
-            "conventions_ew": "ACOL" if open_room else "DEFAULT",
-            "conventions_ns": "DEFAULT" if open_room else "ACOL",
+            "conventions_ew": "GAVIN_ADVANCED" if open_room else "DEFAULT",
+            "conventions_ns": "DEFAULT" if open_room else "GAVIN_ADVANCED",
         }
         res = (
             send_request("place_bid", data, current_player, open_room)
@@ -525,12 +525,12 @@ def run_tm_btwn_ben_versions(
         pbn = run_deal_on_both_rooms(
             deal, force_same_sequence, force_same_lead, force_same_card_play
         )
-        print(
-            "Ben times average : bidding : {},carding : {}".format(
-                NEW_BIDDING_TIME[0] / NEW_BIDDING_TIME[1],
-                NEW_CARD_TIME[0] / NEW_CARD_TIME[1],
-            )
-        )
+        # print(
+        #     "Ben times average : bidding : {},carding : {}".format(
+        #         NEW_BIDDING_TIME[0] / NEW_BIDDING_TIME[1],
+        #         NEW_CARD_TIME[0] / NEW_CARD_TIME[1],
+        #     )
+        # )
         # print("Lia times average : bidding : {},carding : {}".format(
         #     OLD_BIDDING_TIME[0]/OLD_BIDDING_TIME[1], OLD_CARD_TIME[0]/OLD_CARD_TIME[1]))
         print("Boards with differents leads : {}".format(boards_with_different_leads))
@@ -580,13 +580,13 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    run_tm_btwn_ben_versions(force_same_lead=True,force_same_card_play=True,deal_random=True)
+    # run_tm_btwn_ben_versions(force_same_lead=True,force_same_card_play=True,deal_random=True)
     # tests = run_tests()
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))
     # load_test_pbn("c4f380988fc67c0fe6e5f4bc5502d67a3b45d2c0.pbn")
-    link = r"https://play.intobridge.com/hand?lin=pn%7CGavin,Lia,Lia,Lia%7Cmd%7C4SJT43HA8DKQJ92C43,SQHK64DAT76CQJT62,S98765HJ3D853CK97,SAK2HQT9752D4CA85%7Cah%7CBoard%202%7Cmb%7C1H%7Cmb%7Cp%7Cmb%7C2C%7Cmb%7Cp%7Cmb%7C2H%7Cmb%7Cp%7Cmb%7C4H%7Cmb%7Cp%7Cmb%7Cp%7Cmb%7Cp%7Cpc%7CDK%7Cpc%7CDA%7Cpc%7CD8%7Cpc%7CD4%7Cpc%7CH4%7Cpc%7CH3%7Cpc%7CHT%7Cpc%7CHA%7Cpc%7CDQ%7Cpc%7CD6%7Cpc%7CD3%7Cpc%7CH7%7Cpc%7CH2%7Cpc%7CH8%7Cpc%7CHK%7Cpc%7CHJ%7Cpc%7CSQ%7Cpc%7CS5%7Cpc%7CS2%7Cpc%7CS4%7Cpc%7CD7%7Cpc%7CD5%7Cpc%7CH5%7Cpc%7CD9%7Cpc%7CSK%7Cpc%7CS3%7Cpc%7CC2%7Cpc%7CS6%7Cpc%7CSA%7Cpc%7CST%7Cpc%7CH6%7Cpc%7CS7%7Cpc%7CCQ%7Cpc%7CC7%7Cpc%7CC5%7Cpc%7CC4%7Cpc%7CCJ%7Cpc%7CC9%7Cpc%7CC8%7Cpc%7CC3%7Cpc%7CC6%7Cmc%7C12%7Csv%7Cn%7C"
-    print(from_lin_to_request(link, Card_.from_str("DA")))
+    link = r"https://play.intobridge.com/hand?lin=pn|meepo15,Lia,Lia,Lia|md|1SQ94HQ9DK53CKQJ96,S73HTDAQJ864CA532,SAKJT62HKJ8D9CT87,S85HA765432DT72C4|ah|Board%2015|mb|p|mb|1D|mb|1S|mb|p|mb|3N|mb|p|mb|4S|mb|p|mb|p|mb|p|pc|C4|pc|CK|pc|CA|pc|C7|pc|C2|pc|CT|pc|S5|pc|C6|pc|D7|pc|DK|pc|DA|pc|D9|pc|C3|pc|C8|pc|S8|pc|C9|pc|HA|pc|H9|pc|HT|pc|H8|pc|H2|mc|8|sv|n|&boardId=65f0d152cea1ada9e9c67267"
+    print(from_lin_to_request(link, Card_.from_str("H2")))
     # print(from_lin_to_request(link, bid_to_remove_after="X"))
 
     # print(from_lin_to_request(link, None))

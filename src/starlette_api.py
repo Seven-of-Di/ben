@@ -22,7 +22,7 @@ from opentelemetry.propagate import extract
 from opentelemetry.context import attach, detach
 from sentry_sdk.integrations.logging import LoggingIntegration
 
-from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit,PlayingMode
+from utils import DIRECTIONS, VULNERABILITIES, PlayerHand, BiddingSuit,PlayingMode,Diag
 from nn.models import MODELS
 from play_card_pre_process import play_a_card
 from game import AsyncBotBid, AsyncBotLead
@@ -95,6 +95,7 @@ class CheckClaim:
         self.contract = check_claim_request["contract"]
         self.tricks = check_claim_request['tricks']
         self.claim = check_claim_request['claim']
+        self.real_diag = Diag.init_from_pbn(check_claim_request['real_diag']) if 'real_diag' in check_claim_request else None
 
 async def play_card(request: Request):
     try:
@@ -204,7 +205,8 @@ async def check_claim(request : Request):
             req.contract_direction,
             req.contract,
             req.tricks,
-            req.claim)
+            req.claim,
+            real_diag=req.real_diag)
 
         return JSONResponse({'claim_accepted': res}, 200)
     except Exception as e:

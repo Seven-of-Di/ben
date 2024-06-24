@@ -797,6 +797,7 @@ class CardPlayer:
             raise Exception("Play record should not be none")
 
         leader_i = (leader_i + self.declarer.offset(2).value) % 4
+        start = time.time()
         dd_solved = DDS.solve(
             self.strain_i,
             leader_i,
@@ -806,6 +807,8 @@ class CardPlayer:
                 for diag in samples_as_diag
             ],
         )
+        with open("dds.log", "a") as f:
+            f.write("DDS took {} seconds\n".format(time.time() - start))
 
         if any(
             [

@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [0.9.0-dev.0](https://github.com/Seven-of-Di/ben/compare/v0.8.0-dev.4...v0.9.0-dev.0) (2024-06-26)
+## [0.9.0](https://github.com/Seven-of-Di/ben/compare/v0.8.0...v0.9.0) (2024-06-26)
 
 
 ### Bug Fixes

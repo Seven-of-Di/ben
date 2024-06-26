@@ -25,7 +25,7 @@ from Deal import Deal
 from Sequence import Sequence, SequenceAtom
 from PlayRecord import PlayRecord
 import json
-from FullBoardPlayer import AsyncFullBoardPlayer
+from FullBoardPlayer import AsyncFullBoardPlayer, PlayingMode
 from score_calculation import calculate_score
 from Board import Board
 
@@ -34,10 +34,15 @@ OLD_BIDDING_TIME: List[float] = [0, 0]
 NEW_CARD_TIME: List[float] = [0, 0]
 OLD_CARD_TIME: List[float] = [0, 0]
 RECEIVING_BOT_NAME = "Ben"
-RECEIVED_BOT_NAME = "Lia"
+RECEIVED_BOT_NAME = "Lia Gavin advanced"
 boards_with_different_leads = []
 TIME_STAMP = datetime.datetime.now().strftime("%H-%M")
 DATE = datetime.datetime.today().strftime("%m_%d_%Y")
+CONVENTION_NS_OPEN = "TWO_OVER_ONE"
+CONVENTION_NS_CLOSED = "GAVIN_ADVANCED"
+
+CONVENTION_EW_OPEN = CONVENTION_NS_CLOSED
+CONVENTION_EW_CLOSED = CONVENTION_NS_OPEN
 
 
 def from_lin_to_request(
@@ -136,9 +141,11 @@ def from_lin_to_request(
 
     return json.dumps(
         {
-            "hand": diag.hands[turn_to_play].print_as_pbn()
-            if turn_to_play != declarer.offset(2)
-            else diag.hands[declarer].print_as_pbn(),
+            "hand": (
+                diag.hands[turn_to_play].print_as_pbn()
+                if turn_to_play != declarer.offset(2)
+                else diag.hands[declarer].print_as_pbn()
+            ),
             "dummy_hand": diag.hands[declarer.offset(2)].print_as_pbn(),
             "dealer": dealer.abbreviation(),
             "vuln": vul_str,
@@ -167,6 +174,7 @@ def run_tests():
                 vuls=[deal.ns_vulnerable, deal.ew_vulnerable],
                 dealer=deal.dealer,
                 models=MODELS,
+                playing_mode=PlayingMode.TEAMS,
             ).async_full_board()
         )
         sequence = Sequence.from_str_list(full_play["auction"])
@@ -183,9 +191,11 @@ def run_tests():
             suit=contract.bid.suit,
             doubled=contract.declaration.value[0],
             tricks=play_record.number_of_tricks,
-            vulnerable=deal.ns_vulnerable
-            if contract.declarer in [Direction.NORTH, Direction.SOUTH]
-            else deal.ew_vulnerable,
+            vulnerable=(
+                deal.ns_vulnerable
+                if contract.declarer in [Direction.NORTH, Direction.SOUTH]
+                else deal.ew_vulnerable
+            ),
         )
         return DealRecord(
             sequence=sequence, play_record=play_record, score=score, names=None
@@ -205,10 +215,27 @@ def send_request(
     # new_ben_called = (open_room and direction in [Direction.NORTH, Direction.SOUTH]) or (
     #     not open_room and direction in [Direction.EAST, Direction.WEST])
     ben_called = (
-        (open_room and direction in [Direction.NORTH, Direction.SOUTH])
-        or (not open_room and direction in [Direction.EAST, Direction.WEST])
-        or type_of_action == "play_card"
-    )
+        (
+            open_room
+            and direction in [Direction.NORTH, Direction.SOUTH]
+            and RECEIVING_BOT_NAME == "Ben"
+        )
+        or (
+            open_room
+            and direction in [Direction.EAST, Direction.WEST]
+            and RECEIVED_BOT_NAME == "Ben"
+        )
+        or (
+            not open_room
+            and direction in [Direction.EAST, Direction.WEST]
+            and RECEIVING_BOT_NAME == "Ben"
+        )
+        or (
+            not open_room
+            and direction in [Direction.NORTH, Direction.SOUTH]
+            and RECEIVED_BOT_NAME == "Ben"
+        )
+    ) or type_of_action == "play_card"
     port = "http://localhost:{}".format("5001" if ben_called else "5002")
     start = time.time()
     res = requests.post("{}/{}".format(port, type_of_action), json=data)
@@ -244,8 +271,8 @@ def bid_deal(deal: Deal, open_room: bool):
             "dealer": deal.dealer.abbreviation(),
             "vuln": VULS_REVERSE[(deal.ns_vulnerable, deal.ew_vulnerable)],
             "auction": sequence.get_as_ben_request(),
-            "conventions_ew": "GAVIN_ADVANCED" if open_room else "DEFAULT",
-            "conventions_ns": "DEFAULT" if open_room else "GAVIN_ADVANCED",
+            "conventions_ew": CONVENTION_EW_OPEN if open_room else CONVENTION_EW_CLOSED,
+            "conventions_ns": CONVENTION_NS_OPEN if open_room else CONVENTION_NS_CLOSED,
         }
         res = (
             send_request("place_bid", data, current_player, open_room)
@@ -281,6 +308,8 @@ def lead_deal(deal: Deal, sequence: Sequence, open_room: bool) -> str:
         "dealer": deal.dealer.abbreviation(),
         "vuln": VULS_REVERSE[(deal.ns_vulnerable, deal.ew_vulnerable)],
         "auction": sequence.get_as_ben_request(),
+        "conventions_ew": CONVENTION_EW_OPEN if open_room else CONVENTION_EW_CLOSED,
+        "conventions_ns": CONVENTION_NS_OPEN if open_room else CONVENTION_NS_CLOSED,
     }
     res = send_request(
         type_of_action="make_lead", data=data, direction=leader, open_room=open_room
@@ -320,9 +349,11 @@ def full_card_play(
             )
         else:
             data = {
-                "hand": deal.diag.hands[current_player].to_pbn()
-                if current_player != dummy
-                else deal.diag.hands[declarer].to_pbn(),
+                "hand": (
+                    deal.diag.hands[current_player].to_pbn()
+                    if current_player != dummy
+                    else deal.diag.hands[declarer].to_pbn()
+                ),
                 "dummy_hand": deal.diag.hands[dummy].to_pbn(),
                 "dealer": deal.dealer.abbreviation(),
                 "vuln": VULS_REVERSE[(deal.ns_vulnerable, deal.ew_vulnerable)],
@@ -353,9 +384,11 @@ def full_card_play(
                     suit=contract.bid.suit,
                     doubled=contract.declaration.value[0],
                     tricks=play_record.number_of_tricks,
-                    vulnerable=deal.ns_vulnerable
-                    if declarer in [Direction.NORTH, Direction.EAST]
-                    else deal.ew_vulnerable,
+                    vulnerable=(
+                        deal.ns_vulnerable
+                        if declarer in [Direction.NORTH, Direction.EAST]
+                        else deal.ew_vulnerable
+                    ),
                 )
                 return DealRecord(
                     sequence=sequence, play_record=play_record, score=score, names=None
@@ -380,9 +413,11 @@ def full_card_play(
         suit=contract.bid.suit,
         doubled=contract.declaration.value[0],
         tricks=play_record.number_of_tricks,
-        vulnerable=deal.ns_vulnerable
-        if declarer in [Direction.NORTH, Direction.EAST]
-        else deal.ew_vulnerable,
+        vulnerable=(
+            deal.ns_vulnerable
+            if declarer in [Direction.NORTH, Direction.EAST]
+            else deal.ew_vulnerable
+        ),
     )
     return DealRecord(
         sequence=sequence, play_record=play_record, score=score, names=None
@@ -446,6 +481,7 @@ def run_deal_on_both_rooms(
     force_same_sequence: bool = False,
     force_same_lead: bool = False,
     force_same_card_play: bool = False,
+    ditch_if_same_bidding: bool = False,
 ) -> str:
     open_room_record = play_full_deal(
         deepcopy(deal), False, False, False, None, open_room=True
@@ -465,6 +501,16 @@ def run_deal_on_both_rooms(
         other_play_record=open_room_record,
         open_room=False,
     )
+    if (
+        ditch_if_same_bidding
+        and closed_room_record.sequence
+        and open_room_record.sequence
+        and (
+            open_room_record.sequence.print_as_ben_format(dealer=deal.dealer)
+            == closed_room_record.sequence.print_as_ben_format(dealer=deal.dealer)
+        )
+    ):
+        return ""
     closed_room_record.names = {
         Direction.EAST: RECEIVING_BOT_NAME,
         Direction.WEST: RECEIVING_BOT_NAME,
@@ -502,9 +548,11 @@ def run_tm_btwn_ben_versions(
     file: str = "./test_data/match_to_replay.pbn",
     specific_boards: None | List[int] = None,
     deal_random: bool = False,
+    ditch_if_same_bidding: bool = False,
 ):
     with open(file) as f:
-        boards = f.read().strip("\n").split("\n\n")
+        text = f.read()
+        boards = text.strip("\n").split("\n\n")
         deals: List[Deal] = [Deal.from_pbn(board) for board in boards]
         boards_number_seen = set()
         deals = [
@@ -517,14 +565,26 @@ def run_tm_btwn_ben_versions(
             deals = [deal for deal in deals if deal.board_number in specific_boards]
 
     for deal in deals:
+        pbn = ""
         if deal_random:
             deal.diag = Diag.generate_random()
+        if ditch_if_same_bidding:
+            while ditch_if_same_bidding and not pbn and deal_random:
+                deal.diag = Diag.generate_random()
 
-        # while not deal.diag.hands[Direction.NORTH].hcp() + deal.diag.hands[Direction.SOUTH].hcp()>=26:
-        #     deal.diag = Diag.generate_random()
-        pbn = run_deal_on_both_rooms(
-            deal, force_same_sequence, force_same_lead, force_same_card_play
-        )
+                # while not deal.diag.hands[Direction.NORTH].hcp() + deal.diag.hands[Direction.SOUTH].hcp()>=26:
+                #     deal.diag = Diag.generate_random()
+                pbn = run_deal_on_both_rooms(
+                    deal,
+                    force_same_sequence,
+                    force_same_lead,
+                    force_same_card_play,
+                    ditch_if_same_bidding,
+                )
+        else:
+            pbn = run_deal_on_both_rooms(
+                deal, force_same_sequence, force_same_lead, force_same_card_play
+            )
         # print(
         #     "Ben times average : bidding : {},carding : {}".format(
         #         NEW_BIDDING_TIME[0] / NEW_BIDDING_TIME[1],
@@ -580,13 +640,18 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    # run_tm_btwn_ben_versions(force_same_lead=True,force_same_card_play=True,deal_random=True)
+    # run_tm_btwn_ben_versions(
+    #     force_same_lead=True,
+    #     force_same_card_play=True,
+    #     deal_random=True,
+    #     ditch_if_same_bidding=True,
+    # )
     # tests = run_tests()
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))
     # load_test_pbn("c4f380988fc67c0fe6e5f4bc5502d67a3b45d2c0.pbn")
-    link = r"https://play.intobridge.com/hand?lin=pn|meepo15,Lia,Lia,Lia|md|1SQ94HQ9DK53CKQJ96,S73HTDAQJ864CA532,SAKJT62HKJ8D9CT87,S85HA765432DT72C4|ah|Board%2015|mb|p|mb|1D|mb|1S|mb|p|mb|3N|mb|p|mb|4S|mb|p|mb|p|mb|p|pc|C4|pc|CK|pc|CA|pc|C7|pc|C2|pc|CT|pc|S5|pc|C6|pc|D7|pc|DK|pc|DA|pc|D9|pc|C3|pc|C8|pc|S8|pc|C9|pc|HA|pc|H9|pc|HT|pc|H8|pc|H2|mc|8|sv|n|&boardId=65f0d152cea1ada9e9c67267"
-    print(from_lin_to_request(link, Card_.from_str("H2")))
+    link = r"https://play.intobridge.com/hand?lin=pn|Marcelo,Lia,Lia,Lia|md|1SKQJHJ83DT83CAJ65,ST9HQ652DAKQJ6CQ3,S853HKD9542CK9874,SA7642HAT974D7CT2|ah|Board%203|mb|1C|mb|1D|mb|2C|mb|d|mb|p|mb|2H|mb|p|mb|3H|mb|p|mb|4H|mb|p|mb|p|mb|p|pc|C4|pc|C2|pc|CA|pc|C3|pc|C5|pc|CQ|pc|CK|pc|CT|pc|S8|pc|SA|pc|SK|pc|S9|pc|D7|pc|D8|pc|DQ|pc|D5|pc|DJ|pc|D2|pc|S2|pc|D3|pc|DA|pc|D4|pc|S4|pc|DT|pc|H2|pc|HK|pc|HA|mc|11|sv|e|&boardId=667bdcefce13c5c473353403"
+    print(from_lin_to_request(link, Card_.from_str("HA")))
     # print(from_lin_to_request(link, bid_to_remove_after="X"))
 
     # print(from_lin_to_request(link, None))

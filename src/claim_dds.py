@@ -379,7 +379,7 @@ def check_claim(
         real_diag,current_trick_copy = convert_intermediate_cards_to_low(real_diag, claim_direction, shown_out_suits, current_trick_copy, trick_leader)
     return dds_check(
         diags, trump, trick_leader, current_trick, claim, claim_direction, declarer
-    ) and dds_check([real_diag], trump, trick_leader, current_trick_copy, claim, claim_direction, declarer) if real_diag is not None else True
+    ) and (dds_check([real_diag], trump, trick_leader, current_trick_copy, claim, claim_direction, declarer) if real_diag is not None else True)
 
 
 @tracer.start_as_current_span("check_claim_from_api")

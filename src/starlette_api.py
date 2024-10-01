@@ -314,7 +314,7 @@ app = Starlette(
         Route('/check_claim', check_claim, methods=['POST']),
         Route('/play_full_board', play_full_board, methods=['POST']),
         Route('/alert_bid', alert_bid, methods=['POST']),
-        # Route('/healthz', healthz, methods=['GET'])
+        Route('/healthz', healthz, methods=['GET'])
     ],
     middleware=[
         Middleware(OpenTelemetryMiddleware),

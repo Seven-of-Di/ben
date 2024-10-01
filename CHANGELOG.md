@@ -2,9 +2,9 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### [0.9.3](https://github.com/Seven-of-Di/ben/compare/v0.9.2...v0.9.3) (2024-10-01)
+### [0.9.4](https://github.com/Seven-of-Di/ben/compare/v0.9.3...v0.9.4) (2024-10-01)
 
 
 ### Bug Fixes
 
-* properly start the healthchecker and use starlette Response object ([b90471e](https://github.com/Seven-of-Di/ben/commit/b90471ef2d6674c7a0fa99ed9e1fa65e6020fe59))
+* revert to simple http healthcheck ([b7e747b](https://github.com/Seven-of-Di/ben/commit/b7e747b885379862229c58bc280e3cd523b1be56))

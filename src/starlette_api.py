@@ -7,6 +7,7 @@ from starlette.middleware import Middleware
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.requests import Request
+from starlette.responses import Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from opentelemetry import trace
 from starlette_exporter import PrometheusMiddleware, handle_metrics, CollectorRegistry, multiprocess # type: ignore
@@ -74,7 +75,6 @@ class PlayCard:
             "cheating_diag_pbn"] if "cheating_diag_pbn" in play_card_request else None
         self.playing_mode = PlayingMode.from_str(play_card_request[
             "playing_mode"]) if "playing_mode" in play_card_request else PlayingMode.MATCHPOINTS
-
 
 class MakeLead:
     def __init__(self, make_lead_request):
@@ -261,14 +261,16 @@ async def alert_bid(request: Request):
         logging.exception(e)
         return {'error': str(e)},500
 
-health_checker = HealthChecker()
+# health_checker = HealthChecker()
+# health_checker.start()
 
-async def healthz():
-    healthy = health_checker.healthy()
-    if healthy:
-        return 'ok', 200
+async def healthz(_: Request):
+    return Response("OK", status_code=200)
+    # healthy = health_checker.healthy()
+    # if healthy:
+    #     return Response("OK", status_code=200)
 
-    return 'unhealthy', 500
+    # return Response("FAILURE", status_code=500)
     
 class TracingHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
@@ -314,7 +316,7 @@ app = Starlette(
         Route('/check_claim', check_claim, methods=['POST']),
         Route('/play_full_board', play_full_board, methods=['POST']),
         Route('/alert_bid', alert_bid, methods=['POST']),
-        # Route('/healthz', healthz, methods=['GET'])
+        Route('/healthz', healthz, methods=['GET'])
     ],
     middleware=[
         Middleware(OpenTelemetryMiddleware),

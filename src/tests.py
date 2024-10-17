@@ -34,15 +34,18 @@ OLD_BIDDING_TIME: List[float] = [0, 0]
 NEW_CARD_TIME: List[float] = [0, 0]
 OLD_CARD_TIME: List[float] = [0, 0]
 RECEIVING_BOT_NAME = "Ben"
-RECEIVED_BOT_NAME = "Lia Gavin advanced"
+RECEIVED_BOT_NAME = "Lia 2 over 1"
 boards_with_different_leads = []
 TIME_STAMP = datetime.datetime.now().strftime("%H-%M")
 DATE = datetime.datetime.today().strftime("%m_%d_%Y")
 CONVENTION_NS_OPEN = "TWO_OVER_ONE"
-CONVENTION_NS_CLOSED = "GAVIN_ADVANCED"
+CONVENTION_NS_CLOSED = "TWO_OVER_ONE"
 
 CONVENTION_EW_OPEN = CONVENTION_NS_CLOSED
 CONVENTION_EW_CLOSED = CONVENTION_NS_OPEN
+
+match_name = "{} vs {}".format(RECEIVING_BOT_NAME, RECEIVED_BOT_NAME)
+file_name = "{} - {} - {}.pbn".format(match_name, DATE, TIME_STAMP)
 
 
 def from_lin_to_request(
@@ -54,16 +57,28 @@ def from_lin_to_request(
         raise Exception("bid and play are both not None")
 
     lin_str = lin_str.replace("%7C", "|")
-    lin_str = lin_str.split("lin=", maxsplit=1)[1]
-    board_number = lin_str.split("Board%20")[1].split("|")[0]
+    lin_str = lin_str.split("lin=", maxsplit=1)[1] if "lin=" in lin_str else lin_str
+    if "Board" in lin_str:
+        lin_str = lin_str.split("Board", maxsplit=1)[1]
+        board_number = lin_str.split("|", maxsplit=1)[0].strip()
+    else:
+        board_number = 1
     vul_str = board_number_to_vul(int(board_number))
-    lin_str = lin_str.split("|", maxsplit=3)[3]
+    lin_str = lin_str.split("md|", maxsplit=1)[1]
     lin_dealer_to_direction = {
         "1": Direction.SOUTH,
         "2": Direction.WEST,
         "3": Direction.NORTH,
         "4": Direction.EAST,
     }
+    # Remove all the alerts, format is |an|alert, with a regular expression
+    while "|an|" in lin_str:
+        lin_str = (
+            lin_str.split("|an|", maxsplit=1)[0]
+            + lin_str.split("|an|", maxsplit=1)[1].split("|", maxsplit=1)[1]
+        )
+
+    lin_str = lin_str.replace("|pg|", "")
     dealer: Direction = lin_dealer_to_direction[lin_str[0]]
     diag_lin = lin_str[1:].split("|")[0]
     diag = Diag.init_from_lin(diag_lin)
@@ -154,7 +169,7 @@ def from_lin_to_request(
             "auction": bidding_str,
             "next_player": turn_to_play.abbreviation(),
             "tricks": play_as_list_of_list,
-            "cheating_diag_pbn": diag.print_as_pbn(),
+            # "cheating_diag_pbn": diag.print_as_pbn(),
         }
     )
 
@@ -216,6 +231,7 @@ def send_request(
     #     not open_room and direction in [Direction.EAST, Direction.WEST])
     ben_called = (
         (
+        (
             open_room
             and direction in [Direction.NORTH, Direction.SOUTH]
             and RECEIVING_BOT_NAME == "Ben"
@@ -235,8 +251,12 @@ def send_request(
             and direction in [Direction.NORTH, Direction.SOUTH]
             and RECEIVED_BOT_NAME == "Ben"
         )
-    ) or type_of_action == "play_card"
+        # or type_of_action == "play_card"
+    ) 
+
+    ) and not type_of_action == "place_bid"
     port = "http://localhost:{}".format("5001" if ben_called else "5002")
+    print("Sending to port {}".format(port))
     start = time.time()
     res = requests.post("{}/{}".format(port, type_of_action), json=data)
     request_time = time.time() - start
@@ -254,7 +274,7 @@ def send_request(
         else:
             OLD_BIDDING_TIME[0] += request_time
             OLD_BIDDING_TIME[1] += 1
-    print("Sending to port {}".format(port))
+    
     print(res.json())
     return res.json()
 
@@ -273,6 +293,7 @@ def bid_deal(deal: Deal, open_room: bool):
             "auction": sequence.get_as_ben_request(),
             "conventions_ew": CONVENTION_EW_OPEN if open_room else CONVENTION_EW_CLOSED,
             "conventions_ns": CONVENTION_NS_OPEN if open_room else CONVENTION_NS_CLOSED,
+            "debug_mode": "True",
         }
         res = (
             send_request("place_bid", data, current_player, open_room)
@@ -362,8 +383,17 @@ def full_card_play(
                 "contract_direction": contract.declarer.abbreviation(),
                 "next_player": current_player.abbreviation(),
                 "tricks": tricks,
-                "cheating_diag_pbn": deal.diag.print_as_pbn(),
+                "conventions_ew": CONVENTION_EW_OPEN if open_room else CONVENTION_EW_CLOSED,
+                "conventions_ns": CONVENTION_NS_OPEN if open_room else CONVENTION_NS_CLOSED,
+                # "cheating_diag_pbn": deal.diag.print_as_pbn(),
                 "playing_mode": "teams",
+                "logging_infos": {
+                    "board_number": deal.board_number,
+                    "open_room": open_room,
+                    "receiving_bot_name": RECEIVING_BOT_NAME,
+                    "received_bot_name": RECEIVED_BOT_NAME,
+                    "file_name": file_name,
+                },
             }
             res = send_request(
                 type_of_action="play_card",
@@ -640,18 +670,19 @@ def compare_two_tests(set_of_boards_1: List[Board], set_of_boards_2: List[Board]
 
 
 if __name__ == "__main__":
-    # run_tm_btwn_ben_versions(
-    #     force_same_lead=True,
-    #     force_same_card_play=True,
-    #     deal_random=True,
-    #     ditch_if_same_bidding=True,
-    # )
+    run_tm_btwn_ben_versions(
+        force_same_lead=True,
+        # force_same_card_play=True,
+        deal_random=True,
+        force_same_sequence=True,
+        # ditch_if_same_bidding=True,
+    )
     # tests = run_tests()
     # compare_two_tests(load_test_pbn("avant.pbn"),
     #                   load_test_pbn("après.pbn"))
     # load_test_pbn("c4f380988fc67c0fe6e5f4bc5502d67a3b45d2c0.pbn")
-    link = r"https://play.intobridge.com/hand?lin=pn|Marcelo,Lia,Lia,Lia|md|1SKQJHJ83DT83CAJ65,ST9HQ652DAKQJ6CQ3,S853HKD9542CK9874,SA7642HAT974D7CT2|ah|Board%203|mb|1C|mb|1D|mb|2C|mb|d|mb|p|mb|2H|mb|p|mb|3H|mb|p|mb|4H|mb|p|mb|p|mb|p|pc|C4|pc|C2|pc|CA|pc|C3|pc|C5|pc|CQ|pc|CK|pc|CT|pc|S8|pc|SA|pc|SK|pc|S9|pc|D7|pc|D8|pc|DQ|pc|D5|pc|DJ|pc|D2|pc|S2|pc|D3|pc|DA|pc|D4|pc|S4|pc|DT|pc|H2|pc|HK|pc|HA|mc|11|sv|e|&boardId=667bdcefce13c5c473353403"
-    print(from_lin_to_request(link, Card_.from_str("HA")))
+    link = r"pn|Ben,Lia 2 over 1,Ben,Lia 2 over 1|qx|c19,BOARD 19|rh||ah|Board 19|md|1S7HKJT982DAK7CAJ6,SQ86H7DQ8654C8732,SA93HA653D3CQT954|sv|e|sa|0|mb|1H|an|11-23 hcp -- 5+!H|mb|p|mb|4D|an|ART3-6!S 4-7!H 3-6!C -- Game values -- Splinter - !D|mb|4S|mb|d|an|Penalty Double|mb|p|mb|p|an|4-6!H -- |mb|p|pg||pc|DA|pc|D4|pc|D3|pc|D2|pg||pc|HJ|pc|H7|pc|HA|pc|H4|pg||pc|C5|pc|CK|pc|CA|pc|C2|pg||pc|DK|pc|D5|pc|H5|pc|D9|pg||pc|S7|pc|S6|pc|SA|pc|S5|pg||pc|CT|pc|ST|mc|8|pg||"
+    print(from_lin_to_request(link, Card_.from_str("D9")))
     # print(from_lin_to_request(link, bid_to_remove_after="X"))
 
     # print(from_lin_to_request(link, None))

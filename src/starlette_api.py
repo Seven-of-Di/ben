@@ -261,16 +261,16 @@ async def alert_bid(request: Request):
         logging.exception(e)
         return {'error': str(e)},500
 
-health_checker = HealthChecker()
-health_checker.start()
+# health_checker = HealthChecker()
+# health_checker.start()
 
 async def healthz(_: Request):
-    # return Response("OK", status_code=200)
-    healthy = health_checker.healthy()
-    if healthy:
-        return Response("OK", status_code=200)
+    return Response("OK", status_code=200)
+    # healthy = health_checker.healthy()
+    # if healthy:
+    #     return Response("OK", status_code=200)
 
-    return Response("FAILURE", status_code=500)
+    # return Response("FAILURE", status_code=500)
     
 class TracingHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):

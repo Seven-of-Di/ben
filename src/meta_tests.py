@@ -14,14 +14,14 @@ def replay_last_match(specific_boards: List[int] | None = None):
     print(latest_file)
 
     run_tm_btwn_ben_versions(
-        force_same_sequence=False,
+        force_same_sequence=True,
         force_same_lead=True,
-        force_same_card_play=True,
+        force_same_card_play=False,
         file=latest_file,
         specific_boards=specific_boards,
     )
 
 
 if __name__ == "__main__":
-    # replay_last_match(specific_boards = [46])
-    replay_last_match([12,17,31,39,40,44,49,51,53,55])
+    replay_last_match(specific_boards=[5])
+    # replay_last_match()

@@ -30,7 +30,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.read_version.outputs.version }}
       deploy-env: ${{ steps.set_env.outputs.deploy-env }}
@@ -123,7 +123,7 @@ jobs:
 
   sync_stack:
     needs: [release, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Trigger Update in Stack Repo
         uses: peter-evans/repository-dispatch@v2
